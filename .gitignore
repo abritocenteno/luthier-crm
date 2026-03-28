@@ -1,0 +1,34 @@
+# macOS
+.DS_Store
+
+# Large binary/archive files
+*.zip
+*.pdf
+
+# Node
+ag_crm/node_modules
+ag_crm/.pnp
+ag_crm/.pnp.*
+ag_crm/.yarn/*
+!ag_crm/.yarn/patches
+!ag_crm/.yarn/plugins
+!ag_crm/.yarn/releases
+!ag_crm/.yarn/versions
+
+# Next.js
+ag_crm/.next/
+ag_crm/out/
+ag_crm/build/
+
+# Env files
+ag_crm/.env*
+
+# Misc
+ag_crm/*.pem
+ag_crm/npm-debug.log*
+ag_crm/yarn-debug.log*
+ag_crm/yarn-error.log*
+ag_crm/.pnpm-debug.log*
+ag_crm/.vercel
+ag_crm/*.tsbuildinfo
+ag_crm/next-env.d.ts
