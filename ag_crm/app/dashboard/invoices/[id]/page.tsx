@@ -45,6 +45,131 @@ const Badge = ({ children, variant = "neutral" }: { children: React.ReactNode, v
     );
 };
 
+/**
+ * Splits an invoice image into A4 pages, finding whitespace rows
+ * near each page boundary so lines are never cut mid-row.
+ */
+async function splitIntoPages(dataUrl: string, compress = false): Promise<jsPDF> {
+    const A4W = 210, A4H = 297; // mm
+
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const i = new Image();
+        i.onload = () => resolve(i);
+        i.onerror = reject;
+        i.src = dataUrl;
+    });
+
+    // Full-image canvas for pixel scanning
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext('2d')!;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0);
+
+    const totalHeightMm = (img.height / img.width) * A4W;
+    const pageHeightPx = Math.round((A4H / totalHeightMm) * img.height);
+    const searchRadius = Math.round(pageHeightPx * 0.06); // scan ±6% of page height
+
+    // Find the best split point by detecting a horizontal divider line near the ideal boundary.
+    // Dividers are rows where a large portion of pixels are noticeably darker than white.
+    // Falls back to the nearest white gap if no divider is found.
+    const findSplit = (ideal: number): number => {
+        const top = Math.max(0, ideal - searchRadius);
+        const bottom = Math.min(img.height, ideal + Math.round(searchRadius * 0.3));
+        const height = bottom - top;
+        if (height <= 0) return ideal;
+        const strip = ctx.getImageData(0, top, img.width, height).data;
+
+        const isDivider = (row: number): boolean => {
+            const base = row * img.width * 4;
+            let dark = 0;
+            for (let i = 0; i < img.width; i++) {
+                const o = base + i * 4;
+                // A divider pixel is noticeably darker than white (zinc-50/100 range)
+                if (strip[o] < 220 || strip[o + 1] < 220 || strip[o + 2] < 220) dark++;
+            }
+            // At least 60% of the row must be non-white to count as a divider
+            return dark / img.width >= 0.6;
+        };
+
+        const isWhite = (row: number): boolean => {
+            const base = row * img.width * 4;
+            let whites = 0;
+            for (let i = 0; i < img.width; i++) {
+                const o = base + i * 4;
+                if (strip[o] > 235 && strip[o + 1] > 235 && strip[o + 2] > 235) whites++;
+            }
+            return whites / img.width >= 0.97;
+        };
+
+        // How many px to back up before the divider so it appears at the top of the next page with breathing room
+        const topPad = Math.round(pageHeightPx * 0.018); // ~1.8% of page height ≈ 5mm
+
+        // 1. Look for the closest divider line, preferring above the ideal cut
+        for (let d = 0; d <= searchRadius; d++) {
+            const rowAbove = ideal - top - d;
+            if (rowAbove >= 0 && isDivider(rowAbove)) return Math.max(0, ideal - d - topPad);
+            const rowBelow = ideal - top + d;
+            if (d > 0 && rowBelow < height && isDivider(rowBelow)) return Math.max(0, ideal + d - topPad);
+        }
+
+        // 2. Fallback: largest white gap (original logic)
+        type Run = { start: number; end: number };
+        const runs: Run[] = [];
+        let inRun = false, runStart = 0;
+        for (let r = 0; r < height; r++) {
+            if (isWhite(r)) {
+                if (!inRun) { inRun = true; runStart = r; }
+            } else {
+                if (inRun) { runs.push({ start: runStart, end: r - 1 }); inRun = false; }
+            }
+        }
+        if (inRun) runs.push({ start: runStart, end: height - 1 });
+        if (runs.length === 0) return ideal;
+        const best = runs.reduce((a, b) => (b.end - b.start > a.end - a.start ? b : a));
+        return top + Math.round((best.start + best.end) / 2);
+    };
+
+    // Build split points
+    const splits: number[] = [0];
+    let pos = 0;
+    while (pos + pageHeightPx < img.height) {
+        const split = findSplit(pos + pageHeightPx);
+        splits.push(split);
+        pos = split;
+    }
+    splits.push(img.height);
+
+    // Build PDF — one slice per page
+    const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4', compress });
+    const sliceCanvas = document.createElement('canvas');
+    sliceCanvas.width = img.width;
+
+    for (let i = 0; i < splits.length - 1; i++) {
+        const startPx = splits[i];
+        const sliceH = splits[i + 1] - startPx;
+        const sliceHMm = (sliceH / img.width) * A4W;
+
+        sliceCanvas.height = sliceH;
+        const sc = sliceCanvas.getContext('2d')!;
+        sc.fillStyle = '#ffffff';
+        sc.fillRect(0, 0, sliceCanvas.width, sliceH);
+        sc.drawImage(canvas, 0, startPx, img.width, sliceH, 0, 0, img.width, sliceH);
+
+        if (i > 0) pdf.addPage();
+        pdf.addImage(
+            sliceCanvas.toDataURL('image/png'),
+            'PNG', 0, 0, A4W, sliceHMm,
+            undefined,
+            compress ? 'FAST' : 'NONE'
+        );
+    }
+
+    return pdf;
+}
+
 function InvoiceDetail({ id }: { id: Id<"invoices"> }) {
     const router = useRouter();
     const invoice = useQuery(api.invoices.get, { id });
@@ -78,32 +203,7 @@ function InvoiceDetail({ id }: { id: Id<"invoices"> }) {
                 }
             });
 
-            const pdf = new jsPDF({
-                orientation: "p",
-                unit: "mm",
-                format: "a4",
-            });
-
-            const imgWidth = 210; // A4 width in mm
-            const pageHeight = 297; // A4 height in mm
-
-            // Calculate height to maintain aspect ratio
-            const imgProps = pdf.getImageProperties(dataUrl);
-            const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
-
-            let heightLeft = imgHeight;
-            let position = 0;
-
-            pdf.addImage(dataUrl, "PNG", 0, position, imgWidth, imgHeight);
-            heightLeft -= pageHeight;
-
-            while (heightLeft > 0) {
-                position = position - pageHeight;
-                pdf.addPage();
-                pdf.addImage(dataUrl, "PNG", 0, position, imgWidth, imgHeight);
-                heightLeft -= pageHeight;
-            }
-
+            const pdf = await splitIntoPages(dataUrl);
             pdf.save(`${invoice?.invoiceNumber || "invoice"}.pdf`);
             
             // Download attachments
@@ -170,32 +270,8 @@ function InvoiceDetail({ id }: { id: Id<"invoices"> }) {
                 }
             });
 
-            // 2. Put it into jsPDF to format as A4
-            const pdf = new jsPDF({
-                orientation: "p",
-                unit: "mm",
-                format: "a4",
-                compress: true, // Enable jsPDF compression
-            });
-
-            const imgWidth = 210;
-            const pageHeight = 297;
-            const imgProps = pdf.getImageProperties(dataUrl);
-            const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
-
-            let heightLeft = imgHeight;
-            let position = 0;
-
-            // Use 'FAST' compression in jsPDF to further reduce the final output size
-            pdf.addImage(dataUrl, "PNG", 0, position, imgWidth, imgHeight, undefined, 'FAST');
-            heightLeft -= pageHeight;
-
-            while (heightLeft > 0) {
-                position = position - pageHeight;
-                pdf.addPage();
-                pdf.addImage(dataUrl, "PNG", 0, position, imgWidth, imgHeight, undefined, 'FAST');
-                heightLeft -= pageHeight;
-            }
+            // 2. Split into pages with smart whitespace detection
+            const pdf = await splitIntoPages(dataUrl, true);
 
             // 3. Extract the clean Base64 string for the email attachment
             const pdfDataUri = pdf.output('datauristring');
@@ -363,7 +439,7 @@ function InvoiceDetail({ id }: { id: Id<"invoices"> }) {
             <div
                 ref={invoiceRef}
                 id="invoice-capture"
-                className="bg-white border border-zinc-200 rounded-[2.5rem] p-12 md:p-20 shadow-xl shadow-zinc-200/50 space-y-16"
+                className="bg-white border border-zinc-200 rounded-2xl p-8 md:p-12 shadow-xl shadow-zinc-200/50 space-y-10"
                 style={{
                     color: '#18181b', // zinc-900
                     backgroundColor: '#ffffff',
@@ -401,7 +477,7 @@ function InvoiceDetail({ id }: { id: Id<"invoices"> }) {
                     }
                 `}} />
                 {/* Branding & Top Info */}
-                <div className="flex flex-col md:flex-row justify-between gap-10">
+                <div className="flex flex-col md:flex-row justify-between gap-6">
                     <div className="space-y-6 flex-1">
                         <div className="flex items-center gap-4">
                             {settings?.logoUrl ? (
@@ -431,7 +507,7 @@ function InvoiceDetail({ id }: { id: Id<"invoices"> }) {
                         </div>
                     </div>
                     <div className="text-right space-y-2">
-                        <h2 className="text-5xl font-black tracking-tighter uppercase">Invoice</h2>
+                        <h2 className="text-3xl font-black tracking-tighter uppercase">Invoice</h2>
                         <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-zinc-50 border border-zinc-100 rounded-full">
                             <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest leading-none">Status</span>
                             <Badge variant={invoice.status === "paid" ? "success" : invoice.status === "pending" ? "warning" : "error"}>
@@ -441,49 +517,67 @@ function InvoiceDetail({ id }: { id: Id<"invoices"> }) {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {/* Billed To */}
                     <div className="space-y-4">
                         <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Billed To</p>
-                        <div className="flex items-start gap-4">
-                            <div className="space-y-1">
-                                <h3 className="text-lg font-bold text-zinc-900">{invoice.clientName}</h3>
-                                <p className="text-sm text-zinc-500 font-medium">Contact Client Detail for address.</p>
-                            </div>
+                        <div className="space-y-1">
+                            <h3 className="text-lg font-bold text-zinc-900">{invoice.clientName}</h3>
+                            {(invoice as any).client?.street && (
+                                <p className="text-sm text-zinc-500 font-medium">{(invoice as any).client.street}</p>
+                            )}
+                            {((invoice as any).client?.postcode || (invoice as any).client?.city) && (
+                                <p className="text-sm text-zinc-500 font-medium">
+                                    {[(invoice as any).client?.postcode, (invoice as any).client?.city].filter(Boolean).join("  ")}
+                                </p>
+                            )}
+                            {(invoice as any).client?.email && (
+                                <p className="text-sm text-zinc-500 font-medium">{(invoice as any).client.email}</p>
+                            )}
+                            {(invoice as any).client?.phone && (
+                                <p className="text-sm text-zinc-500 font-medium">{(invoice as any).client.phone}</p>
+                            )}
+                            {!(invoice as any).client?.street && !(invoice as any).client?.city && (
+                                <p className="text-sm text-zinc-400 italic">No address on file.</p>
+                            )}
                         </div>
                     </div>
 
                     {/* Invoice Meta */}
                     <div className="grid grid-cols-2 gap-8">
-                        <div className="space-y-4">
+                        <div className="space-y-2">
                             <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Invoice Details</p>
-                            <div className="space-y-4 text-sm font-bold">
+                            <div className="space-y-2 text-sm font-bold">
                                 <div>
-                                    <p className="text-zinc-400 font-medium text-[11px] mb-1">Number</p>
+                                    <p className="text-zinc-400 font-medium text-[11px] mb-0.5">Number</p>
                                     <p>{invoice.invoiceNumber}</p>
                                 </div>
                                 <div>
-                                    <p className="text-zinc-400 font-medium text-[11px] mb-1">Date Issued</p>
+                                    <p className="text-zinc-400 font-medium text-[11px] mb-0.5">Date Issued</p>
                                     <p>{new Date(invoice.date).toLocaleDateString()}</p>
                                 </div>
                             </div>
                         </div>
-                        <div className="space-y-4">
+                        <div className="space-y-2">
                             <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Payment Due</p>
-                            <div className="space-y-4 text-sm font-bold">
+                            <div className="space-y-2 text-sm font-bold">
                                 <div>
-                                    <p className="text-zinc-400 font-medium text-[11px] mb-1">Due By</p>
+                                    <p className="text-zinc-400 font-medium text-[11px] mb-0.5">Due By</p>
                                     <p>{new Date(invoice.date + 14 * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
                                 </div>
                                 {invoice.paymentMethod && (
                                     <div>
-                                        <p className="text-zinc-400 font-medium text-[11px] mb-1">Method</p>
+                                        <p className="text-zinc-400 font-medium text-[11px] mb-0.5">Method</p>
                                         <p>{invoice.paymentMethod}</p>
                                     </div>
                                 )}
                                 <div>
-                                    <p className="text-zinc-400 font-medium text-[11px] mb-1">Amount Due</p>
-                                    <p className="text-xl font-black tracking-tight">{formatCurrency(invoice.status === "paid" ? 0 : invoice.amount, settings?.currency)}</p>
+                                    <p className="text-zinc-400 font-medium text-[11px] mb-0.5">
+                                        {invoice.amount < 0 ? "Credit Due" : "Amount Due"}
+                                    </p>
+                                    <p className={cn("text-lg font-black tracking-tight", invoice.amount < 0 && "text-amber-600")}>
+                                        {invoice.status === "paid" ? formatCurrency(0, settings?.currency) : formatCurrency(invoice.amount, settings?.currency)}
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -496,16 +590,16 @@ function InvoiceDetail({ id }: { id: Id<"invoices"> }) {
                     <table className="w-full text-left">
                         <thead>
                             <tr className="border-b-2 border-zinc-100">
-                                <th className="pb-6 text-sm font-black uppercase tracking-tight w-[45%]">Item & Description</th>
-                                <th className="pb-6 text-sm font-black uppercase tracking-tight text-center w-[15%]">Qty</th>
-                                <th className="pb-6 text-sm font-black uppercase tracking-tight text-right w-[20%]">Rate</th>
-                                <th className="pb-6 text-sm font-black uppercase tracking-tight text-right w-[20%]">Total</th>
+                                <th className="pb-3 text-sm font-black uppercase tracking-tight w-[45%]">Item & Description</th>
+                                <th className="pb-3 text-sm font-black uppercase tracking-tight text-center w-[15%]">Qty</th>
+                                <th className="pb-3 text-sm font-black uppercase tracking-tight text-right w-[20%]">Rate</th>
+                                <th className="pb-3 text-sm font-black uppercase tracking-tight text-right w-[20%]">Total</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-50">
                             {invoice.items?.map((item: any, idx: number) => (
                                 <tr key={idx} className="group">
-                                    <td className="py-8 pr-4">
+                                    <td className="py-3 pr-4">
                                         <div className="space-y-1">
                                             <p className="font-bold text-zinc-900">{item.name}</p>
                                             <p className="text-xs text-zinc-500 leading-relaxed max-w-sm">{item.description}</p>
@@ -516,13 +610,13 @@ function InvoiceDetail({ id }: { id: Id<"invoices"> }) {
                                             )}
                                         </div>
                                     </td>
-                                    <td className="py-8 text-center">
+                                    <td className="py-3 text-center">
                                         <span className="text-sm font-bold text-zinc-700 bg-zinc-50 px-3 py-1 rounded-lg">{item.amount}</span>
                                     </td>
-                                    <td className="py-8 text-right font-bold text-zinc-700">
+                                    <td className="py-3 text-right font-bold text-zinc-700">
                                         {formatCurrency(item.unitPrice, settings?.currency)}
                                     </td>
-                                    <td className="py-8 text-right font-black text-zinc-900">
+                                    <td className="py-3 text-right font-black text-zinc-900">
                                         {formatCurrency(item.amount * item.unitPrice, settings?.currency)}
                                     </td>
                                 </tr>
@@ -532,37 +626,69 @@ function InvoiceDetail({ id }: { id: Id<"invoices"> }) {
                 </div>
 
                 {/* Summary Section */}
-                <div className="flex justify-end pt-12 border-t-2 border-zinc-100">
-                    <div className="w-full md:w-80 space-y-6">
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-center text-sm">
-                                <span className="text-zinc-500 font-bold uppercase tracking-widest text-[10px]">Subtotal</span>
-                                <span className="font-bold text-zinc-900">{formatCurrency(invoice.amount, settings?.currency)}</span>
-                            </div>
-                            <div className="flex justify-between items-center text-sm">
-                                <span className="text-zinc-500 font-bold uppercase tracking-widest text-[10px]">Tax (0%)</span>
-                                <span className="font-bold text-zinc-900">$0.00</span>
-                            </div>
-                        </div>
-                        <div className="pt-6 border-t border-zinc-100 flex justify-between items-end">
-                            <div>
-                                <span className="text-zinc-400 font-bold uppercase tracking-widest text-[10px] block mb-1">Total Amount</span>
-                                <span className="text-4xl font-black tracking-tighter text-zinc-900">{formatCurrency(invoice.amount, settings?.currency)}</span>
-                            </div>
-                            {invoice.status === "paid" && (
-                                <div className="bg-emerald-50 text-emerald-600 px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 mb-2">
-                                    <CheckCircle2 size={12} />
-                                    Fully Paid
+                {(() => {
+                    const credits = (invoice as any).credits as { description: string; amount: number }[] | undefined;
+                    const creditsTotal = credits?.reduce((a, c) => a + c.amount, 0) ?? 0;
+                    // invoice.amount is already the net total (items − credits).
+                    // Back-calculate the items subtotal for display.
+                    const itemsSubtotal = creditsTotal > 0 ? invoice.amount + creditsTotal : invoice.amount;
+
+                    return (
+                        <div className="flex justify-end pt-6 border-t-2 border-zinc-100">
+                            <div className="w-full md:w-72 space-y-3">
+
+                                {/* Subtotal row */}
+                                <div className="flex justify-between items-center">
+                                    <span className="text-zinc-500 font-bold uppercase tracking-widest text-[10px]">Subtotal</span>
+                                    <span className="text-sm font-bold text-zinc-900">{formatCurrency(itemsSubtotal, settings?.currency)}</span>
                                 </div>
-                            )}
+
+                                {/* Credit deduction rows */}
+                                {creditsTotal > 0 && credits?.map((credit, idx) => (
+                                    <div key={idx} className="flex justify-between items-center gap-4">
+                                        <span className="text-[10px] font-bold uppercase tracking-widest text-amber-600 truncate">
+                                            Credit — {credit.description}
+                                        </span>
+                                        <span className="text-sm font-bold text-amber-700 shrink-0">
+                                            − {formatCurrency(credit.amount, settings?.currency)}
+                                        </span>
+                                    </div>
+                                ))}
+
+                                {/* Total */}
+                                <div className="pt-3 border-t border-zinc-100 flex justify-between items-end">
+                                    <div>
+                                        <span className="text-zinc-400 font-bold uppercase tracking-widest text-[10px] block mb-1">
+                                            {invoice.amount < 0 ? "Credit Due to Client" : "Total Amount"}
+                                        </span>
+                                        <span className={cn(
+                                            "text-2xl font-black tracking-tighter",
+                                            invoice.amount < 0 ? "text-amber-600" : "text-zinc-900"
+                                        )}>
+                                            {formatCurrency(invoice.amount, settings?.currency)}
+                                        </span>
+                                    </div>
+                                    {invoice.amount < 0 ? (
+                                        <div className="bg-amber-50 text-amber-700 border border-amber-100 px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 mb-2">
+                                            <span>Credit Balance</span>
+                                        </div>
+                                    ) : invoice.status === "paid" && (
+                                        <div className="bg-emerald-50 text-emerald-600 px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 mb-2">
+                                            <CheckCircle2 size={12} />
+                                            Fully Paid
+                                        </div>
+                                    )}
+                                </div>
+
+                            </div>
                         </div>
-                    </div>
-                </div>
+                    );
+                })()}
 
                 {/* Attached Supplier Invoices */}
                 {invoice.orders && invoice.orders.length > 0 && (
-                    <div className="pt-16 border-t border-zinc-100 no-print">
-                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-8 text-center">Attached Documents & Supplier Invoices</p>
+                    <div className="pt-6 border-t border-zinc-100 no-print">
+                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4 text-center">Attached Documents & Supplier Invoices</p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {invoice.orders.map((order: any) => (
                                 <Card key={order._id} className="p-6 bg-zinc-50/50 border-dashed hover:bg-zinc-50 transition-colors">
@@ -592,8 +718,8 @@ function InvoiceDetail({ id }: { id: Id<"invoices"> }) {
                 )}
 
                 {/* Footer Message */}
-                <div className="pt-20 border-t border-zinc-100">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12 text-zinc-500 text-[11px] font-medium leading-relaxed uppercase tracking-wider">
+                <div className="pt-6 border-t border-zinc-100">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-zinc-500 text-[11px] font-medium leading-relaxed uppercase tracking-wider">
                         <div>
                             <p className="font-black text-zinc-900 mb-2">Payment Terms</p>
                             <p>Please pay within 14 days of receiving this invoice.</p>

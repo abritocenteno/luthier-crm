@@ -43,6 +43,7 @@ function EditInvoiceForm({ id }: { id: Id<"invoices"> }) {
         status: "pending",
         paymentMethod: "",
         items: [] as { name: string; description: string; remark: string; amount: number; unitPrice: number }[],
+        credits: [] as { description: string; amount: number }[],
     });
 
     // Pre-fill form data when invoice is loaded
@@ -56,12 +57,15 @@ function EditInvoiceForm({ id }: { id: Id<"invoices"> }) {
                 status: invoice.status,
                 paymentMethod: invoice.paymentMethod || "",
                 items: invoice.items || [],
+                credits: (invoice as any).credits || [],
             });
         }
     }, [invoice]);
 
-    const calculateTotal = (items: typeof formData.items) => {
-        return items.reduce((acc, item) => acc + (item.amount * item.unitPrice), 0);
+    const calculateTotal = (items: typeof formData.items, credits: typeof formData.credits = formData.credits) => {
+        const subtotal = items.reduce((acc, item) => acc + (item.amount * item.unitPrice), 0);
+        const creditsTotal = credits.reduce((acc, c) => acc + c.amount, 0);
+        return subtotal - creditsTotal;
     };
 
     const handleAddItem = () => {
@@ -76,7 +80,7 @@ function EditInvoiceForm({ id }: { id: Id<"invoices"> }) {
         setFormData(prev => ({
             ...prev,
             items: newItems,
-            amount: calculateTotal(newItems)
+            amount: calculateTotal(newItems, prev.credits)
         }));
     };
 
@@ -86,8 +90,30 @@ function EditInvoiceForm({ id }: { id: Id<"invoices"> }) {
         setFormData(prev => ({
             ...prev,
             items: newItems,
-            amount: calculateTotal(newItems)
+            amount: calculateTotal(newItems, prev.credits)
         }));
+    };
+
+    const handleAddCredit = () => {
+        setFormData(prev => {
+            const newCredits = [...prev.credits, { description: "", amount: 0 }];
+            return { ...prev, credits: newCredits, amount: calculateTotal(prev.items, newCredits) };
+        });
+    };
+
+    const handleRemoveCredit = (index: number) => {
+        setFormData(prev => {
+            const newCredits = prev.credits.filter((_, i) => i !== index);
+            return { ...prev, credits: newCredits, amount: calculateTotal(prev.items, newCredits) };
+        });
+    };
+
+    const handleUpdateCredit = (index: number, field: keyof { description: string; amount: number }, value: string | number) => {
+        setFormData(prev => {
+            const newCredits = [...prev.credits];
+            newCredits[index] = { ...newCredits[index], [field]: value };
+            return { ...prev, credits: newCredits, amount: calculateTotal(prev.items, newCredits) };
+        });
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -103,6 +129,7 @@ function EditInvoiceForm({ id }: { id: Id<"invoices"> }) {
                 id,
                 ...formData,
                 clientId: formData.clientId as Id<"clients">,
+                credits: formData.credits,
             });
             router.push("/dashboard/invoices");
         } catch (error) {
@@ -352,6 +379,94 @@ function EditInvoiceForm({ id }: { id: Id<"invoices"> }) {
                             </table>
                         </div>
                     </Card>
+                </div>
+
+                {/* Credits & Discounts Section */}
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                            <h2 className="text-xl font-bold tracking-tight text-zinc-900">Credits & Discounts</h2>
+                            <p className="text-sm text-zinc-500">Deduct outstanding credits or discounts from the total.</p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={handleAddCredit}
+                            className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-xl text-xs font-bold hover:bg-black transition-all active:scale-95 shadow-lg shadow-black/5"
+                        >
+                            <Plus size={14} />
+                            Add Credit
+                        </button>
+                    </div>
+
+                    {formData.credits.length > 0 ? (
+                        <Card>
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest border-b border-zinc-100 bg-zinc-50/50">
+                                        <th className="px-6 py-4">Description</th>
+                                        <th className="px-6 py-4 w-[180px] text-right">Amount</th>
+                                        <th className="px-4 py-4 w-[40px]"></th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-zinc-100">
+                                    {formData.credits.map((credit, index) => (
+                                        <tr key={index} className="group hover:bg-zinc-50/30 transition-colors">
+                                            <td className="px-6 py-3">
+                                                <input
+                                                    required
+                                                    placeholder="e.g. Previous overpayment, warranty credit..."
+                                                    className="w-full bg-transparent border-none text-sm font-medium focus:ring-0 placeholder:text-zinc-300"
+                                                    value={credit.description}
+                                                    onChange={e => handleUpdateCredit(index, "description", e.target.value)}
+                                                />
+                                            </td>
+                                            <td className="px-6 py-3 text-right">
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <span className="text-[10px] font-bold text-zinc-400">{getCurrencySymbol(settings?.currency)}</span>
+                                                    <input
+                                                        type="number"
+                                                        step="0.01"
+                                                        min="0"
+                                                        required
+                                                        className="w-24 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-bold text-right py-1 focus:ring-2 focus:ring-black/5 transition-all"
+                                                        value={credit.amount || ""}
+                                                        placeholder="0.00"
+                                                        onChange={e => handleUpdateCredit(index, "amount", parseFloat(e.target.value) || 0)}
+                                                    />
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRemoveCredit(index)}
+                                                    className="p-1.5 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                                <tfoot>
+                                    <tr className="bg-amber-50/60 border-t border-amber-100">
+                                        <td className="px-6 py-3 text-right">
+                                            <span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Total Credits</span>
+                                        </td>
+                                        <td className="px-6 py-3 text-right">
+                                            <span className="text-sm font-black text-amber-700">
+                                                − {formatCurrency(formData.credits.reduce((a, c) => a + c.amount, 0), settings?.currency)}
+                                            </span>
+                                        </td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </Card>
+                    ) : (
+                        <div className="px-6 py-8 text-center text-zinc-400 italic text-sm border border-dashed border-zinc-200 rounded-2xl">
+                            No credits added. Click "Add Credit" to apply a deduction.
+                        </div>
+                    )}
                 </div>
 
                 <div className="w-full lg:w-1/2">

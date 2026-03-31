@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth, UserButton } from "@clerk/nextjs";
+import { UserButton } from "@/components/clerk-compat";
 import {
     Users,
     Truck,
@@ -8,19 +8,50 @@ import {
     LayoutDashboard,
     Calendar,
     Settings,
-    LogOut,
+
     ChevronLeft,
     ChevronRight,
     Menu,
     X,
     ShoppingBag,
+    RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
-import { SignInButton } from "@clerk/nextjs";
+
+/**
+ * Smart recovery button shown when Convex reports Unauthenticated.
+ *
+ * Two cases:
+ *  1. Clerk session is still alive but Convex lost the token (most common after
+ *     a tab sits idle). A simple page reload re-fetches a fresh JWT and Convex
+ *     reconnects automatically.
+ *  2. The user is genuinely signed out. After reload the landing page / Clerk
+ *     middleware will handle redirecting them to sign in.
+ *
+ * Using a modal SignInButton here causes the Clerk error
+ * "cannot_render_single_session_enabled" because Clerk still considers the
+ * user signed-in even though Convex has lost the token.
+ */
+function SessionRecoveryButton() {
+    const handleRecover = () => {
+        // Hard reload — forces Clerk to re-issue a fresh JWT, Convex re-auths.
+        window.location.reload();
+    };
+
+    return (
+        <button
+            onClick={handleRecover}
+            className="flex items-center gap-2 bg-black text-white px-8 py-3 rounded-xl font-bold hover:bg-zinc-800 transition-all active:scale-95 shadow-lg shadow-black/10"
+        >
+            <RefreshCw size={18} />
+            Reconnect Session
+        </button>
+    );
+}
 
 const SidebarItem = ({
     icon: Icon,
@@ -200,11 +231,7 @@ export default function DashboardLayout({
                                 <h2 className="text-2xl font-bold tracking-tight">Access Restricted</h2>
                                 <p className="text-zinc-500 max-w-sm">Please sign in to your workshop account to access the dashboard and manage your projects.</p>
                             </div>
-                            <SignInButton mode="modal">
-                                <button className="bg-black text-white px-8 py-3 rounded-xl font-bold hover:bg-zinc-800 transition-all active:scale-95 shadow-lg shadow-black/10">
-                                    Sign In Now
-                                </button>
-                            </SignInButton>
+                            <SessionRecoveryButton />
                         </div>
                     </Unauthenticated>
                     <AuthLoading>

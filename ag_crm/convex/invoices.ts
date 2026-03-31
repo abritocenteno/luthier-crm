@@ -31,6 +31,10 @@ export const add = mutation({
             unitPrice: v.number(),
             fromOrderId: v.optional(v.id("orders")),
         }))),
+        credits: v.optional(v.array(v.object({
+            description: v.string(),
+            amount: v.number(),
+        }))),
         invoiceStorageId: v.optional(v.id("_storage")),
         orderIds: v.optional(v.array(v.id("orders"))),
     },
@@ -86,6 +90,10 @@ export const update = mutation({
             remark: v.string(),
             amount: v.number(),
             unitPrice: v.number(),
+        }))),
+        credits: v.optional(v.array(v.object({
+            description: v.string(),
+            amount: v.number(),
         }))),
         orderIds: v.optional(v.array(v.id("orders"))),
     },

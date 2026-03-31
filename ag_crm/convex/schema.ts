@@ -36,6 +36,10 @@ export default defineSchema({
             unitPrice: v.number(),
             fromOrderId: v.optional(v.id("orders")),
         }))),
+        credits: v.optional(v.array(v.object({
+            description: v.string(),
+            amount: v.number(),
+        }))),
         invoiceStorageId: v.optional(v.id("_storage")),
         orderIds: v.optional(v.array(v.id("orders"))),
         userId: v.string(),
