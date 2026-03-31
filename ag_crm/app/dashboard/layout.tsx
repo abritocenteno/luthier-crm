@@ -8,7 +8,6 @@ import {
     LayoutDashboard,
     Calendar,
     Settings,
-
     ChevronLeft,
     ChevronRight,
     Menu,
@@ -16,6 +15,7 @@ import {
     ShoppingBag,
     RefreshCw,
     Wrench,
+    BarChart2,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -101,6 +101,7 @@ export default function DashboardLayout({
         { label: "Invoices", icon: FileText, href: "/dashboard/invoices" },
         { label: "Orders", icon: ShoppingBag, href: "/dashboard/orders" },
         { label: "Calendar", icon: Calendar, href: "/dashboard/schedule" },
+        { label: "Reports", icon: BarChart2, href: "/dashboard/reports" },
         { label: "Settings", icon: Settings, href: "/dashboard/settings" },
     ];
 
