@@ -153,6 +153,10 @@ export default defineSchema({
         invoiceId: v.optional(v.id("invoices")),
         // Internal notes
         internalNotes: v.optional(v.string()),
+        // Quote
+        sentQuoteAt: v.optional(v.number()),
+        // Photos (before/after)
+        photoIds: v.optional(v.array(v.id("_storage"))),
     })
         .index("by_user", ["userId"])
         .index("by_client", ["clientId"]),

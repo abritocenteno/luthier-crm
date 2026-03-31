@@ -56,7 +56,8 @@ function CreateJobForm() {
     const [clientId, setClientId] = useState<Id<"clients"> | "">(initialClientId ?? "");
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
-    const [status] = useState("intake");
+    const [startAsQuote, setStartAsQuote] = useState(false);
+    const status = startAsQuote ? "quoted" : "intake";
 
     // Instrument
     const [instrumentType, setInstrumentType] = useState("Guitar");
@@ -217,6 +218,27 @@ function CreateJobForm() {
                                 onChange={(e) => setDescription(e.target.value)}
                                 className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black/5 resize-none"
                             />
+                        </div>
+
+                        {/* Start as Quote toggle */}
+                        <div className="flex items-center justify-between p-4 bg-zinc-50 rounded-xl border border-zinc-100">
+                            <div>
+                                <p className="text-sm font-bold text-zinc-800">Start as Quote</p>
+                                <p className="text-xs text-zinc-500 mt-0.5">Send the client a price estimate before starting work.</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setStartAsQuote((v) => !v)}
+                                className={cn(
+                                    "relative w-11 h-6 rounded-full transition-colors",
+                                    startAsQuote ? "bg-black" : "bg-zinc-200"
+                                )}
+                            >
+                                <span className={cn(
+                                    "absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform",
+                                    startAsQuote ? "translate-x-6" : "translate-x-1"
+                                )} />
+                            </button>
                         </div>
 
                         {/* Dates */}

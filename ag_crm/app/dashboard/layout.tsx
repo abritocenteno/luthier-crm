@@ -100,7 +100,7 @@ export default function DashboardLayout({
         { label: "Suppliers", icon: Truck, href: "/dashboard/suppliers" },
         { label: "Invoices", icon: FileText, href: "/dashboard/invoices" },
         { label: "Orders", icon: ShoppingBag, href: "/dashboard/orders" },
-        { label: "Schedule", icon: Calendar, href: "/dashboard/schedule" },
+        { label: "Calendar", icon: Calendar, href: "/dashboard/schedule" },
         { label: "Settings", icon: Settings, href: "/dashboard/settings" },
     ];
 

@@ -85,7 +85,11 @@ export const get = query({
 
         const invoice = job.invoiceId ? await ctx.db.get(job.invoiceId) : null;
 
-        return { ...job, client, orders, invoice };
+        const photoUrls = job.photoIds
+            ? await Promise.all(job.photoIds.map((pid) => ctx.storage.getUrl(pid)))
+            : [];
+
+        return { ...job, client, orders, invoice, photoUrls };
     },
 });
 
@@ -107,6 +111,7 @@ export const add = mutation({
         estimatedCompletionDate: v.optional(v.number()),
         orderIds: v.optional(v.array(v.id("orders"))),
         internalNotes: v.optional(v.string()),
+        sentQuoteAt: v.optional(v.number()),
     },
     handler: async (ctx, args) => {
         const identity = await ctx.auth.getUserIdentity();
@@ -139,6 +144,7 @@ export const update = mutation({
         completionDate: v.optional(v.number()),
         orderIds: v.optional(v.array(v.id("orders"))),
         internalNotes: v.optional(v.string()),
+        sentQuoteAt: v.optional(v.number()),
     },
     handler: async (ctx, args) => {
         const identity = await ctx.auth.getUserIdentity();
@@ -224,5 +230,53 @@ export const generateInvoice = mutation({
         await ctx.db.patch(id, { invoiceId });
 
         return invoiceId;
+    },
+});
+
+// Generate a short-lived upload URL for a photo
+export const generateUploadUrl = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) throw new Error("Unauthorized");
+        return ctx.storage.generateUploadUrl();
+    },
+});
+
+// Attach a photo storageId to a job
+export const addJobPhoto = mutation({
+    args: { id: v.id("jobs"), storageId: v.id("_storage") },
+    handler: async (ctx, { id, storageId }) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) throw new Error("Unauthorized");
+        const job = await ctx.db.get(id);
+        if (!job || job.userId !== identity.tokenIdentifier) throw new Error("Not found");
+        const existing = job.photoIds ?? [];
+        await ctx.db.patch(id, { photoIds: [...existing, storageId] });
+    },
+});
+
+// Remove a photo from a job
+export const removeJobPhoto = mutation({
+    args: { id: v.id("jobs"), storageId: v.id("_storage") },
+    handler: async (ctx, { id, storageId }) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) throw new Error("Unauthorized");
+        const job = await ctx.db.get(id);
+        if (!job || job.userId !== identity.tokenIdentifier) throw new Error("Not found");
+        await ctx.db.patch(id, { photoIds: (job.photoIds ?? []).filter((p) => p !== storageId) });
+        await ctx.storage.delete(storageId);
+    },
+});
+
+// Mark quote as sent
+export const markQuoteSent = mutation({
+    args: { id: v.id("jobs") },
+    handler: async (ctx, { id }) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) throw new Error("Unauthorized");
+        const job = await ctx.db.get(id);
+        if (!job || job.userId !== identity.tokenIdentifier) throw new Error("Not found");
+        await ctx.db.patch(id, { sentQuoteAt: Date.now() });
     },
 });

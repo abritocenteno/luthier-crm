@@ -1,6 +1,6 @@
 "use client";
 
-import { use, Suspense, useState } from "react";
+import { use, Suspense, useState, useRef } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -9,11 +9,12 @@ import { Id } from "../../../../convex/_generated/dataModel";
 import {
     ArrowLeft, Wrench, Edit2, FileText, Guitar, Calendar, Clock,
     CheckCircle2, AlertCircle, Loader2, ExternalLink, StickyNote,
-    ChevronRight, Package, User, Inbox, Bell,
+    ChevronRight, Package, User, Inbox, Bell, Send, ImagePlus, X, Trash2,
 } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 
 const STATUS_STEPS = [
+    { key: "quoted",        label: "Quote",             desc: "Awaiting approval" },
     { key: "intake",        label: "Intake",            desc: "Instrument received" },
     { key: "in_progress",   label: "In Progress",       desc: "Work underway" },
     { key: "waiting_parts", label: "Waiting for Parts", desc: "Parts on order" },
@@ -46,11 +47,20 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
     const updateStatus = useMutation(api.jobs.updateStatus);
     const generateInvoice = useMutation(api.jobs.generateInvoice);
     const notifyClient = useAction(api.resend.sendJobReadyEmail);
+    const sendQuote = useAction(api.resend.sendQuoteEmail);
+    const markQuoteSent = useMutation(api.jobs.markQuoteSent);
+    const generateUploadUrl = useMutation(api.jobs.generateUploadUrl);
+    const addJobPhoto = useMutation(api.jobs.addJobPhoto);
+    const removeJobPhoto = useMutation(api.jobs.removeJobPhoto);
 
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isNotifying, setIsNotifying] = useState(false);
     const [notified, setNotified] = useState(false);
+    const [isSendingQuote, setIsSendingQuote] = useState(false);
+    const [quoteSent, setQuoteSent] = useState(false);
+    const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+    const photoInputRef = useRef<HTMLInputElement>(null);
 
     if (job === undefined) {
         return <div className="flex items-center justify-center min-h-[400px]"><Loader2 className="animate-spin text-zinc-300" size={32} /></div>;
@@ -108,6 +118,51 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
         }
     };
 
+    const handleSendQuote = async () => {
+        setIsSendingQuote(true);
+        try {
+            await sendQuote({ jobId: id });
+            await markQuoteSent({ id });
+            setQuoteSent(true);
+        } catch (err: any) {
+            alert(err.message ?? "Failed to send quote.");
+        } finally {
+            setIsSendingQuote(false);
+        }
+    };
+
+    const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files ?? []);
+        if (!files.length) return;
+        setIsUploadingPhoto(true);
+        try {
+            for (const file of files) {
+                const uploadUrl = await generateUploadUrl();
+                const res = await fetch(uploadUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": file.type },
+                    body: file,
+                });
+                const { storageId } = await res.json();
+                await addJobPhoto({ id, storageId });
+            }
+        } catch (err: any) {
+            alert(err.message ?? "Failed to upload photo.");
+        } finally {
+            setIsUploadingPhoto(false);
+            if (photoInputRef.current) photoInputRef.current.value = "";
+        }
+    };
+
+    const handleRemovePhoto = async (storageId: string) => {
+        if (!confirm("Remove this photo?")) return;
+        try {
+            await removeJobPhoto({ id, storageId: storageId as any });
+        } catch (err: any) {
+            alert(err.message ?? "Failed to remove photo.");
+        }
+    };
+
     return (
         <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
             {/* Header */}
@@ -140,6 +195,35 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
                             <Edit2 size={16} />
                             Edit
                         </Link>
+                    )}
+                    {job.status === "quoted" && (
+                        <>
+                            <button
+                                onClick={handleSendQuote}
+                                disabled={isSendingQuote || quoteSent}
+                                className={cn(
+                                    "flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95 shadow-lg disabled:opacity-60",
+                                    quoteSent
+                                        ? "bg-emerald-500 text-white shadow-emerald-500/20"
+                                        : "bg-amber-500 text-white hover:bg-amber-600 shadow-amber-500/20"
+                                )}
+                            >
+                                {isSendingQuote ? <Loader2 size={16} className="animate-spin" /> : quoteSent ? <CheckCircle2 size={16} /> : <Send size={16} />}
+                                {quoteSent
+                                    ? "Quote Sent"
+                                    : (job as any).sentQuoteAt
+                                        ? "Resend Quote"
+                                        : "Send Quote"}
+                            </button>
+                            <button
+                                onClick={() => handleStatusChange("intake")}
+                                disabled={isUpdatingStatus}
+                                className="flex items-center gap-2 px-5 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-bold hover:bg-zinc-50 transition-all active:scale-95 shadow-sm"
+                            >
+                                <CheckCircle2 size={16} className="text-emerald-500" />
+                                Accept Quote
+                            </button>
+                        </>
                     )}
                     {job.status === "ready" && (
                         <button
@@ -403,6 +487,52 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
                             </div>
                         </Card>
                     )}
+
+                    {/* Photos */}
+                    <Card>
+                        <div className="px-6 pt-6 pb-4 flex items-center justify-between">
+                            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Photos</p>
+                            <button
+                                type="button"
+                                onClick={() => photoInputRef.current?.click()}
+                                disabled={isUploadingPhoto}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 text-white rounded-xl text-xs font-bold hover:bg-black transition-all active:scale-95 disabled:opacity-50"
+                            >
+                                {isUploadingPhoto ? <Loader2 size={12} className="animate-spin" /> : <ImagePlus size={12} />}
+                                {isUploadingPhoto ? "Uploading…" : "Add Photos"}
+                            </button>
+                            <input
+                                ref={photoInputRef}
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                className="hidden"
+                                onChange={handlePhotoUpload}
+                            />
+                        </div>
+                        {!(job as any).photoUrls?.length ? (
+                            <div className="px-6 pb-8 text-center text-zinc-400 italic text-sm">
+                                No photos yet. Add before &amp; after shots.
+                            </div>
+                        ) : (
+                            <div className="px-6 pb-6 grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                {(job as any).photoUrls.map((url: string, i: number) => {
+                                    const storageId = (job as any).photoIds?.[i];
+                                    return (
+                                        <div key={i} className="relative group aspect-square rounded-xl overflow-hidden border border-zinc-100 bg-zinc-50">
+                                            <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
+                                            <button
+                                                onClick={() => handleRemovePhoto(storageId)}
+                                                className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 hover:bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+                                            >
+                                                <X size={10} />
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </Card>
 
                     {/* Linked Orders */}
                     {(job as any).orders?.length > 0 && (
