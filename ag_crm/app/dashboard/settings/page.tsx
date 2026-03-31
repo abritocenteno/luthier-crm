@@ -3,12 +3,26 @@
 import { useState, useRef, useEffect } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { Save, Upload, Loader2, Building, Mail, MapPin, Phone, Globe, Hash, CreditCard, Languages, Coins } from "lucide-react";
+import { Save, Upload, Loader2, Building, Mail, MapPin, Phone, Globe, Hash, CreditCard, Languages, Coins, Wrench, Plus, Trash2, Pencil, Check, X } from "lucide-react";
+import { cn, formatCurrency, getCurrencySymbol } from "@/lib/utils";
+import { Id } from "../../../convex/_generated/dataModel";
 
 export default function SettingsPage() {
     const settings = useQuery(api.settings.get);
     const upsertSettings = useMutation(api.settings.upsert);
     const generateUploadUrl = useMutation(api.files.generateUploadUrl);
+
+    // Service library
+    const services = useQuery(api.services.list);
+    const addService = useMutation(api.services.add);
+    const updateService = useMutation(api.services.update);
+    const removeService = useMutation(api.services.remove);
+
+    type ServiceDraft = { name: string; description: string; type: "fixed" | "hourly"; defaultPrice: number };
+    const emptyDraft = (): ServiceDraft => ({ name: "", description: "", type: "fixed", defaultPrice: 0 });
+    const [newService, setNewService] = useState<ServiceDraft>(emptyDraft());
+    const [editingId, setEditingId] = useState<Id<"services"> | null>(null);
+    const [editDraft, setEditDraft] = useState<ServiceDraft>(emptyDraft());
 
     const [isSaving, setIsSaving] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
@@ -19,6 +33,7 @@ export default function SettingsPage() {
     const [phone, setPhone] = useState("");
     const [website, setWebsite] = useState("");
     const [kvkNumber, setKvkNumber] = useState("");
+    const [btwNumber, setBtwNumber] = useState("");
     const [bankAccounts, setBankAccounts] = useState("");
     const [addressLine1, setAddressLine1] = useState("");
     const [addressLine2, setAddressLine2] = useState("");
@@ -37,6 +52,7 @@ export default function SettingsPage() {
             setPhone(settings.phone || "");
             setWebsite(settings.website || "");
             setKvkNumber(settings.kvkNumber || "");
+            setBtwNumber((settings as any).btwNumber || "");
             setBankAccounts(settings.bankAccounts || "");
             setAddressLine1(settings.addressLine1);
             setAddressLine2(settings.addressLine2);
@@ -87,6 +103,7 @@ export default function SettingsPage() {
                 phone,
                 website,
                 kvkNumber,
+                btwNumber,
                 bankAccounts,
                 addressLine1,
                 addressLine2,
@@ -241,6 +258,20 @@ export default function SettingsPage() {
                                 />
                             </div>
 
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-zinc-700 flex items-center gap-2">
+                                    <Hash className="h-4 w-4 text-zinc-400" />
+                                    BTW-Nummer (VAT)
+                                </label>
+                                <input
+                                    type="text"
+                                    value={btwNumber}
+                                    onChange={(e) => setBtwNumber(e.target.value)}
+                                    className="w-full px-4 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                                    placeholder="e.g. NL123456789B01"
+                                />
+                            </div>
+
                             <div className="space-y-2 md:col-span-2">
                                 <hr className="border-zinc-100 my-2" />
                             </div>
@@ -334,6 +365,162 @@ export default function SettingsPage() {
                                     <option value="JPY">JPY (¥)</option>
                                     <option value="BRL">BRL (R$)</option>
                                 </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* ── Service Library ── */}
+                <div className="p-6 sm:p-8 space-y-6 border-t border-zinc-100">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h3 className="text-lg font-semibold flex items-center gap-2">
+                                <Wrench className="h-4 w-4 text-zinc-400" />
+                                Service Library
+                            </h3>
+                            <p className="text-sm text-zinc-500 mt-0.5">Predefined services you can add to jobs with one click.</p>
+                        </div>
+                    </div>
+
+                    {/* Existing services */}
+                    <div className="divide-y divide-zinc-100 border border-zinc-200 rounded-xl overflow-hidden">
+                        {services === undefined ? (
+                            <div className="p-6 text-center"><Loader2 className="animate-spin mx-auto text-zinc-300" size={20} /></div>
+                        ) : services.length === 0 ? (
+                            <div className="p-6 text-center text-sm text-zinc-400 italic">No services yet. Add one below.</div>
+                        ) : services.map((svc) => (
+                            editingId === svc._id ? (
+                                /* Inline edit row */
+                                <div key={svc._id} className="p-4 bg-zinc-50 space-y-3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <input
+                                            autoFocus
+                                            value={editDraft.name}
+                                            onChange={(e) => setEditDraft((p) => ({ ...p, name: e.target.value }))}
+                                            placeholder="Service name"
+                                            className="px-3 py-2 text-sm border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black/5"
+                                        />
+                                        <input
+                                            value={editDraft.description}
+                                            onChange={(e) => setEditDraft((p) => ({ ...p, description: e.target.value }))}
+                                            placeholder="Description (optional)"
+                                            className="px-3 py-2 text-sm border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black/5 text-zinc-500"
+                                        />
+                                    </div>
+                                    <div className="flex items-center gap-3 flex-wrap">
+                                        <div className="flex rounded-lg overflow-hidden border border-zinc-200 text-xs font-bold">
+                                            {(["fixed", "hourly"] as const).map((t) => (
+                                                <button key={t} type="button"
+                                                    onClick={() => setEditDraft((p) => ({ ...p, type: t }))}
+                                                    className={cn("px-3 py-1.5 uppercase tracking-wider transition-all", editDraft.type === t ? "bg-black text-white" : "bg-white text-zinc-400 hover:bg-zinc-50")}>
+                                                    {t === "fixed" ? "Fixed" : "Hourly"}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <span className="text-xs text-zinc-400">{getCurrencySymbol(settings?.currency)}</span>
+                                            <input type="number" step="0.01" min="0"
+                                                value={editDraft.defaultPrice || ""}
+                                                onChange={(e) => setEditDraft((p) => ({ ...p, defaultPrice: parseFloat(e.target.value) || 0 }))}
+                                                className="w-24 px-3 py-1.5 text-sm border border-zinc-200 rounded-lg text-right focus:outline-none focus:ring-2 focus:ring-black/5"
+                                                placeholder="0.00" />
+                                            {editDraft.type === "hourly" && <span className="text-xs text-zinc-400">/hr</span>}
+                                        </div>
+                                        <div className="ml-auto flex gap-2">
+                                            <button type="button"
+                                                onClick={async () => {
+                                                    if (!editDraft.name) return;
+                                                    await updateService({ id: svc._id, ...editDraft });
+                                                    setEditingId(null);
+                                                }}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-black text-white rounded-lg text-xs font-bold hover:bg-zinc-800 transition-all">
+                                                <Check size={12} /> Save
+                                            </button>
+                                            <button type="button" onClick={() => setEditingId(null)}
+                                                className="p-1.5 text-zinc-400 hover:text-black hover:bg-zinc-100 rounded-lg transition-all">
+                                                <X size={14} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                /* Display row */
+                                <div key={svc._id} className="flex items-center justify-between px-4 py-3 group hover:bg-zinc-50/50 transition-colors">
+                                    <div className="min-w-0 flex-1 space-y-0.5">
+                                        <p className="text-sm font-bold text-zinc-900">{svc.name}</p>
+                                        {svc.description && <p className="text-xs text-zinc-400">{svc.description}</p>}
+                                    </div>
+                                    <div className="flex items-center gap-3 ml-4 shrink-0">
+                                        <span className={cn("text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-lg border",
+                                            svc.type === "hourly" ? "bg-blue-50 text-blue-600 border-blue-100" : "bg-zinc-50 text-zinc-500 border-zinc-100")}>
+                                            {svc.type === "hourly" ? "Hourly" : "Fixed"}
+                                        </span>
+                                        <span className="text-sm font-black text-zinc-900 w-20 text-right">
+                                            {formatCurrency(svc.defaultPrice, settings?.currency)}{svc.type === "hourly" ? "/hr" : ""}
+                                        </span>
+                                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button type="button"
+                                                onClick={() => { setEditingId(svc._id); setEditDraft({ name: svc.name, description: svc.description ?? "", type: svc.type as "fixed" | "hourly", defaultPrice: svc.defaultPrice }); }}
+                                                className="p-1.5 text-zinc-400 hover:text-black hover:bg-zinc-100 rounded-lg transition-all">
+                                                <Pencil size={13} />
+                                            </button>
+                                            <button type="button"
+                                                onClick={() => removeService({ id: svc._id })}
+                                                className="p-1.5 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all">
+                                                <Trash2 size={13} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        ))}
+
+                        {/* Add new service row */}
+                        <div className="p-4 bg-zinc-50/50 space-y-3">
+                            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Add New Service</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <input
+                                    value={newService.name}
+                                    onChange={(e) => setNewService((p) => ({ ...p, name: e.target.value }))}
+                                    placeholder="Service name (e.g. Full Setup)"
+                                    className="px-3 py-2 text-sm border border-zinc-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-black/5"
+                                />
+                                <input
+                                    value={newService.description}
+                                    onChange={(e) => setNewService((p) => ({ ...p, description: e.target.value }))}
+                                    placeholder="Description (optional)"
+                                    className="px-3 py-2 text-sm border border-zinc-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-black/5 text-zinc-500"
+                                />
+                            </div>
+                            <div className="flex items-center gap-3 flex-wrap">
+                                <div className="flex rounded-lg overflow-hidden border border-zinc-200 text-xs font-bold">
+                                    {(["fixed", "hourly"] as const).map((t) => (
+                                        <button key={t} type="button"
+                                            onClick={() => setNewService((p) => ({ ...p, type: t }))}
+                                            className={cn("px-3 py-1.5 uppercase tracking-wider transition-all", newService.type === t ? "bg-black text-white" : "bg-white text-zinc-400 hover:bg-zinc-50")}>
+                                            {t === "fixed" ? "Fixed" : "Hourly"}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <span className="text-xs text-zinc-400">{getCurrencySymbol(settings?.currency)}</span>
+                                    <input type="number" step="0.01" min="0"
+                                        value={newService.defaultPrice || ""}
+                                        onChange={(e) => setNewService((p) => ({ ...p, defaultPrice: parseFloat(e.target.value) || 0 }))}
+                                        className="w-24 px-3 py-1.5 text-sm border border-zinc-200 rounded-lg bg-white text-right focus:outline-none focus:ring-2 focus:ring-black/5"
+                                        placeholder="0.00" />
+                                    {newService.type === "hourly" && <span className="text-xs text-zinc-400">/hr</span>}
+                                </div>
+                                <button type="button"
+                                    disabled={!newService.name}
+                                    onClick={async () => {
+                                        if (!newService.name) return;
+                                        await addService(newService);
+                                        setNewService(emptyDraft());
+                                    }}
+                                    className="ml-auto flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg text-xs font-bold hover:bg-zinc-800 transition-all active:scale-95 disabled:opacity-40">
+                                    <Plus size={13} /> Add Service
+                                </button>
                             </div>
                         </div>
                     </div>

@@ -42,6 +42,7 @@ export default defineSchema({
         }))),
         invoiceStorageId: v.optional(v.id("_storage")),
         orderIds: v.optional(v.array(v.id("orders"))),
+        paidAt: v.optional(v.number()),
         userId: v.string(),
     })
         .index("by_client", ["clientId"])
@@ -68,6 +69,7 @@ export default defineSchema({
         phone: v.optional(v.string()),
         website: v.optional(v.string()),
         kvkNumber: v.optional(v.string()),
+        btwNumber: v.optional(v.string()),
         bankAccounts: v.optional(v.string()),
         logoStorageId: v.optional(v.id("_storage")),
         language: v.optional(v.string()),
@@ -104,6 +106,56 @@ export default defineSchema({
     })
         .index("by_supplier", ["supplierId"])
         .index("by_user", ["userId"]),
+    services: defineTable({
+        userId: v.string(),
+        name: v.string(),
+        description: v.optional(v.string()),
+        type: v.string(), // 'fixed' | 'hourly'
+        defaultPrice: v.number(),
+    }).index("by_user", ["userId"]),
+    jobs: defineTable({
+        userId: v.string(),
+        clientId: v.id("clients"),
+        title: v.string(),
+        description: v.optional(v.string()),
+        status: v.string(), // 'intake' | 'in_progress' | 'waiting_parts' | 'ready' | 'closed'
+        // Instrument details
+        instrumentType: v.string(),
+        instrumentBrand: v.optional(v.string()),
+        instrumentModel: v.optional(v.string()),
+        instrumentSerial: v.optional(v.string()),
+        instrumentColor: v.optional(v.string()),
+        // Intake condition checklist
+        intakeChecklist: v.optional(v.object({
+            tuners: v.optional(v.string()),      // 'good' | 'fair' | 'poor'
+            frets: v.optional(v.string()),
+            nut: v.optional(v.string()),
+            bridge: v.optional(v.string()),
+            neck: v.optional(v.string()),
+            body: v.optional(v.string()),
+            electronics: v.optional(v.string()),
+            notes: v.optional(v.string()),
+        })),
+        // Work items (services to be performed)
+        workItems: v.optional(v.array(v.object({
+            name: v.string(),
+            description: v.optional(v.string()),
+            type: v.string(), // 'fixed' | 'hourly'
+            unitPrice: v.number(), // fixed price OR hourly rate
+            hours: v.optional(v.number()), // for hourly items
+        }))),
+        // Dates
+        intakeDate: v.number(),
+        estimatedCompletionDate: v.optional(v.number()),
+        completionDate: v.optional(v.number()),
+        // Links
+        orderIds: v.optional(v.array(v.id("orders"))),
+        invoiceId: v.optional(v.id("invoices")),
+        // Internal notes
+        internalNotes: v.optional(v.string()),
+    })
+        .index("by_user", ["userId"])
+        .index("by_client", ["clientId"]),
     contacts: defineTable({
         name: v.string(),
         email: v.optional(v.string()),

@@ -15,6 +15,7 @@ import {
     X,
     ShoppingBag,
     RefreshCw,
+    Wrench,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -95,6 +96,7 @@ export default function DashboardLayout({
     const navigation = [
         { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
         { label: "Clients", icon: Users, href: "/dashboard/clients" },
+        { label: "Jobs", icon: Wrench, href: "/dashboard/jobs" },
         { label: "Suppliers", icon: Truck, href: "/dashboard/suppliers" },
         { label: "Invoices", icon: FileText, href: "/dashboard/invoices" },
         { label: "Orders", icon: ShoppingBag, href: "/dashboard/orders" },

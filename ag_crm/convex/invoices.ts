@@ -115,6 +115,46 @@ export const update = mutation({
     },
 });
 
+export const markAsPaid = mutation({
+    args: {
+        id: v.id("invoices"),
+        paymentMethod: v.optional(v.string()),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) throw new Error("Unauthorized");
+
+        const existing = await ctx.db.get(args.id);
+        if (!existing || existing.userId !== identity.tokenIdentifier) {
+            throw new Error("Invoice not found or unauthorized");
+        }
+
+        await ctx.db.patch(args.id, {
+            status: "paid",
+            paymentMethod: args.paymentMethod,
+            paidAt: Date.now(),
+        });
+    },
+});
+
+export const markAsUnpaid = mutation({
+    args: { id: v.id("invoices") },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) throw new Error("Unauthorized");
+
+        const existing = await ctx.db.get(args.id);
+        if (!existing || existing.userId !== identity.tokenIdentifier) {
+            throw new Error("Invoice not found or unauthorized");
+        }
+
+        await ctx.db.patch(args.id, {
+            status: "pending",
+            paidAt: undefined,
+        });
+    },
+});
+
 export const remove = mutation({
     args: { id: v.id("invoices") },
     handler: async (ctx, args) => {

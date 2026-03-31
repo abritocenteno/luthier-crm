@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, use, Suspense } from "react";
-import { useQuery, useAction } from "convex/react";
+import { useQuery, useAction, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -18,6 +18,9 @@ import {
     Printer,
     ExternalLink,
     Edit2,
+    Banknote,
+    ChevronDown,
+    RotateCcw,
 } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { Id } from "../../../../convex/_generated/dataModel";
@@ -176,11 +179,42 @@ function InvoiceDetail({ id }: { id: Id<"invoices"> }) {
     const settings = useQuery(api.settings.get);
     const invoiceRef = useRef<HTMLDivElement>(null);
 
+    const markAsPaid = useMutation(api.invoices.markAsPaid);
+    const markAsUnpaid = useMutation(api.invoices.markAsUnpaid);
+
     const [isDownloading, setIsDownloading] = useState(false);
     const [isSending, setIsSending] = useState(false);
     const [sendSuccess, setSendSuccess] = useState(false);
+    const [showPayModal, setShowPayModal] = useState(false);
+    const [selectedPayMethod, setSelectedPayMethod] = useState("Cash");
+    const [isMarkingPaid, setIsMarkingPaid] = useState(false);
 
     const [errorDetails, setErrorDetails] = useState<string | null>(null);
+
+    const PAYMENT_METHODS = ["Cash", "iDeal / Wero", "Bank Transfer", "Card", "Other"];
+
+    const handleMarkAsPaid = async () => {
+        if (!invoice) return;
+        setIsMarkingPaid(true);
+        try {
+            await markAsPaid({ id: invoice._id, paymentMethod: selectedPayMethod });
+            setShowPayModal(false);
+        } catch (err: any) {
+            alert(`Failed to mark as paid: ${err.message}`);
+        } finally {
+            setIsMarkingPaid(false);
+        }
+    };
+
+    const handleMarkAsUnpaid = async () => {
+        if (!invoice) return;
+        if (!confirm("Revert this invoice back to unpaid?")) return;
+        try {
+            await markAsUnpaid({ id: invoice._id });
+        } catch (err: any) {
+            alert(`Failed to revert: ${err.message}`);
+        }
+    };
 
     const handleDownloadPDF = async () => {
         if (!invoiceRef.current || !invoice) return;
@@ -326,8 +360,9 @@ function InvoiceDetail({ id }: { id: Id<"invoices"> }) {
             await sendEmailAction({
                 invoiceNumber: invoice.invoiceNumber,
                 clientName: invoice.client.name,
-                clientEmail: invoice.client.email || "", // Fallback if no email is set
-                replyToEmail: "billing@thedotguitars.com", // Validated domain sender
+                clientEmail: invoice.client.email || "",
+                replyToEmail: settings?.contactEmail || "billing@thedotguitars.com",
+                companyName: settings?.companyName,
                 pdfBase64: base64Data,
                 extraAttachments: extraAttachments,
             });
@@ -391,7 +426,7 @@ function InvoiceDetail({ id }: { id: Id<"invoices"> }) {
                             className="flex items-center gap-2 px-5 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-bold hover:bg-zinc-50 transition-all active:scale-95 shadow-sm"
                         >
                             <Edit2 size={18} />
-                            Edit Invoice
+                            Edit
                         </Link>
                     )}
                     <button
@@ -400,27 +435,87 @@ function InvoiceDetail({ id }: { id: Id<"invoices"> }) {
                         className="flex items-center gap-2 px-5 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-bold hover:bg-zinc-50 transition-all active:scale-95 disabled:opacity-50"
                     >
                         {isDownloading ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
-                        Download PDF
+                        PDF
                     </button>
                     <button
                         onClick={handleSendEmail}
                         disabled={isSending || sendSuccess}
                         className={cn(
-                            "flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95 shadow-lg disabled:opacity-50",
+                            "flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95 shadow-lg disabled:opacity-50",
                             sendSuccess
                                 ? "bg-emerald-500 text-white shadow-emerald-500/20"
-                                : "bg-black text-white hover:bg-zinc-800 shadow-black/10"
+                                : "bg-white border border-zinc-200 text-zinc-700 hover:bg-zinc-50 shadow-none"
                         )}
                     >
-                        {isSending ? (
-                            <Loader2 size={18} className="animate-spin" />
-                        ) : sendSuccess ? (
-                            <CheckCircle2 size={18} />
-                        ) : (
-                            <Mail size={18} />
-                        )}
-                        {sendSuccess ? "Sent Successfully" : "Send to Client"}
+                        {isSending ? <Loader2 size={18} className="animate-spin" /> : sendSuccess ? <CheckCircle2 size={18} /> : <Mail size={18} />}
+                        {sendSuccess ? "Sent!" : "Email"}
                     </button>
+
+                    {/* Mark as Paid / Paid indicator */}
+                    {invoice.status === "paid" ? (
+                        <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 px-5 py-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-sm font-bold text-emerald-700">
+                                <CheckCircle2 size={18} />
+                                Paid{(invoice as any).paidAt ? ` · ${new Date((invoice as any).paidAt).toLocaleDateString()}` : ""}
+                            </div>
+                            <button
+                                onClick={handleMarkAsUnpaid}
+                                title="Revert to unpaid"
+                                className="p-2.5 bg-white border border-zinc-200 rounded-xl text-zinc-400 hover:text-zinc-700 hover:bg-zinc-50 transition-all active:scale-95"
+                            >
+                                <RotateCcw size={16} />
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowPayModal((v) => !v)}
+                                className="flex items-center gap-2 px-5 py-2.5 bg-black text-white rounded-xl text-sm font-bold hover:bg-zinc-800 transition-all active:scale-95 shadow-lg shadow-black/10"
+                            >
+                                <Banknote size={18} />
+                                Mark as Paid
+                                <ChevronDown size={14} className={cn("transition-transform", showPayModal && "rotate-180")} />
+                            </button>
+
+                            {showPayModal && (
+                                <>
+                                    <div className="fixed inset-0 z-10" onClick={() => setShowPayModal(false)} />
+                                    <div className="absolute right-0 top-full mt-2 z-20 w-72 bg-white border border-zinc-200 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+                                        <div className="px-5 pt-5 pb-3">
+                                            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.15em] mb-3">Payment Method</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {PAYMENT_METHODS.map((m) => (
+                                                    <button
+                                                        key={m}
+                                                        type="button"
+                                                        onClick={() => setSelectedPayMethod(m)}
+                                                        className={cn(
+                                                            "px-3 py-1.5 rounded-lg text-xs font-bold border transition-all",
+                                                            selectedPayMethod === m
+                                                                ? "bg-black text-white border-black"
+                                                                : "bg-white text-zinc-500 border-zinc-200 hover:border-zinc-400"
+                                                        )}
+                                                    >
+                                                        {m}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="px-5 pb-5 pt-3 border-t border-zinc-100">
+                                            <button
+                                                onClick={handleMarkAsPaid}
+                                                disabled={isMarkingPaid}
+                                                className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                                            >
+                                                {isMarkingPaid ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+                                                Confirm Payment — {selectedPayMethod}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    )}
                 </div>
             </header>
 
@@ -503,6 +598,7 @@ function InvoiceDetail({ id }: { id: Id<"invoices"> }) {
                                 {settings?.phone && <p>{settings?.phone}</p>}
                                 {settings?.website && <p>{settings?.website.replace(/^https?:\/\//, '')}</p>}
                                 {settings?.kvkNumber && <p>KvK: {settings?.kvkNumber}</p>}
+                                {(settings as any)?.btwNumber && <p>BTW: {(settings as any).btwNumber}</p>}
                             </div>
                         </div>
                     </div>
@@ -558,25 +654,44 @@ function InvoiceDetail({ id }: { id: Id<"invoices"> }) {
                                 </div>
                             </div>
                         </div>
-                        <div className="space-y-2">
-                            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Payment Due</p>
-                            <div className="space-y-2 text-sm font-bold">
-                                <div>
-                                    <p className="text-zinc-400 font-medium text-[11px] mb-0.5">Due By</p>
-                                    <p>{new Date(invoice.date + 14 * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
+                        <div className="space-y-2 relative">
+                            {/* PAID stamp overlay */}
+                            {invoice.status === "paid" && (
+                                <div className="absolute -top-2 -right-2 rotate-[-12deg] pointer-events-none select-none">
+                                    <div className="px-3 py-1 border-2 border-emerald-400 rounded-lg">
+                                        <span className="text-emerald-500 font-black text-xl tracking-[0.25em] uppercase opacity-70">Paid</span>
+                                    </div>
                                 </div>
+                            )}
+                            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Payment</p>
+                            <div className="space-y-2 text-sm font-bold">
+                                {invoice.status !== "paid" && (
+                                    <div>
+                                        <p className="text-zinc-400 font-medium text-[11px] mb-0.5">Due By</p>
+                                        <p>{new Date(invoice.date + 14 * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
+                                    </div>
+                                )}
                                 {invoice.paymentMethod && (
                                     <div>
                                         <p className="text-zinc-400 font-medium text-[11px] mb-0.5">Method</p>
                                         <p>{invoice.paymentMethod}</p>
                                     </div>
                                 )}
+                                {(invoice as any).paidAt && (
+                                    <div>
+                                        <p className="text-zinc-400 font-medium text-[11px] mb-0.5">Paid On</p>
+                                        <p className="text-emerald-600">{new Date((invoice as any).paidAt).toLocaleDateString()}</p>
+                                    </div>
+                                )}
                                 <div>
                                     <p className="text-zinc-400 font-medium text-[11px] mb-0.5">
-                                        {invoice.amount < 0 ? "Credit Due" : "Amount Due"}
+                                        {invoice.status === "paid" ? "Amount Paid" : invoice.amount < 0 ? "Credit Due" : "Amount Due"}
                                     </p>
-                                    <p className={cn("text-lg font-black tracking-tight", invoice.amount < 0 && "text-amber-600")}>
-                                        {invoice.status === "paid" ? formatCurrency(0, settings?.currency) : formatCurrency(invoice.amount, settings?.currency)}
+                                    <p className={cn(
+                                        "text-lg font-black tracking-tight",
+                                        invoice.status === "paid" ? "text-emerald-600" : invoice.amount < 0 ? "text-amber-600" : ""
+                                    )}>
+                                        {formatCurrency(invoice.amount, settings?.currency)}
                                     </p>
                                 </div>
                             </div>

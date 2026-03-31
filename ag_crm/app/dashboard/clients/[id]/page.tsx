@@ -22,6 +22,7 @@ import {
     Plus,
     Trash2,
     X,
+    Wrench,
 } from "lucide-react";
 import { useMutation } from "convex/react";
 import { useState } from "react";
@@ -58,6 +59,7 @@ export default function ClientDetailPage() {
 
     const client = useQuery(api.clients.get, { id: clientId });
     const invoices = useQuery(api.invoices.listByClient, { clientId });
+    const jobs = useQuery(api.jobs.listByClient, { clientId });
     const settings = useQuery(api.settings.get);
     const contacts = useQuery(api.contacts.listByClient, { clientId });
     const addContact = useMutation(api.contacts.add);
@@ -379,6 +381,71 @@ export default function ClientDetailPage() {
                                 </tbody>
                             </table>
                         </div>
+                    </Card>
+
+                    {/* Repair History */}
+                    <div className="flex items-center justify-between pt-4">
+                        <h3 className="text-xl font-bold tracking-tight">Repair History</h3>
+                        <Link
+                            href={`/dashboard/jobs/create?clientId=${clientId}`}
+                            className="flex items-center gap-2 text-sm font-bold text-black border border-zinc-200 px-4 py-2 rounded-xl hover:bg-zinc-50 transition-all"
+                        >
+                            <Plus size={14} />
+                            New Job
+                        </Link>
+                    </div>
+
+                    <Card>
+                        {jobs && jobs.length > 0 ? (
+                            <div className="divide-y divide-zinc-100">
+                                {jobs.map((job) => {
+                                    const statusColors: Record<string, string> = {
+                                        intake:        "bg-blue-50 text-blue-700 border-blue-100",
+                                        in_progress:   "bg-amber-50 text-amber-700 border-amber-100",
+                                        waiting_parts: "bg-orange-50 text-orange-700 border-orange-100",
+                                        ready:         "bg-emerald-50 text-emerald-700 border-emerald-100",
+                                        closed:        "bg-zinc-100 text-zinc-500 border-zinc-200",
+                                    };
+                                    const statusLabels: Record<string, string> = {
+                                        intake: "Intake", in_progress: "In Progress",
+                                        waiting_parts: "Waiting", ready: "Ready", closed: "Closed",
+                                    };
+                                    return (
+                                        <div key={job._id} className="flex items-center justify-between px-6 py-4 group hover:bg-zinc-50/50 transition-colors">
+                                            <div className="space-y-0.5 min-w-0 flex-1">
+                                                <div className="flex items-center gap-2">
+                                                    <Wrench size={12} className="text-zinc-300 shrink-0" />
+                                                    <p className="text-sm font-bold text-zinc-900 truncate">{job.title}</p>
+                                                </div>
+                                                <p className="text-xs text-zinc-400 ml-5">
+                                                    {[job.instrumentBrand, job.instrumentModel, job.instrumentType].filter(Boolean).join(" ")}
+                                                    {" · "}
+                                                    {new Date(job.intakeDate).toLocaleDateString()}
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center gap-3 shrink-0 ml-4">
+                                                <span className={cn("text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border", statusColors[job.status] ?? statusColors.closed)}>
+                                                    {statusLabels[job.status] ?? job.status}
+                                                </span>
+                                                <Link href={`/dashboard/jobs/${job._id}`}
+                                                    className="p-1.5 text-zinc-300 hover:text-black hover:bg-zinc-100 rounded-lg transition-all">
+                                                    <ChevronRight size={16} />
+                                                </Link>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="px-6 py-12 text-center">
+                                <div className="flex flex-col items-center justify-center space-y-3">
+                                    <div className="w-12 h-12 bg-zinc-50 rounded-full flex items-center justify-center text-zinc-300">
+                                        <Wrench size={24} />
+                                    </div>
+                                    <p className="text-zinc-500 font-medium">No repair jobs for this client yet.</p>
+                                </div>
+                            </div>
+                        )}
                     </Card>
                 </div>
             </div>

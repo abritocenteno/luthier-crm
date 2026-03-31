@@ -34,6 +34,7 @@ export const upsert = mutation({
         phone: v.optional(v.string()),
         website: v.optional(v.string()),
         kvkNumber: v.optional(v.string()),
+        btwNumber: v.optional(v.string()),
         bankAccounts: v.optional(v.string()),
         logoStorageId: v.optional(v.id("_storage")),
         language: v.optional(v.string()),
