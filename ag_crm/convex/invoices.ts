@@ -1,4 +1,4 @@
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 
 export const listByClient = query({
@@ -112,6 +112,26 @@ export const update = mutation({
         }
 
         await ctx.db.patch(id, data);
+    },
+});
+
+// Called by the daily cron — marks pending invoices past their 14-day due date as overdue
+export const markOverdueInvoices = internalMutation({
+    args: {},
+    handler: async (ctx) => {
+        const cutoff = Date.now() - 14 * 24 * 60 * 60 * 1000;
+        const pending = await ctx.db
+            .query("invoices")
+            .filter((q) => q.eq(q.field("status"), "pending"))
+            .collect();
+        let count = 0;
+        for (const inv of pending) {
+            if (inv.date < cutoff) {
+                await ctx.db.patch(inv._id, { status: "overdue" });
+                count++;
+            }
+        }
+        console.log(`Marked ${count} invoice(s) as overdue.`);
     },
 });
 

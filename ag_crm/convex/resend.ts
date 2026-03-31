@@ -66,6 +66,70 @@ export const sendInvoiceEmail = action({
     },
 });
 
+export const sendOverdueReminderEmail = action({
+    args: { invoiceId: v.id("invoices") },
+    handler: async (ctx, { invoiceId }) => {
+        const resendApiKey = process.env.RESEND_API_KEY;
+        if (!resendApiKey) throw new Error("RESEND_API_KEY not set");
+
+        const invoice = await ctx.runQuery(api.invoices.get, { id: invoiceId });
+        if (!invoice) throw new Error("Invoice not found");
+
+        const client = (invoice as any).client;
+        if (!client?.email) throw new Error("Client has no email address on file");
+
+        const settings = await ctx.runQuery(api.settings.get);
+        const companyName = settings?.companyName ?? "Your repair shop";
+        const contactEmail = settings?.contactEmail ?? "";
+        const phone = settings?.phone ?? "";
+        const bankAccounts = settings?.bankAccounts ?? "";
+
+        const currency = settings?.currency ?? "EUR";
+        const formatAmt = (n: number) => new Intl.NumberFormat("nl-NL", { style: "currency", currency }).format(n);
+        const dueDate = new Date((invoice as any).date + 14 * 24 * 60 * 60 * 1000).toLocaleDateString("en-NL", { day: "numeric", month: "long", year: "numeric" });
+
+        const resend = new Resend(resendApiKey);
+
+        const html = `
+            <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px 24px;color:#18181b;">
+                <h2 style="font-size:22px;font-weight:900;margin:0 0 4px;">Payment reminder</h2>
+                <p style="color:#71717a;margin:0 0 32px;font-size:14px;">From ${companyName}</p>
+
+                <p style="margin:0 0 16px;">Dear <strong>${client.name}</strong>,</p>
+                <p style="margin:0 0 24px;line-height:1.6;">
+                    We'd like to remind you that invoice <strong>${(invoice as any).invoiceNumber}</strong>
+                    was due on <strong>${dueDate}</strong> and is still outstanding.
+                </p>
+
+                <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:12px;padding:20px 24px;margin-bottom:24px;">
+                    <p style="margin:0 0 6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#92400e;">Amount Due</p>
+                    <p style="margin:0;font-size:28px;font-weight:900;color:#92400e;">${formatAmt((invoice as any).amount)}</p>
+                    <p style="margin:4px 0 0;font-size:12px;color:#b45309;">Invoice ${(invoice as any).invoiceNumber} · Due ${dueDate}</p>
+                </div>
+
+                ${bankAccounts ? `<p style="margin:0 0 16px;font-size:14px;color:#52525b;line-height:1.6;">Please arrange payment using the details below:<br><pre style="font-family:sans-serif;color:#18181b;">${bankAccounts}</pre></p>` : ""}
+
+                <p style="margin:0 0 4px;font-size:14px;color:#52525b;">Questions? Contact us:</p>
+                ${contactEmail ? `<p style="margin:0 0 2px;font-size:14px;"><a href="mailto:${contactEmail}" style="color:#18181b;">${contactEmail}</a></p>` : ""}
+                ${phone ? `<p style="margin:0;font-size:14px;">${phone}</p>` : ""}
+
+                <hr style="border:none;border-top:1px solid #e4e4e7;margin:32px 0;" />
+                <p style="margin:0;font-size:12px;color:#a1a1aa;">© ${new Date().getFullYear()} ${companyName}</p>
+            </div>`;
+
+        await resend.emails.send({
+            from: "AG CRM <billing@thedotguitars.com>",
+            to: [client.email],
+            replyTo: contactEmail || undefined,
+            subject: `Payment reminder: Invoice ${(invoice as any).invoiceNumber} — ${companyName}`,
+            html,
+            text: `Dear ${client.name},\n\nThis is a reminder that invoice ${(invoice as any).invoiceNumber} (${formatAmt((invoice as any).amount)}) was due on ${dueDate} and is still outstanding.\n\n${bankAccounts ? `Payment details:\n${bankAccounts}\n\n` : ""}${contactEmail ? `Contact: ${contactEmail}\n` : ""}${phone}\n\n${companyName}`,
+        });
+
+        return { success: true };
+    },
+});
+
 export const sendQuoteEmail = action({
     args: { jobId: v.id("jobs") },
     handler: async (ctx, { jobId }) => {

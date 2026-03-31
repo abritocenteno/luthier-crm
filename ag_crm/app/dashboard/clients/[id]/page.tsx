@@ -23,6 +23,12 @@ import {
     Trash2,
     X,
     Wrench,
+    MessageSquare,
+    PhoneCall,
+    AtSign,
+    Users,
+    CheckSquare,
+    MoreHorizontal,
 } from "lucide-react";
 import { useMutation } from "convex/react";
 import { useState } from "react";
@@ -62,9 +68,12 @@ export default function ClientDetailPage() {
     const jobs = useQuery(api.jobs.listByClient, { clientId });
     const settings = useQuery(api.settings.get);
     const contacts = useQuery(api.contacts.listByClient, { clientId });
+    const communications = useQuery(api.communications.listByClient, { clientId });
     const addContact = useMutation(api.contacts.add);
     const removeContact = useMutation(api.contacts.remove);
     const generateUploadUrl = useMutation(api.contacts.generateUploadUrl);
+    const addComm = useMutation(api.communications.add);
+    const removeComm = useMutation(api.communications.remove);
 
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -76,6 +85,13 @@ export default function ClientDetailPage() {
         role: "",
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Communication log state
+    const [showCommForm, setShowCommForm] = useState(false);
+    const [commType, setCommType] = useState("call");
+    const [commNotes, setCommNotes] = useState("");
+    const [commDate, setCommDate] = useState(new Date().toISOString().split("T")[0]);
+    const [isLoggingComm, setIsLoggingComm] = useState(false);
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -119,6 +135,28 @@ export default function ClientDetailPage() {
             console.error("Failed to add contact:", error);
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const handleLogComm = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!commNotes.trim()) return;
+        setIsLoggingComm(true);
+        try {
+            await addComm({
+                clientId,
+                type: commType,
+                notes: commNotes.trim(),
+                date: new Date(commDate).getTime(),
+            });
+            setCommNotes("");
+            setCommDate(new Date().toISOString().split("T")[0]);
+            setCommType("call");
+            setShowCommForm(false);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setIsLoggingComm(false);
         }
     };
 
@@ -443,6 +481,141 @@ export default function ClientDetailPage() {
                                         <Wrench size={24} />
                                     </div>
                                     <p className="text-zinc-500 font-medium">No repair jobs for this client yet.</p>
+                                </div>
+                            </div>
+                        )}
+                    </Card>
+                    {/* Communication Log */}
+                    <div className="flex items-center justify-between pt-4">
+                        <h3 className="text-xl font-bold tracking-tight">Communication Log</h3>
+                        <button
+                            onClick={() => setShowCommForm((v) => !v)}
+                            className="flex items-center gap-2 text-sm font-bold text-black border border-zinc-200 px-4 py-2 rounded-xl hover:bg-zinc-50 transition-all"
+                        >
+                            <Plus size={14} />
+                            Log Interaction
+                        </button>
+                    </div>
+
+                    {showCommForm && (
+                        <Card className="p-6">
+                            <form onSubmit={handleLogComm} className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    {/* Type */}
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">Type</label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {[
+                                                { value: "call",      label: "Call" },
+                                                { value: "email",     label: "Email" },
+                                                { value: "message",   label: "Message" },
+                                                { value: "in_person", label: "In Person" },
+                                                { value: "other",     label: "Other" },
+                                            ].map((t) => (
+                                                <button
+                                                    key={t.value}
+                                                    type="button"
+                                                    onClick={() => setCommType(t.value)}
+                                                    className={cn(
+                                                        "px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border transition-all",
+                                                        commType === t.value
+                                                            ? "bg-black text-white border-black"
+                                                            : "bg-white text-zinc-400 border-zinc-200 hover:border-zinc-300"
+                                                    )}
+                                                >
+                                                    {t.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    {/* Date */}
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">Date</label>
+                                        <input
+                                            type="date"
+                                            value={commDate}
+                                            onChange={(e) => setCommDate(e.target.value)}
+                                            className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black/5"
+                                        />
+                                    </div>
+                                </div>
+                                {/* Notes */}
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">Notes</label>
+                                    <textarea
+                                        required
+                                        rows={3}
+                                        placeholder="What was discussed or agreed upon…"
+                                        value={commNotes}
+                                        onChange={(e) => setCommNotes(e.target.value)}
+                                        className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black/5 resize-none"
+                                    />
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowCommForm(false)}
+                                        className="px-4 py-2 text-sm font-bold text-zinc-500 border border-zinc-200 rounded-xl hover:bg-zinc-50 transition-all"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={isLoggingComm}
+                                        className="px-6 py-2 text-sm font-bold bg-black text-white rounded-xl hover:bg-zinc-800 transition-all disabled:opacity-50"
+                                    >
+                                        {isLoggingComm ? "Saving…" : "Save Entry"}
+                                    </button>
+                                </div>
+                            </form>
+                        </Card>
+                    )}
+
+                    <Card>
+                        {communications && communications.length > 0 ? (
+                            <div className="divide-y divide-zinc-100">
+                                {communications.map((entry) => {
+                                    const typeConfig: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
+                                        call:      { icon: <PhoneCall size={14} />,     label: "Call",      color: "bg-blue-50 text-blue-600" },
+                                        email:     { icon: <AtSign size={14} />,        label: "Email",     color: "bg-violet-50 text-violet-600" },
+                                        message:   { icon: <MessageSquare size={14} />, label: "Message",   color: "bg-emerald-50 text-emerald-600" },
+                                        in_person: { icon: <Users size={14} />,         label: "In Person", color: "bg-amber-50 text-amber-600" },
+                                        other:     { icon: <MoreHorizontal size={14} />,label: "Other",     color: "bg-zinc-100 text-zinc-500" },
+                                    };
+                                    const cfg = typeConfig[entry.type] ?? typeConfig.other;
+                                    return (
+                                        <div key={entry._id} className="flex gap-4 px-6 py-4 group hover:bg-zinc-50/50 transition-colors">
+                                            <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5", cfg.color)}>
+                                                {cfg.icon}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center justify-between gap-2 mb-1">
+                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">{cfg.label}</span>
+                                                    <span className="text-xs text-zinc-400 shrink-0">
+                                                        {new Date(entry.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                                                    </span>
+                                                </div>
+                                                <p className="text-sm text-zinc-700 leading-relaxed">{entry.notes}</p>
+                                            </div>
+                                            <button
+                                                onClick={() => removeComm({ id: entry._id })}
+                                                className="p-1.5 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100 self-start mt-0.5 shrink-0"
+                                                title="Delete entry"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="px-6 py-12 text-center">
+                                <div className="flex flex-col items-center justify-center space-y-3">
+                                    <div className="w-12 h-12 bg-zinc-50 rounded-full flex items-center justify-center text-zinc-300">
+                                        <MessageSquare size={24} />
+                                    </div>
+                                    <p className="text-zinc-500 font-medium">No interactions logged yet.</p>
+                                    <p className="text-zinc-400 text-sm">Use the button above to log calls, emails and visits.</p>
                                 </div>
                             </div>
                         )}

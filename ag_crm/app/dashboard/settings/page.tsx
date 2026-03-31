@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { Save, Upload, Loader2, Building, Mail, MapPin, Phone, Globe, Hash, CreditCard, Languages, Coins, Wrench, Plus, Trash2, Pencil, Check, X } from "lucide-react";
+import { Save, Upload, Loader2, Building, Mail, MapPin, Phone, Globe, Hash, CreditCard, Languages, Coins, Wrench, Plus, Trash2, Pencil, Check, X, ChevronDown, Guitar } from "lucide-react";
 import { cn, formatCurrency, getCurrencySymbol } from "@/lib/utils";
 import { Id } from "../../../convex/_generated/dataModel";
 
@@ -14,6 +14,18 @@ export default function SettingsPage() {
 
     // Service library
     const services = useQuery(api.services.list);
+
+    // Job templates
+    const templates = useQuery(api.jobTemplates.list);
+    const addTemplate = useMutation(api.jobTemplates.add);
+    const removeTemplate = useMutation(api.jobTemplates.remove);
+
+    type TemplateDraft = { name: string; description: string; instrumentType: string };
+    const emptyTemplate = (): TemplateDraft => ({ name: "", description: "", instrumentType: "" });
+    const [newTemplate, setNewTemplate] = useState<TemplateDraft>(emptyTemplate());
+    const [showTemplateForm, setShowTemplateForm] = useState(false);
+
+    const INSTRUMENT_TYPES_LIST = ["Guitar", "Bass", "Ukulele", "Mandolin", "Banjo", "Violin", "Viola", "Cello", "Other"];
     const addService = useMutation(api.services.add);
     const updateService = useMutation(api.services.update);
     const removeService = useMutation(api.services.remove);
@@ -524,6 +536,92 @@ export default function SettingsPage() {
                             </div>
                         </div>
                     </div>
+                </div>
+
+                {/* ── Job Templates ── */}
+                <div className="p-6 sm:p-8 border-t border-zinc-200 space-y-6">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h3 className="text-base font-black tracking-tight flex items-center gap-2">
+                                <Guitar size={16} className="text-zinc-400" /> Job Templates
+                            </h3>
+                            <p className="text-xs text-zinc-500 mt-0.5">Preset job types for one-click creation of common repairs.</p>
+                        </div>
+                        <button type="button" onClick={() => setShowTemplateForm((v) => !v)}
+                            className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-xl text-xs font-bold hover:bg-black transition-all active:scale-95">
+                            <Plus size={13} /> New Template
+                        </button>
+                    </div>
+
+                    {/* Existing templates */}
+                    {templates && templates.length > 0 && (
+                        <div className="divide-y divide-zinc-100 border border-zinc-100 rounded-xl overflow-hidden">
+                            {templates.map((tpl) => (
+                                <div key={tpl._id} className="flex items-center justify-between px-4 py-3 bg-white hover:bg-zinc-50 group transition-colors">
+                                    <div className="min-w-0">
+                                        <p className="text-sm font-bold text-zinc-900 truncate">{tpl.name}</p>
+                                        <p className="text-xs text-zinc-400 truncate">
+                                            {tpl.instrumentType || "Any instrument"}
+                                            {tpl.description ? ` · ${tpl.description}` : ""}
+                                        </p>
+                                    </div>
+                                    <button type="button" onClick={() => removeTemplate({ id: tpl._id })}
+                                        className="p-1.5 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100 shrink-0 ml-2">
+                                        <Trash2 size={14} />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Add template form */}
+                    {showTemplateForm && (
+                        <div className="border border-zinc-200 rounded-xl p-4 space-y-3 bg-zinc-50/50">
+                            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">New Template</p>
+                            <input
+                                placeholder="Template name (e.g. Standard Guitar Setup)"
+                                value={newTemplate.name}
+                                onChange={(e) => setNewTemplate((p) => ({ ...p, name: e.target.value }))}
+                                className="w-full px-3 py-2 text-sm border border-zinc-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-black/5"
+                            />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div className="relative">
+                                    <select
+                                        value={newTemplate.instrumentType}
+                                        onChange={(e) => setNewTemplate((p) => ({ ...p, instrumentType: e.target.value }))}
+                                        className="w-full px-3 py-2 text-sm border border-zinc-200 rounded-lg bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-black/5 text-zinc-500">
+                                        <option value="">Any instrument type</option>
+                                        {INSTRUMENT_TYPES_LIST.map((t) => <option key={t}>{t}</option>)}
+                                    </select>
+                                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+                                </div>
+                                <input
+                                    placeholder="Short description (optional)"
+                                    value={newTemplate.description}
+                                    onChange={(e) => setNewTemplate((p) => ({ ...p, description: e.target.value }))}
+                                    className="px-3 py-2 text-sm border border-zinc-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-black/5 text-zinc-500"
+                                />
+                            </div>
+                            <div className="flex items-center gap-2 justify-end">
+                                <button type="button" onClick={() => { setShowTemplateForm(false); setNewTemplate(emptyTemplate()); }}
+                                    className="px-3 py-1.5 text-xs font-bold text-zinc-500 hover:text-black transition-colors">Cancel</button>
+                                <button type="button" disabled={!newTemplate.name}
+                                    onClick={async () => {
+                                        if (!newTemplate.name) return;
+                                        await addTemplate({
+                                            name: newTemplate.name,
+                                            description: newTemplate.description || undefined,
+                                            instrumentType: newTemplate.instrumentType || undefined,
+                                        });
+                                        setNewTemplate(emptyTemplate());
+                                        setShowTemplateForm(false);
+                                    }}
+                                    className="flex items-center gap-2 px-4 py-1.5 bg-black text-white rounded-lg text-xs font-bold hover:bg-zinc-800 transition-all active:scale-95 disabled:opacity-40">
+                                    <Check size={13} /> Save Template
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div className="bg-zinc-50 p-6 sm:p-8 border-t border-zinc-200 flex justify-end">

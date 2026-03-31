@@ -7,7 +7,7 @@ import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import {
     ArrowLeft, Wrench, User, Calendar, Plus, Trash2,
-    ChevronDown, Guitar, Clock, StickyNote, CheckCircle2, Loader2, BookOpen,
+    ChevronDown, Guitar, Clock, StickyNote, CheckCircle2, Loader2, BookOpen, LayoutTemplate,
 } from "lucide-react";
 import { cn, formatCurrency, getCurrencySymbol } from "@/lib/utils";
 import { Suspense } from "react";
@@ -48,6 +48,7 @@ function CreateJobForm() {
     const clients = useQuery(api.clients.list);
     const settings = useQuery(api.settings.get);
     const services = useQuery(api.services.list);
+    const templates = useQuery(api.jobTemplates.list);
     const addJob = useMutation(api.jobs.add);
 
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -79,6 +80,7 @@ function CreateJobForm() {
     // Work items
     const [workItems, setWorkItems] = useState<WorkItem[]>([]);
     const [showLibrary, setShowLibrary] = useState(false);
+    const [showTemplates, setShowTemplates] = useState(false);
 
     // Internal notes
     const [internalNotes, setInternalNotes] = useState("");
@@ -98,6 +100,29 @@ function CreateJobForm() {
             hours: 1,
         }]);
         setShowLibrary(false);
+    };
+
+    const applyTemplate = (tpl: {
+        name: string;
+        description?: string;
+        instrumentType?: string;
+        workItems?: Array<{ name: string; description?: string; type: string; unitPrice: number; hours?: number }>;
+        internalNotes?: string;
+    }) => {
+        if (tpl.name && !title) setTitle(tpl.name);
+        if (tpl.description && !description) setDescription(tpl.description);
+        if (tpl.instrumentType) setInstrumentType(tpl.instrumentType);
+        if (tpl.internalNotes && !internalNotes) setInternalNotes(tpl.internalNotes);
+        if (tpl.workItems && tpl.workItems.length > 0) {
+            setWorkItems(tpl.workItems.map((wi) => ({
+                name: wi.name,
+                description: wi.description ?? "",
+                type: wi.type as "fixed" | "hourly",
+                unitPrice: wi.unitPrice,
+                hours: wi.hours ?? 1,
+            })));
+        }
+        setShowTemplates(false);
     };
 
     const removeWorkItem = (i: number) =>
@@ -394,11 +419,66 @@ function CreateJobForm() {
                             <p className="text-sm text-zinc-500">Services to be performed. Fixed price or hourly.</p>
                         </div>
                         <div className="flex items-center gap-2">
+                            {/* Apply Template */}
+                            <div className="relative">
+                                <button
+                                    type="button"
+                                    onClick={() => { setShowTemplates((v) => !v); setShowLibrary(false); }}
+                                    className="flex items-center gap-2 px-4 py-2 bg-white border border-zinc-200 text-zinc-700 rounded-xl text-xs font-bold hover:bg-zinc-50 hover:border-zinc-300 transition-all active:scale-95"
+                                >
+                                    <LayoutTemplate size={14} />
+                                    From Template
+                                </button>
+                                {showTemplates && (
+                                    <>
+                                        <div className="fixed inset-0 z-10" onClick={() => setShowTemplates(false)} />
+                                        <div className="absolute right-0 top-full mt-2 z-20 w-72 bg-white border border-zinc-200 rounded-2xl shadow-xl overflow-hidden">
+                                            <div className="px-4 py-3 border-b border-zinc-100">
+                                                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.15em]">Job Templates</p>
+                                            </div>
+                                            {!templates || templates.length === 0 ? (
+                                                <div className="px-4 py-6 text-center text-zinc-400 text-sm italic">
+                                                    No templates saved yet.<br />
+                                                    <span className="text-xs">Add them in Settings → Job Templates.</span>
+                                                </div>
+                                            ) : (
+                                                <div className="max-h-64 overflow-y-auto divide-y divide-zinc-50">
+                                                    {templates.map((tpl) => (
+                                                        <button
+                                                            key={tpl._id}
+                                                            type="button"
+                                                            onClick={() => applyTemplate(tpl)}
+                                                            className="w-full flex flex-col gap-0.5 px-4 py-3 hover:bg-zinc-50 transition-colors text-left group"
+                                                        >
+                                                            <span className="text-sm font-semibold text-zinc-900">{tpl.name}</span>
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                {tpl.instrumentType && (
+                                                                    <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-zinc-100 text-zinc-500">
+                                                                        {tpl.instrumentType}
+                                                                    </span>
+                                                                )}
+                                                                {tpl.workItems && tpl.workItems.length > 0 && (
+                                                                    <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600">
+                                                                        {tpl.workItems.length} item{tpl.workItems.length > 1 ? "s" : ""}
+                                                                    </span>
+                                                                )}
+                                                                {tpl.description && (
+                                                                    <span className="text-xs text-zinc-400 truncate">{tpl.description}</span>
+                                                                )}
+                                                            </div>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
                             {/* Add from Library */}
                             <div className="relative">
                                 <button
                                     type="button"
-                                    onClick={() => setShowLibrary((v) => !v)}
+                                    onClick={() => { setShowLibrary((v) => !v); setShowTemplates(false); }}
                                     className="flex items-center gap-2 px-4 py-2 bg-white border border-zinc-200 text-zinc-700 rounded-xl text-xs font-bold hover:bg-zinc-50 hover:border-zinc-300 transition-all active:scale-95"
                                 >
                                     <BookOpen size={14} />

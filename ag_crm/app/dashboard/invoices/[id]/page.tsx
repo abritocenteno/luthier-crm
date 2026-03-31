@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, use, Suspense } from "react";
+import { useState, useRef, use, Suspense, useCallback } from "react";
 import { useQuery, useAction, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { useRouter } from "next/navigation";
@@ -181,6 +181,7 @@ function InvoiceDetail({ id }: { id: Id<"invoices"> }) {
 
     const markAsPaid = useMutation(api.invoices.markAsPaid);
     const markAsUnpaid = useMutation(api.invoices.markAsUnpaid);
+    const sendReminderAction = useAction(api.resend.sendOverdueReminderEmail);
 
     const [isDownloading, setIsDownloading] = useState(false);
     const [isSending, setIsSending] = useState(false);
@@ -188,6 +189,8 @@ function InvoiceDetail({ id }: { id: Id<"invoices"> }) {
     const [showPayModal, setShowPayModal] = useState(false);
     const [selectedPayMethod, setSelectedPayMethod] = useState("Cash");
     const [isMarkingPaid, setIsMarkingPaid] = useState(false);
+    const [isSendingReminder, setIsSendingReminder] = useState(false);
+    const [reminderSent, setReminderSent] = useState(false);
 
     const [errorDetails, setErrorDetails] = useState<string | null>(null);
 
@@ -203,6 +206,20 @@ function InvoiceDetail({ id }: { id: Id<"invoices"> }) {
             alert(`Failed to mark as paid: ${err.message}`);
         } finally {
             setIsMarkingPaid(false);
+        }
+    };
+
+    const handleSendReminder = async () => {
+        if (!invoice) return;
+        setIsSendingReminder(true);
+        try {
+            await sendReminderAction({ invoiceId: invoice._id });
+            setReminderSent(true);
+            setTimeout(() => setReminderSent(false), 4000);
+        } catch (err: any) {
+            alert(`Failed to send reminder: ${err.message}`);
+        } finally {
+            setIsSendingReminder(false);
         }
     };
 
@@ -450,6 +467,23 @@ function InvoiceDetail({ id }: { id: Id<"invoices"> }) {
                         {isSending ? <Loader2 size={18} className="animate-spin" /> : sendSuccess ? <CheckCircle2 size={18} /> : <Mail size={18} />}
                         {sendSuccess ? "Sent!" : "Email"}
                     </button>
+
+                    {/* Overdue reminder */}
+                    {invoice.status === "overdue" && (
+                        <button
+                            onClick={handleSendReminder}
+                            disabled={isSendingReminder || reminderSent}
+                            className={cn(
+                                "flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95 shadow-lg disabled:opacity-60",
+                                reminderSent
+                                    ? "bg-emerald-500 text-white shadow-emerald-500/20"
+                                    : "bg-red-500 text-white hover:bg-red-600 shadow-red-500/20"
+                            )}
+                        >
+                            {isSendingReminder ? <Loader2 size={18} className="animate-spin" /> : reminderSent ? <CheckCircle2 size={18} /> : <Mail size={18} />}
+                            {reminderSent ? "Reminder Sent" : "Send Reminder"}
+                        </button>
+                    )}
 
                     {/* Mark as Paid / Paid indicator */}
                     {invoice.status === "paid" ? (

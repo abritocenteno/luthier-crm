@@ -160,6 +160,29 @@ export default defineSchema({
     })
         .index("by_user", ["userId"])
         .index("by_client", ["clientId"]),
+    jobTemplates: defineTable({
+        userId: v.string(),
+        name: v.string(),
+        description: v.optional(v.string()),
+        instrumentType: v.optional(v.string()),
+        workItems: v.optional(v.array(v.object({
+            name: v.string(),
+            description: v.optional(v.string()),
+            type: v.string(),
+            unitPrice: v.number(),
+            hours: v.optional(v.number()),
+        }))),
+        internalNotes: v.optional(v.string()),
+    }).index("by_user", ["userId"]),
+    communications: defineTable({
+        userId: v.string(),
+        clientId: v.id("clients"),
+        type: v.string(), // 'call' | 'email' | 'message' | 'in_person' | 'other'
+        notes: v.string(),
+        date: v.number(),
+    })
+        .index("by_user", ["userId"])
+        .index("by_client", ["clientId"]),
     contacts: defineTable({
         name: v.string(),
         email: v.optional(v.string()),
