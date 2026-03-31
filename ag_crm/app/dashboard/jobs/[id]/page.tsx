@@ -9,7 +9,7 @@ import { Id } from "../../../../convex/_generated/dataModel";
 import {
     ArrowLeft, Wrench, Edit2, FileText, Guitar, Calendar, Clock,
     CheckCircle2, AlertCircle, Loader2, ExternalLink, StickyNote,
-    ChevronRight, Package, User, Inbox, Bell, Send, ImagePlus, X, Trash2,
+    ChevronRight, Package, User, Inbox, Bell, Send, ImagePlus, X, Trash2, Printer,
 } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 
@@ -187,6 +187,14 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3 shrink-0">
+                    <Link
+                        href={`/dashboard/jobs/${id}/print`}
+                        target="_blank"
+                        className="flex items-center gap-2 px-5 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-bold hover:bg-zinc-50 transition-all active:scale-95 shadow-sm"
+                    >
+                        <Printer size={16} />
+                        Print
+                    </Link>
                     {job.status !== "closed" && (
                         <Link
                             href={`/dashboard/jobs/${id}/edit`}

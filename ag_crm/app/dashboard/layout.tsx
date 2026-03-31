@@ -16,7 +16,10 @@ import {
     RefreshCw,
     Wrench,
     BarChart2,
+    Package,
+    Search,
 } from "lucide-react";
+import { GlobalSearch } from "@/components/GlobalSearch";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -100,6 +103,7 @@ export default function DashboardLayout({
         { label: "Suppliers", icon: Truck, href: "/dashboard/suppliers" },
         { label: "Invoices", icon: FileText, href: "/dashboard/invoices" },
         { label: "Orders", icon: ShoppingBag, href: "/dashboard/orders" },
+        { label: "Parts", icon: Package, href: "/dashboard/parts" },
         { label: "Calendar", icon: Calendar, href: "/dashboard/schedule" },
         { label: "Reports", icon: BarChart2, href: "/dashboard/reports" },
         { label: "Settings", icon: Settings, href: "/dashboard/settings" },
@@ -107,6 +111,7 @@ export default function DashboardLayout({
 
     return (
         <div className="min-h-screen bg-zinc-50 flex">
+            <GlobalSearch />
             {/* Desktop Sidebar */}
             <aside
                 className={cn(
@@ -211,12 +216,22 @@ export default function DashboardLayout({
                         <Menu size={20} />
                     </button>
 
-                    <div className="ml-auto flex items-center gap-4">
-                        <div className="flex flex-col items-end mr-2">
-                            <Authenticated>
-                                <UserButton afterSignOutUrl="/" />
-                            </Authenticated>
-                        </div>
+                    <div className="ml-auto flex items-center gap-3">
+                        {/* Search trigger */}
+                        <button
+                            onClick={() => {
+                                const e = new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true });
+                                window.dispatchEvent(e);
+                            }}
+                            className="hidden sm:flex items-center gap-2 px-3 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-500 hover:text-zinc-700 rounded-xl text-xs font-medium transition-all"
+                        >
+                            <Search size={14} />
+                            <span>Search</span>
+                            <kbd className="ml-1 px-1.5 py-0.5 bg-white border border-zinc-200 rounded text-[10px] font-bold shadow-sm text-zinc-400">⌘K</kbd>
+                        </button>
+                        <Authenticated>
+                            <UserButton afterSignOutUrl="/" />
+                        </Authenticated>
                     </div>
                 </header>
 

@@ -183,6 +183,17 @@ export default defineSchema({
     })
         .index("by_user", ["userId"])
         .index("by_client", ["clientId"]),
+    parts: defineTable({
+        userId: v.string(),
+        name: v.string(),
+        description: v.optional(v.string()),
+        sku: v.optional(v.string()),
+        category: v.optional(v.string()),
+        quantity: v.number(),
+        unitCost: v.optional(v.number()),
+        reorderThreshold: v.optional(v.number()),
+        supplier: v.optional(v.string()),
+    }).index("by_user", ["userId"]),
     contacts: defineTable({
         name: v.string(),
         email: v.optional(v.string()),

@@ -20,6 +20,7 @@ import type * as invoices from "../invoices.js";
 import type * as jobTemplates from "../jobTemplates.js";
 import type * as jobs from "../jobs.js";
 import type * as orders from "../orders.js";
+import type * as parts from "../parts.js";
 import type * as reports from "../reports.js";
 import type * as resend from "../resend.js";
 import type * as services from "../services.js";
@@ -46,6 +47,7 @@ declare const fullApi: ApiFromModules<{
   jobTemplates: typeof jobTemplates;
   jobs: typeof jobs;
   orders: typeof orders;
+  parts: typeof parts;
   reports: typeof reports;
   resend: typeof resend;
   services: typeof services;
