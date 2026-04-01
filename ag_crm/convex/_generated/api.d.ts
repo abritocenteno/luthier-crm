@@ -22,6 +22,7 @@ import type * as jobs from "../jobs.js";
 import type * as notifications from "../notifications.js";
 import type * as orders from "../orders.js";
 import type * as parts from "../parts.js";
+import type * as portal from "../portal.js";
 import type * as reports from "../reports.js";
 import type * as resend from "../resend.js";
 import type * as services from "../services.js";
@@ -50,6 +51,7 @@ declare const fullApi: ApiFromModules<{
   notifications: typeof notifications;
   orders: typeof orders;
   parts: typeof parts;
+  portal: typeof portal;
   reports: typeof reports;
   resend: typeof resend;
   services: typeof services;

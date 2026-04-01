@@ -183,6 +183,13 @@ export default defineSchema({
     })
         .index("by_user", ["userId"])
         .index("by_client", ["clientId"]),
+    clientPortals: defineTable({
+        clientId: v.id("clients"),
+        userId: v.string(),
+        token: v.string(),
+    })
+        .index("by_token", ["token"])
+        .index("by_client", ["clientId"]),
     notificationReads: defineTable({
         userId: v.string(),
         key: v.string(), // deterministic key e.g. "overdue_invoice_<id>"

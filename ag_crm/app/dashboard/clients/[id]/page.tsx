@@ -29,6 +29,11 @@ import {
     Users,
     CheckSquare,
     MoreHorizontal,
+    Link2,
+    RefreshCw,
+    Copy,
+    Check,
+    ShieldOff,
 } from "lucide-react";
 import { useMutation } from "convex/react";
 import { useState } from "react";
@@ -69,6 +74,9 @@ export default function ClientDetailPage() {
     const settings = useQuery(api.settings.get);
     const contacts = useQuery(api.contacts.listByClient, { clientId });
     const communications = useQuery(api.communications.listByClient, { clientId });
+    const portal = useQuery(api.portal.getPortalForClient, { clientId });
+    const generatePortalToken = useMutation(api.portal.generateToken);
+    const revokePortalToken = useMutation(api.portal.revokeToken);
     const addContact = useMutation(api.contacts.add);
     const removeContact = useMutation(api.contacts.remove);
     const generateUploadUrl = useMutation(api.contacts.generateUploadUrl);
@@ -85,6 +93,28 @@ export default function ClientDetailPage() {
         role: "",
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Portal state
+    const [copied, setCopied] = useState(false);
+    const [isGenerating, setIsGenerating] = useState(false);
+
+    const portalUrl = portal?.token
+        ? `${typeof window !== "undefined" ? window.location.origin : ""}/portal/${portal.token}`
+        : null;
+
+    const handleCopyPortalLink = () => {
+        if (!portalUrl) return;
+        navigator.clipboard.writeText(portalUrl);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    const handleGeneratePortal = async () => {
+        setIsGenerating(true);
+        try { await generatePortalToken({ clientId }); }
+        catch (err) { console.error(err); }
+        finally { setIsGenerating(false); }
+    };
 
     // Communication log state
     const [showCommForm, setShowCommForm] = useState(false);
@@ -343,6 +373,70 @@ export default function ClientDetailPage() {
                                 <p className="text-zinc-500">{client.postcode} {client.city}</p>
                             </div>
                         </div>
+                    </Card>
+
+                    {/* Client Portal */}
+                    <Card className="p-6 space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Client Portal</h3>
+                            {portal?.token && (
+                                <button
+                                    onClick={() => revokePortalToken({ clientId })}
+                                    className="flex items-center gap-1 text-[11px] font-bold text-zinc-400 hover:text-red-500 transition-colors"
+                                    title="Revoke link"
+                                >
+                                    <ShieldOff size={12} />
+                                    Revoke
+                                </button>
+                            )}
+                        </div>
+
+                        {portal?.token ? (
+                            <div className="space-y-3">
+                                <p className="text-xs text-zinc-500 leading-relaxed">
+                                    Share this private link with the client so they can track their jobs and invoices.
+                                </p>
+                                <div className="flex items-center gap-2 p-3 bg-zinc-50 border border-zinc-200 rounded-xl">
+                                    <Link2 size={13} className="text-zinc-400 shrink-0" />
+                                    <span className="text-xs text-zinc-600 font-mono truncate flex-1 min-w-0">
+                                        /portal/{portal.token.slice(0, 16)}…
+                                    </span>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={handleCopyPortalLink}
+                                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-black text-white rounded-xl text-xs font-bold hover:bg-zinc-800 transition-all active:scale-95"
+                                    >
+                                        {copied ? <><Check size={13} /> Copied!</> : <><Copy size={13} /> Copy Link</>}
+                                    </button>
+                                    <button
+                                        onClick={handleGeneratePortal}
+                                        disabled={isGenerating}
+                                        title="Regenerate link"
+                                        className="p-2.5 border border-zinc-200 rounded-xl text-zinc-400 hover:text-black hover:border-zinc-300 transition-all disabled:opacity-50"
+                                    >
+                                        <RefreshCw size={14} className={isGenerating ? "animate-spin" : ""} />
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                <p className="text-xs text-zinc-500 leading-relaxed">
+                                    Generate a private link so this client can view their job status and invoices online.
+                                </p>
+                                <button
+                                    onClick={handleGeneratePortal}
+                                    disabled={isGenerating}
+                                    className="w-full flex items-center justify-center gap-2 py-2.5 bg-zinc-900 text-white rounded-xl text-xs font-bold hover:bg-black transition-all active:scale-95 disabled:opacity-50"
+                                >
+                                    {isGenerating ? (
+                                        <><RefreshCw size={13} className="animate-spin" /> Generating…</>
+                                    ) : (
+                                        <><Link2 size={13} /> Generate Portal Link</>
+                                    )}
+                                </button>
+                            </div>
+                        )}
                     </Card>
                 </div>
 
