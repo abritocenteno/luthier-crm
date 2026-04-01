@@ -20,6 +20,7 @@ import {
     Search,
 } from "lucide-react";
 import { GlobalSearch } from "@/components/GlobalSearch";
+import { NotificationBell } from "@/components/NotificationBell";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -230,6 +231,7 @@ export default function DashboardLayout({
                             <kbd className="ml-1 px-1.5 py-0.5 bg-white border border-zinc-200 rounded text-[10px] font-bold shadow-sm text-zinc-400">⌘K</kbd>
                         </button>
                         <Authenticated>
+                            <NotificationBell />
                             <UserButton afterSignOutUrl="/" />
                         </Authenticated>
                     </div>
