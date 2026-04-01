@@ -14,8 +14,10 @@ import {
     Package,
     Inbox,
     ChevronRight,
+    Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { exportJobs } from "@/lib/exportCsv";
 
 const STATUS_CONFIG = {
     intake:        { label: "Intake",             color: "bg-blue-50 text-blue-700 border-blue-100",   dot: "bg-blue-500" },
@@ -75,13 +77,23 @@ export default function JobsPage() {
                         <p className="text-zinc-500">Track repairs and work orders.</p>
                     </div>
                 </div>
-                <Link
-                    href="/dashboard/jobs/create"
-                    className="flex items-center gap-2 px-5 py-2.5 bg-black text-white rounded-xl text-sm font-bold hover:bg-zinc-800 transition-all active:scale-95 shadow-lg shadow-black/10 self-start sm:self-auto"
-                >
-                    <Plus size={16} />
-                    New Job
-                </Link>
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                    <button
+                        onClick={() => jobs && exportJobs(jobs as any)}
+                        disabled={!jobs || jobs.length === 0}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-white border border-zinc-200 text-zinc-600 rounded-xl text-sm font-bold hover:bg-zinc-50 transition-all active:scale-95 disabled:opacity-40"
+                    >
+                        <Download size={15} />
+                        Export CSV
+                    </button>
+                    <Link
+                        href="/dashboard/jobs/create"
+                        className="flex items-center gap-2 px-5 py-2.5 bg-black text-white rounded-xl text-sm font-bold hover:bg-zinc-800 transition-all active:scale-95 shadow-lg shadow-black/10"
+                    >
+                        <Plus size={16} />
+                        New Job
+                    </Link>
+                </div>
             </header>
 
             {/* Status Tabs */}

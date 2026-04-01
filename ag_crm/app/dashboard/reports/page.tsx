@@ -3,8 +3,9 @@
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import Link from "next/link";
-import { TrendingUp, TrendingDown, Minus, ArrowRight } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, ArrowRight, Download, Users, Wrench, FileText } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
+import { exportJobs, exportInvoices, exportClients } from "@/lib/exportCsv";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -115,6 +116,9 @@ function StatCard({
 export default function ReportsPage() {
     const data = useQuery(api.reports.getData);
     const settings = useQuery(api.settings.get);
+    const allJobs = useQuery(api.jobs.list);
+    const allInvoices = useQuery(api.invoices.list);
+    const allClients = useQuery(api.clients.list);
     const currency = settings?.currency;
 
     const fmt = (n: number) => formatCurrency(n, currency);
@@ -341,6 +345,67 @@ export default function ReportsPage() {
                         </div>
                     )}
                 </Card>
+            </div>
+
+            {/* ── Export Data ── */}
+            <div className="space-y-4">
+                <div className="space-y-1">
+                    <h2 className="text-xl font-bold tracking-tight flex items-center gap-2">
+                        <Download size={18} />
+                        Export Data
+                    </h2>
+                    <p className="text-sm text-zinc-500">Download your data as CSV files — ready for Excel, Google Sheets or your accountant.</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {[
+                        {
+                            label: "Jobs",
+                            description: "All jobs with status, instrument, dates & work items",
+                            icon: <Wrench size={20} />,
+                            count: allJobs?.length ?? 0,
+                            onClick: () => allJobs && exportJobs(allJobs as any),
+                            disabled: !allJobs || allJobs.length === 0,
+                        },
+                        {
+                            label: "Invoices",
+                            description: "All invoices with amounts, status & payment info",
+                            icon: <FileText size={20} />,
+                            count: allInvoices?.length ?? 0,
+                            onClick: () => allInvoices && exportInvoices(allInvoices as any),
+                            disabled: !allInvoices || allInvoices.length === 0,
+                        },
+                        {
+                            label: "Clients",
+                            description: "Full client list with contact & address details",
+                            icon: <Users size={20} />,
+                            count: allClients?.length ?? 0,
+                            onClick: () => allClients && exportClients(allClients as any),
+                            disabled: !allClients || allClients.length === 0,
+                        },
+                    ].map((item) => (
+                        <button
+                            key={item.label}
+                            onClick={item.onClick}
+                            disabled={item.disabled}
+                            className="flex items-start gap-4 p-5 bg-white border border-zinc-200 rounded-2xl shadow-sm hover:border-zinc-300 hover:shadow-md transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed text-left group"
+                        >
+                            <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-600 shrink-0 group-hover:bg-zinc-900 group-hover:text-white transition-all">
+                                {item.icon}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-2">
+                                    <p className="text-sm font-bold text-zinc-900">{item.label}</p>
+                                    <div className="flex items-center gap-1.5 text-zinc-400 group-hover:text-zinc-600 transition-colors shrink-0">
+                                        <Download size={14} />
+                                        <span className="text-xs font-bold">CSV</span>
+                                    </div>
+                                </div>
+                                <p className="text-xs text-zinc-500 mt-0.5 leading-relaxed">{item.description}</p>
+                                <p className="text-[10px] font-bold text-zinc-400 mt-2 uppercase tracking-widest">{item.count} record{item.count !== 1 ? "s" : ""}</p>
+                            </div>
+                        </button>
+                    ))}
+                </div>
             </div>
         </div>
     );

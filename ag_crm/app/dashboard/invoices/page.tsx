@@ -20,7 +20,9 @@ import {
     Clock,
     CheckCircle2,
     AlertCircle,
+    Download,
 } from "lucide-react";
+import { exportInvoices } from "@/lib/exportCsv";
 import { motion, AnimatePresence } from "motion/react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { Id } from "../../../convex/_generated/dataModel";
@@ -79,13 +81,23 @@ export default function InvoicesPage() {
                     <h1 className="text-3xl font-bold tracking-tight">Invoices</h1>
                     <p className="text-zinc-500">Track and manage your workshop's billing and payments.</p>
                 </div>
-                <Link
-                    href="/dashboard/invoices/create"
-                    className="flex items-center gap-2 px-6 py-2.5 bg-black text-white rounded-xl text-sm font-semibold hover:bg-zinc-800 transition-all shadow-lg shadow-black/10 active:scale-95"
-                >
-                    <Plus size={18} />
-                    Add Invoice
-                </Link>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => invoices && exportInvoices(invoices as any)}
+                        disabled={!invoices || invoices.length === 0}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-white border border-zinc-200 text-zinc-600 rounded-xl text-sm font-semibold hover:bg-zinc-50 transition-all active:scale-95 disabled:opacity-40"
+                    >
+                        <Download size={15} />
+                        Export CSV
+                    </button>
+                    <Link
+                        href="/dashboard/invoices/create"
+                        className="flex items-center gap-2 px-6 py-2.5 bg-black text-white rounded-xl text-sm font-semibold hover:bg-zinc-800 transition-all shadow-lg shadow-black/10 active:scale-95"
+                    >
+                        <Plus size={18} />
+                        Add Invoice
+                    </Link>
+                </div>
             </header>
 
             <Card>

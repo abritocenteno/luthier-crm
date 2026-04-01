@@ -18,9 +18,11 @@ import {
     Eye,
     Loader2,
     ChevronRight,
+    Download,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
+import { exportClients } from "@/lib/exportCsv";
 import { Id } from "../../../convex/_generated/dataModel";
 import { useSortableData } from "@/lib/hooks/useSortableData";
 import { SortableHeader } from "@/components/SortableHeader";
@@ -180,13 +182,23 @@ export default function ClientsPage() {
                         <h1 className="text-3xl font-bold tracking-tight">Clients</h1>
                         <p className="text-zinc-500">Manage your workshop's client relationships and store partnerships.</p>
                     </div>
-                    <button
-                        onClick={() => handleOpenDrawer()}
-                        className="flex items-center gap-2 px-6 py-2.5 bg-black text-white rounded-xl text-sm font-semibold hover:bg-zinc-800 transition-all shadow-lg shadow-black/10 active:scale-95"
-                    >
-                        <Plus size={18} />
-                        Add Client
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => clients && exportClients(clients as any)}
+                            disabled={!clients || clients.length === 0}
+                            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-zinc-200 text-zinc-600 rounded-xl text-sm font-semibold hover:bg-zinc-50 transition-all active:scale-95 disabled:opacity-40"
+                        >
+                            <Download size={15} />
+                            Export CSV
+                        </button>
+                        <button
+                            onClick={() => handleOpenDrawer()}
+                            className="flex items-center gap-2 px-6 py-2.5 bg-black text-white rounded-xl text-sm font-semibold hover:bg-zinc-800 transition-all shadow-lg shadow-black/10 active:scale-95"
+                        >
+                            <Plus size={18} />
+                            Add Client
+                        </button>
+                    </div>
                 </header>
 
                 <Card>
