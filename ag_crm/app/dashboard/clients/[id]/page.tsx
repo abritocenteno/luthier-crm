@@ -747,7 +747,7 @@ export default function ClientDetailPage() {
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
-                        className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden border border-zinc-200"
+                        className="relative w-full max-w-lg bg-white rounded-3xl overflow-hidden modal-card"
                     >
                         <div className="p-6 space-y-5">
                             <div className="flex items-start justify-between gap-3">
@@ -837,7 +837,7 @@ export default function ClientDetailPage() {
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
-                        className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden border border-zinc-200"
+                        className="relative w-full max-w-md bg-white rounded-3xl overflow-hidden modal-card"
                     >
                         <div className="p-6 space-y-5">
                             <div className="flex items-start justify-between gap-3">

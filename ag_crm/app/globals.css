@@ -157,11 +157,18 @@
     }
 }
 
-/* Modal backdrop: blurred + feathered edges via radial mask */
+/* Modal backdrop: strong blur over entire screen */
 .modal-backdrop {
     background: rgba(0, 0, 0, 0.45);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    mask-image: radial-gradient(ellipse 95% 95% at 50% 50%, black 35%, rgba(0,0,0,0.6) 65%, transparent 100%);
-    -webkit-mask-image: radial-gradient(ellipse 95% 95% at 50% 50%, black 35%, rgba(0,0,0,0.6) 65%, transparent 100%);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+}
+
+/* Modal card: remove hard border, add white glow that feathers the edges into the backdrop */
+.modal-card {
+    border: none !important;
+    box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.08),
+        0 0 60px 24px rgba(255, 255, 255, 0.45),
+        0 30px 80px -10px rgba(0, 0, 0, 0.55);
 }

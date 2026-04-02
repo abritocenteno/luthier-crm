@@ -359,7 +359,7 @@ export default function CalendarPage() {
             {showEventForm && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div className="absolute inset-0 modal-backdrop" onClick={() => setShowEventForm(false)} />
-                    <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-zinc-200 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200">
+                    <div className="relative w-full max-w-md bg-white rounded-3xl overflow-hidden modal-card animate-in fade-in slide-in-from-bottom-4 duration-200">
                         <div className="p-6 space-y-5">
                             <div className="flex items-start justify-between gap-3">
                                 <div>

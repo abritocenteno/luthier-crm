@@ -286,7 +286,7 @@ export default function PartsPage() {
             {showForm && (
                 <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
                     <div className="absolute inset-0 modal-backdrop" onClick={() => setShowForm(false)} />
-                    <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-zinc-200 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200">
+                    <div className="relative w-full max-w-lg bg-white rounded-3xl overflow-hidden modal-card animate-in fade-in slide-in-from-bottom-4 duration-200">
                         <div className="p-6 space-y-5 max-h-[90vh] overflow-y-auto">
                             <div className="flex items-center justify-between">
                                 <h3 className="text-xl font-bold">{editingId ? "Edit Part" : "Add Part"}</h3>
