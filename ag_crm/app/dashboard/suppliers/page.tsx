@@ -314,7 +314,7 @@ export default function SuppliersPage() {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => setIsDrawerOpen(false)}
-                            className="fixed inset-0 bg-black/50 z-[60]"
+                            className="fixed inset-0 modal-backdrop z-[60]"
                         />
                         <motion.div
                             initial={{ x: "100%" }}

@@ -742,7 +742,7 @@ export default function ClientDetailPage() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         onClick={() => setIsEditOpen(false)}
-                        className="absolute inset-0 bg-black/50"
+                        className="absolute inset-0 modal-backdrop"
                     />
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -832,7 +832,7 @@ export default function ClientDetailPage() {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={() => setIsAddModalOpen(false)}
-                        className="absolute inset-0 bg-black/50"
+                        className="absolute inset-0 modal-backdrop"
                     />
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}

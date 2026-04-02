@@ -156,3 +156,12 @@
         opacity: 1;
     }
 }
+
+/* Modal backdrop: blurred + feathered edges via radial mask */
+.modal-backdrop {
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    mask-image: radial-gradient(ellipse 95% 95% at 50% 50%, black 35%, rgba(0,0,0,0.6) 65%, transparent 100%);
+    -webkit-mask-image: radial-gradient(ellipse 95% 95% at 50% 50%, black 35%, rgba(0,0,0,0.6) 65%, transparent 100%);
+}
