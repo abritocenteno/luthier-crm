@@ -51,19 +51,21 @@ function StatCard({
 }) {
     const inner = (
         <div className={cn(
-            "bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm transition-all duration-200 group relative overflow-hidden min-h-[9.5rem]",
+            "bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm transition-all duration-200 group relative overflow-hidden min-h-[10rem] flex flex-col justify-between",
             href && "hover:shadow-md hover:-translate-y-0.5 cursor-pointer"
         )}>
             <div className={cn("absolute inset-0 opacity-0 group-hover:opacity-[0.025] transition-opacity rounded-2xl", accent)} />
-            <div className="flex items-start justify-between mb-4">
+            <div className="flex items-start justify-between">
                 <div className={cn("p-2.5 rounded-xl", accent, "bg-opacity-10")}>
                     <Icon size={20} />
                 </div>
                 {href && <ChevronRight size={14} className="text-zinc-300 group-hover:text-zinc-500 group-hover:translate-x-0.5 transition-all mt-1" />}
             </div>
-            <p className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest mb-1">{label}</p>
-            <p className="text-3xl font-black tracking-tight text-zinc-900">{value}</p>
-            {sub && <p className="text-xs text-zinc-400 font-medium mt-1">{sub}</p>}
+            <div>
+                <p className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest mb-1">{label}</p>
+                <p className="text-3xl font-black tracking-tight text-zinc-900">{value}</p>
+                <p className="text-xs text-zinc-400 font-medium mt-1 min-h-[1rem]">{sub ?? ""}</p>
+            </div>
         </div>
     );
     return href ? <Link href={href}>{inner}</Link> : inner;

@@ -409,7 +409,7 @@ export default function SupplierDetailPage() {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={() => setIsAddModalOpen(false)}
-                        className="absolute inset-0 bg-black/20 backdrop-blur-sm"
+                        className="absolute inset-0 bg-black/50"
                     />
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}
