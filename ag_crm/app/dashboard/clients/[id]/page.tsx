@@ -77,12 +77,16 @@ export default function ClientDetailPage() {
     const portal = useQuery(api.portal.getPortalForClient, { clientId });
     const generatePortalToken = useMutation(api.portal.generateToken);
     const revokePortalToken = useMutation(api.portal.revokeToken);
+    const updateClient = useMutation(api.clients.update);
     const addContact = useMutation(api.contacts.add);
     const removeContact = useMutation(api.contacts.remove);
     const generateUploadUrl = useMutation(api.contacts.generateUploadUrl);
     const addComm = useMutation(api.communications.add);
     const removeComm = useMutation(api.communications.remove);
 
+    const [isEditOpen, setIsEditOpen] = useState(false);
+    const [editDraft, setEditDraft] = useState({ name: "", email: "", phone: "", type: "regular", website: "", street: "", postcode: "", city: "" });
+    const [isSavingEdit, setIsSavingEdit] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -257,7 +261,22 @@ export default function ClientDetailPage() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <button className="flex items-center gap-2 px-6 py-2.5 bg-black text-white rounded-xl text-sm font-semibold hover:bg-zinc-800 transition-all shadow-lg shadow-black/10 active:scale-95">
+                        <button
+                            onClick={() => {
+                                setEditDraft({
+                                    name: client.name,
+                                    email: client.email,
+                                    phone: client.phone ?? "",
+                                    type: client.type,
+                                    website: client.website ?? "",
+                                    street: client.street ?? "",
+                                    postcode: client.postcode ?? "",
+                                    city: client.city ?? "",
+                                });
+                                setIsEditOpen(true);
+                            }}
+                            className="flex items-center gap-2 px-6 py-2.5 bg-black text-white rounded-xl text-sm font-semibold hover:bg-zinc-800 transition-all shadow-lg shadow-black/10 active:scale-95"
+                        >
                             <Edit2 size={16} />
                             Edit Profile
                         </button>
@@ -716,6 +735,95 @@ export default function ClientDetailPage() {
                     </Card>
                 </div>
             </div>
+            {/* Edit Profile Modal */}
+            {isEditOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        onClick={() => setIsEditOpen(false)}
+                        className="absolute inset-0 bg-black/20 backdrop-blur-sm"
+                    />
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden border border-zinc-200"
+                    >
+                        <div className="p-6 space-y-5">
+                            <div className="flex items-start justify-between gap-3">
+                                <div>
+                                    <h3 className="text-lg font-bold text-zinc-900">Edit Profile</h3>
+                                    <p className="text-sm text-zinc-500 mt-0.5">Update {client.name}'s details.</p>
+                                </div>
+                                <button onClick={() => setIsEditOpen(false)} className="p-1.5 hover:bg-zinc-100 rounded-xl text-zinc-400 hover:text-black transition-colors shrink-0">
+                                    <X size={18} />
+                                </button>
+                            </div>
+                            <form
+                                onSubmit={async (e) => {
+                                    e.preventDefault();
+                                    setIsSavingEdit(true);
+                                    try {
+                                        await updateClient({ id: clientId, ...editDraft });
+                                        setIsEditOpen(false);
+                                    } catch (err) { console.error(err); }
+                                    finally { setIsSavingEdit(false); }
+                                }}
+                                className="space-y-4"
+                            >
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="col-span-2 space-y-1.5">
+                                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Name *</label>
+                                        <input required value={editDraft.name} onChange={e => setEditDraft({ ...editDraft, name: e.target.value })} placeholder="Full name" className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-black/5 outline-none transition-all" />
+                                    </div>
+                                    <div className="col-span-2 space-y-1.5">
+                                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Email *</label>
+                                        <input required type="email" value={editDraft.email} onChange={e => setEditDraft({ ...editDraft, email: e.target.value })} placeholder="email@example.com" className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-black/5 outline-none transition-all" />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Phone</label>
+                                        <input value={editDraft.phone} onChange={e => setEditDraft({ ...editDraft, phone: e.target.value })} placeholder="+31..." className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-black/5 outline-none transition-all" />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Website</label>
+                                        <input value={editDraft.website} onChange={e => setEditDraft({ ...editDraft, website: e.target.value })} placeholder="https://..." className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-black/5 outline-none transition-all" />
+                                    </div>
+                                    <div className="col-span-2 space-y-1.5">
+                                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Type</label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {["regular", "store"].map(t => (
+                                                <button key={t} type="button" onClick={() => setEditDraft({ ...editDraft, type: t })}
+                                                    className={cn("py-2.5 rounded-xl text-sm font-bold capitalize border transition-all", editDraft.type === t ? "bg-black text-white border-black" : "bg-zinc-50 text-zinc-500 border-zinc-200 hover:border-zinc-300")}>
+                                                    {t === "store" ? "Store / Business" : "Individual"}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="col-span-2 space-y-1.5">
+                                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Street</label>
+                                        <input value={editDraft.street} onChange={e => setEditDraft({ ...editDraft, street: e.target.value })} placeholder="Street address" className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-black/5 outline-none transition-all" />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Postcode</label>
+                                        <input value={editDraft.postcode} onChange={e => setEditDraft({ ...editDraft, postcode: e.target.value })} placeholder="1234 AB" className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-black/5 outline-none transition-all" />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">City</label>
+                                        <input value={editDraft.city} onChange={e => setEditDraft({ ...editDraft, city: e.target.value })} placeholder="Amsterdam" className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-black/5 outline-none transition-all" />
+                                    </div>
+                                </div>
+                                <div className="flex gap-3 pt-1">
+                                    <button type="button" onClick={() => setIsEditOpen(false)} className="flex-1 py-2.5 border border-zinc-200 rounded-xl text-sm font-bold text-zinc-600 hover:bg-zinc-50 transition-all">Cancel</button>
+                                    <button type="submit" disabled={isSavingEdit} className="flex-1 py-2.5 bg-black text-white rounded-xl text-sm font-bold hover:bg-zinc-800 transition-all disabled:opacity-50">
+                                        {isSavingEdit ? "Saving..." : "Save Changes"}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
+
             {/* Add Contact Modal */}
             {isAddModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -731,31 +839,28 @@ export default function ClientDetailPage() {
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden border border-zinc-200"
                     >
-                        <div className="p-8 space-y-6">
-                            <div className="flex items-center justify-between">
-                                <div className="space-y-1">
-                                    <h3 className="text-xl font-bold text-zinc-900">Add Contact</h3>
-                                    <p className="text-sm text-zinc-500">Add a new representative for {client.name}.</p>
+                        <div className="p-6 space-y-5">
+                            <div className="flex items-start justify-between gap-3">
+                                <div>
+                                    <h3 className="text-lg font-bold text-zinc-900">Add Contact</h3>
+                                    <p className="text-sm text-zinc-500 mt-0.5">New representative for {client.name}.</p>
                                 </div>
                                 <button
                                     onClick={() => setIsAddModalOpen(false)}
-                                    className="p-2 hover:bg-zinc-50 rounded-xl transition-colors text-zinc-400 hover:text-black"
+                                    className="p-1.5 hover:bg-zinc-100 rounded-xl transition-colors text-zinc-400 hover:text-black shrink-0"
                                 >
-                                    <X size={20} />
+                                    <X size={18} />
                                 </button>
                             </div>
 
-                            <form onSubmit={handleAddContact} className="space-y-5">
-                                <div className="flex flex-col items-center gap-4 pb-2">
-                                    <div className="relative group/avatar">
-                                        <div className="w-24 h-24 rounded-3xl bg-zinc-50 border-2 border-dashed border-zinc-200 flex items-center justify-center text-zinc-400 overflow-hidden transition-all group-hover/avatar:border-black/20 group-hover/avatar:bg-zinc-100">
+                            <form onSubmit={handleAddContact} className="space-y-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="relative group/avatar shrink-0">
+                                        <div className="w-14 h-14 rounded-2xl bg-zinc-50 border-2 border-dashed border-zinc-200 flex items-center justify-center text-zinc-400 overflow-hidden transition-all group-hover/avatar:border-zinc-400 group-hover/avatar:bg-zinc-100 cursor-pointer">
                                             {imagePreview ? (
                                                 <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
                                             ) : (
-                                                <div className="flex flex-col items-center gap-2">
-                                                    <Camera size={24} />
-                                                    <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 group-hover/avatar:text-zinc-600 transition-colors">Add Photo</span>
-                                                </div>
+                                                <Camera size={18} className="text-zinc-300" />
                                             )}
                                         </div>
                                         <input
@@ -767,15 +872,16 @@ export default function ClientDetailPage() {
                                         {imagePreview && (
                                             <button
                                                 type="button"
-                                                onClick={() => {
-                                                    setSelectedImage(null);
-                                                    setImagePreview(null);
-                                                }}
-                                                className="absolute -top-2 -right-2 w-7 h-7 bg-red-500 text-white rounded-xl flex items-center justify-center shadow-lg border-2 border-white hover:scale-110 transition-all"
+                                                onClick={() => { setSelectedImage(null); setImagePreview(null); }}
+                                                className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-lg flex items-center justify-center shadow border-2 border-white hover:scale-110 transition-all"
                                             >
-                                                <Trash2 size={12} />
+                                                <X size={10} />
                                             </button>
                                         )}
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-semibold text-zinc-700">Photo</p>
+                                        <p className="text-xs text-zinc-400 mt-0.5">Optional — click to upload</p>
                                     </div>
                                 </div>
 
@@ -826,7 +932,7 @@ export default function ClientDetailPage() {
                                 <button
                                     disabled={isSubmitting}
                                     type="submit"
-                                    className="w-full bg-black text-white rounded-2xl py-4 text-sm font-bold shadow-xl shadow-black/10 hover:bg-zinc-800 transition-all active:scale-[0.98] disabled:opacity-50 mt-4"
+                                    className="w-full bg-black text-white rounded-2xl py-3 text-sm font-bold hover:bg-zinc-800 transition-all active:scale-[0.98] disabled:opacity-50"
                                 >
                                     {isSubmitting ? "Adding..." : "Save Contact"}
                                 </button>

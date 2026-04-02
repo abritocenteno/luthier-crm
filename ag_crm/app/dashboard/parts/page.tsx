@@ -287,7 +287,7 @@ export default function PartsPage() {
                 <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setShowForm(false)} />
                     <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-zinc-200 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200">
-                        <div className="p-8 space-y-6 max-h-[90vh] overflow-y-auto">
+                        <div className="p-6 space-y-5 max-h-[90vh] overflow-y-auto">
                             <div className="flex items-center justify-between">
                                 <h3 className="text-xl font-bold">{editingId ? "Edit Part" : "Add Part"}</h3>
                                 <button onClick={() => setShowForm(false)} className="p-2 hover:bg-zinc-100 rounded-xl transition-colors text-zinc-400 hover:text-black">
@@ -334,7 +334,7 @@ export default function PartsPage() {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-3 gap-4">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                                     {/* Quantity */}
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">Quantity *</label>

@@ -51,7 +51,7 @@ function StatCard({
 }) {
     const inner = (
         <div className={cn(
-            "bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm transition-all duration-200 group relative overflow-hidden",
+            "bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm transition-all duration-200 group relative overflow-hidden min-h-[9.5rem]",
             href && "hover:shadow-md hover:-translate-y-0.5 cursor-pointer"
         )}>
             <div className={cn("absolute inset-0 opacity-0 group-hover:opacity-[0.025] transition-opacity rounded-2xl", accent)} />
@@ -199,10 +199,8 @@ export default function Dashboard() {
                             <div className="py-16 text-center space-y-3">
                                 <Wrench className="mx-auto text-zinc-200" size={40} />
                                 <p className="text-zinc-400 font-medium">No active jobs right now.</p>
-                                <Link href="/dashboard/jobs/create">
-                                    <button className="mt-2 px-4 py-2 bg-black text-white rounded-xl text-sm font-bold hover:bg-zinc-800 transition-all active:scale-95">
-                                        Create your first job
-                                    </button>
+                                <Link href="/dashboard/jobs/create" className="mt-2 text-sm font-bold text-black underline underline-offset-4 hover:text-zinc-600 transition-colors">
+                                    Create first job →
                                 </Link>
                             </div>
                         ) : (

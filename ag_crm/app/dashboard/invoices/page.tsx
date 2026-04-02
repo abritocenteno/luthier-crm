@@ -175,18 +175,18 @@ export default function InvoicesPage() {
                                 filteredInvoices.map((invoice) => (
                                     <tr key={invoice._id} className="group hover:bg-zinc-50/50 transition-colors">
                                         <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-400 border border-zinc-200 transition-all group-hover:bg-white group-hover:shadow-sm">
+                                            <Link href={`/dashboard/invoices/${invoice._id}`} className="flex items-center gap-3 group/link">
+                                                <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-400 border border-zinc-200 transition-all group-hover/link:bg-white group-hover/link:shadow-sm">
                                                     <FileText size={18} />
                                                 </div>
                                                 <div>
-                                                    <p className="text-sm font-bold text-zinc-900">{invoice.invoiceNumber}</p>
+                                                    <p className="text-sm font-bold text-zinc-900 group-hover/link:underline underline-offset-4">{invoice.invoiceNumber}</p>
                                                     <div className="flex items-center gap-1 text-[10px] text-zinc-400 font-medium whitespace-nowrap">
                                                         <Calendar size={10} />
                                                         {new Date(invoice.date).toLocaleDateString()}
                                                     </div>
                                                 </div>
-                                            </div>
+                                            </Link>
                                         </td>
                                         <td className="px-6 py-4">
                                             <Link href={`/dashboard/clients/${invoice.clientId}`} className="flex items-center gap-3 group/link">

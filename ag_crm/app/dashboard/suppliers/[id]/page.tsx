@@ -416,31 +416,28 @@ export default function SupplierDetailPage() {
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden border border-zinc-200"
                     >
-                        <div className="p-8 space-y-6">
-                            <div className="flex items-center justify-between">
-                                <div className="space-y-1">
-                                    <h3 className="text-xl font-bold text-zinc-900">Add Contact</h3>
-                                    <p className="text-sm text-zinc-500">Add a new representative for {supplier.name}.</p>
+                        <div className="p-6 space-y-5">
+                            <div className="flex items-start justify-between gap-3">
+                                <div>
+                                    <h3 className="text-lg font-bold text-zinc-900">Add Contact</h3>
+                                    <p className="text-sm text-zinc-500 mt-0.5">New representative for {supplier.name}.</p>
                                 </div>
                                 <button
                                     onClick={() => setIsAddModalOpen(false)}
-                                    className="p-2 hover:bg-zinc-50 rounded-xl transition-colors text-zinc-400 hover:text-black"
+                                    className="p-1.5 hover:bg-zinc-100 rounded-xl transition-colors text-zinc-400 hover:text-black shrink-0"
                                 >
-                                    <X size={20} />
+                                    <X size={18} />
                                 </button>
                             </div>
 
-                            <form onSubmit={handleAddContact} className="space-y-5">
-                                <div className="flex flex-col items-center gap-4 pb-2">
-                                    <div className="relative group/avatar">
-                                        <div className="w-24 h-24 rounded-3xl bg-zinc-50 border-2 border-dashed border-zinc-200 flex items-center justify-center text-zinc-400 overflow-hidden transition-all group-hover/avatar:border-black/20 group-hover/avatar:bg-zinc-100">
+                            <form onSubmit={handleAddContact} className="space-y-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="relative group/avatar shrink-0">
+                                        <div className="w-14 h-14 rounded-2xl bg-zinc-50 border-2 border-dashed border-zinc-200 flex items-center justify-center text-zinc-400 overflow-hidden transition-all group-hover/avatar:border-zinc-400 group-hover/avatar:bg-zinc-100 cursor-pointer">
                                             {imagePreview ? (
                                                 <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
                                             ) : (
-                                                <div className="flex flex-col items-center gap-2">
-                                                    <Camera size={24} />
-                                                    <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 group-hover/avatar:text-zinc-600 transition-colors">Add Photo</span>
-                                                </div>
+                                                <Camera size={18} className="text-zinc-300" />
                                             )}
                                         </div>
                                         <input
@@ -452,15 +449,16 @@ export default function SupplierDetailPage() {
                                         {imagePreview && (
                                             <button
                                                 type="button"
-                                                onClick={() => {
-                                                    setSelectedImage(null);
-                                                    setImagePreview(null);
-                                                }}
-                                                className="absolute -top-2 -right-2 w-7 h-7 bg-red-500 text-white rounded-xl flex items-center justify-center shadow-lg border-2 border-white hover:scale-110 transition-all"
+                                                onClick={() => { setSelectedImage(null); setImagePreview(null); }}
+                                                className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-lg flex items-center justify-center shadow border-2 border-white hover:scale-110 transition-all"
                                             >
-                                                <Trash2 size={12} />
+                                                <X size={10} />
                                             </button>
                                         )}
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-semibold text-zinc-700">Photo</p>
+                                        <p className="text-xs text-zinc-400 mt-0.5">Optional — click to upload</p>
                                     </div>
                                 </div>
 
@@ -511,7 +509,7 @@ export default function SupplierDetailPage() {
                                 <button
                                     disabled={isSubmitting}
                                     type="submit"
-                                    className="w-full bg-black text-white rounded-2xl py-4 text-sm font-bold shadow-xl shadow-black/10 hover:bg-zinc-800 transition-all active:scale-[0.98] disabled:opacity-50 mt-4"
+                                    className="w-full bg-black text-white rounded-2xl py-3 text-sm font-bold hover:bg-zinc-800 transition-all active:scale-[0.98] disabled:opacity-50"
                                 >
                                     {isSubmitting ? "Adding..." : "Save Contact"}
                                 </button>
