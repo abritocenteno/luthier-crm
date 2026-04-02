@@ -223,7 +223,7 @@ export default function Dashboard() {
                                             </div>
 
                                             {/* Dates */}
-                                            <div className="text-right shrink-0">
+                                            <div className="hidden sm:block text-right shrink-0">
                                                 {job.estimatedCompletionDate ? (
                                                     <p className={cn(
                                                         "text-xs font-bold",
@@ -245,7 +245,7 @@ export default function Dashboard() {
 
                                 {/* Footer */}
                                 <div className="px-6 py-3 bg-zinc-50/60 flex items-center justify-between">
-                                    <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-3 flex-wrap">
                                         {Object.entries(STATUS_CONFIG).filter(([k]) => k !== "closed").map(([key, cfg]) => {
                                             const count = data.stats?.jobBreakdown[key as keyof typeof data.stats.jobBreakdown] ?? 0;
                                             if (count === 0) return null;

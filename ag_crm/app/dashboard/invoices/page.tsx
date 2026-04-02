@@ -114,7 +114,52 @@ export default function InvoicesPage() {
                     </div>
                 </div>
 
-                <div className="overflow-x-auto">
+                {/* Mobile card list */}
+                <div className="sm:hidden divide-y divide-zinc-100">
+                    {!filteredInvoices ? (
+                        [1, 2, 3].map(i => (
+                            <div key={i} className="p-4 animate-pulse">
+                                <div className="h-12 bg-zinc-100 rounded-xl w-full" />
+                            </div>
+                        ))
+                    ) : filteredInvoices.length === 0 ? (
+                        <div className="px-6 py-12 text-center">
+                            <div className="flex flex-col items-center justify-center space-y-3">
+                                <div className="w-12 h-12 bg-zinc-50 rounded-full flex items-center justify-center text-zinc-300">
+                                    <FileText size={24} />
+                                </div>
+                                <p className="text-zinc-500 font-medium">No invoices found.</p>
+                                <Link href="/dashboard/invoices/create" className="text-sm font-bold text-black underline underline-offset-4">
+                                    Create your first invoice
+                                </Link>
+                            </div>
+                        </div>
+                    ) : filteredInvoices.map((invoice) => (
+                        <div key={invoice._id} className="flex items-center gap-3 px-4 py-3">
+                            <Link href={`/dashboard/invoices/${invoice._id}`} className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-2 mb-0.5">
+                                    <p className="text-sm font-bold text-zinc-900">{invoice.invoiceNumber}</p>
+                                    <Badge variant={invoice.status === 'paid' ? 'success' : invoice.status === 'pending' ? 'warning' : 'error'}>
+                                        {invoice.status}
+                                    </Badge>
+                                </div>
+                                <p className="text-xs text-zinc-500 truncate">{invoice.clientName}</p>
+                                <p className="text-xs text-zinc-400 mt-0.5">
+                                    {formatCurrency(invoice.amount, settings?.currency)} · {new Date(invoice.date).toLocaleDateString()}
+                                </p>
+                            </Link>
+                            <Link
+                                href={`/dashboard/invoices/${invoice._id}`}
+                                className="p-3 text-zinc-300 shrink-0"
+                            >
+                                <ChevronRight size={16} />
+                            </Link>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Desktop table */}
+                <div className="hidden sm:block overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest border-b border-zinc-100 bg-zinc-50/30">

@@ -215,7 +215,62 @@ export default function ClientsPage() {
                         </div>
                     </div>
 
-                    <div className="overflow-x-auto">
+                    {/* Mobile card list */}
+                    <div className="sm:hidden divide-y divide-zinc-100">
+                        {clients === undefined ? (
+                            [1, 2, 3].map(i => (
+                                <div key={i} className="p-4 animate-pulse">
+                                    <div className="h-12 bg-zinc-100 rounded-xl w-full" />
+                                </div>
+                            ))
+                        ) : sortedClients.map((client) => (
+                            <div key={client._id} className="flex items-center gap-3 px-4 py-3">
+                                <Link href={`/dashboard/clients/${client._id}`} className="flex items-center gap-3 flex-1 min-w-0">
+                                    <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-400 border border-zinc-200 overflow-hidden shrink-0">
+                                        {client.imageUrl ? (
+                                            <img src={client.imageUrl} alt={client.name} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <User size={18} />
+                                        )}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-sm font-bold text-zinc-900 truncate">{client.name}</p>
+                                        <p className="text-xs text-zinc-400 truncate">{client.email || client.city || 'No contact set'}</p>
+                                    </div>
+                                </Link>
+                                <div className="flex items-center gap-1 shrink-0">
+                                    <button
+                                        onClick={() => handleOpenDrawer(client)}
+                                        className="p-3 text-zinc-400 hover:text-black hover:bg-zinc-100 rounded-lg transition-all"
+                                    >
+                                        <Edit2 size={16} />
+                                    </button>
+                                    <Link
+                                        href={`/dashboard/clients/${client._id}`}
+                                        className="p-3 text-zinc-300 hover:text-black hover:bg-zinc-100 rounded-lg transition-all"
+                                    >
+                                        <ChevronRight size={16} />
+                                    </Link>
+                                </div>
+                            </div>
+                        ))}
+                        {filteredClients?.length === 0 && (
+                            <div className="px-6 py-12 text-center">
+                                <div className="flex flex-col items-center justify-center space-y-3">
+                                    <div className="w-12 h-12 bg-zinc-50 rounded-full flex items-center justify-center text-zinc-300">
+                                        <Users size={24} />
+                                    </div>
+                                    <p className="text-zinc-500 font-medium">No clients found.</p>
+                                    <button onClick={() => handleOpenDrawer()} className="text-sm font-bold text-black underline underline-offset-4">
+                                        Add your first client
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Desktop table */}
+                    <div className="hidden sm:block overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest border-b border-zinc-100 bg-zinc-50/30">
