@@ -4,6 +4,7 @@ import "./globals.css";
 
 import { ConditionalClerkProvider } from "@/components/ConditionalClerkProvider";
 import ConvexClientProvider from "@/components/ConvexClientProvider";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,12 +28,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <ConditionalClerkProvider>
-          <ConvexClientProvider>{children}</ConvexClientProvider>
-        </ConditionalClerkProvider>
+      <head>
+        {/* Anti-flash: apply dark class before first paint */}
+        <script dangerouslySetInnerHTML={{ __html: `(function(){var t=localStorage.getItem('theme');var d=window.matchMedia('(prefers-color-scheme: dark)').matches;if(t==='dark'||(t===null&&d))document.documentElement.classList.add('dark');})();` }} />
+      </head>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <ThemeProvider>
+          <ConditionalClerkProvider>
+            <ConvexClientProvider>{children}</ConvexClientProvider>
+          </ConditionalClerkProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

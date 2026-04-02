@@ -1,6 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
+/* Enable class-based dark mode */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
     --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
     --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
@@ -68,6 +71,55 @@
         color: #a1a1aa !important;
         /* zinc-400 */
     }
+}
+
+/* ── Dark mode ─────────────────────────────────────────────────────────── */
+
+.dark {
+    color-scheme: dark;
+
+    /* Flip the zinc scale so all bg-zinc-*, text-zinc-*, border-zinc-* invert */
+    --color-zinc-50:  #09090b;
+    --color-zinc-100: #18181b;
+    --color-zinc-200: #27272a;
+    --color-zinc-300: #3f3f46;
+    --color-zinc-400: #71717a;
+    --color-zinc-500: #a1a1aa;
+    --color-zinc-600: #d4d4d8;
+    --color-zinc-700: #e4e4e7;
+    --color-zinc-800: #f4f4f5;
+    --color-zinc-900: #fafafa;
+    --color-zinc-950: #ffffff;
+
+    /* White surfaces (cards, sidebar, modals) → dark surface */
+    & .bg-white {
+        background-color: #18181b;
+    }
+
+    /* Semi-transparent white header backdrop */
+    & .bg-white\/80 {
+        background-color: rgb(9 9 11 / 0.85) !important;
+    }
+
+    /* Inputs and selects */
+    & input,
+    & select,
+    & textarea {
+        color: #fafafa !important;
+        background-color: #27272a !important;
+        border-color: #3f3f46 !important;
+    }
+
+    & input::placeholder,
+    & textarea::placeholder {
+        color: #71717a !important;
+    }
+
+    /* Shadow softening in dark mode */
+    & .shadow-sm        { --tw-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.4); }
+    & .shadow-lg        { --tw-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.5); }
+    & .shadow-xl        { --tw-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.5); }
+    & .shadow-2xl       { --tw-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.6); }
 }
 
 .animate-in {

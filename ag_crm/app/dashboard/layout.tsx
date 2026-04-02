@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { NotificationBell } from "@/components/NotificationBell";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -209,7 +210,7 @@ export default function DashboardLayout({
                 )}
             >
                 {/* Header */}
-                <header className="h-16 sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-zinc-200 px-6 flex items-center justify-between">
+                <header className="h-16 sticky top-0 z-30 bg-white/80 dark:bg-zinc-950/85 backdrop-blur-md border-b border-zinc-200 px-6 flex items-center justify-between">
                     <button
                         onClick={() => setMobileOpen(true)}
                         className="p-2 hover:bg-zinc-100 rounded-lg lg:hidden"
@@ -230,6 +231,7 @@ export default function DashboardLayout({
                             <span>Search</span>
                             <kbd className="ml-1 px-1.5 py-0.5 bg-white border border-zinc-200 rounded text-[10px] font-bold shadow-sm text-zinc-400">⌘K</kbd>
                         </button>
+                        <ThemeToggle />
                         <Authenticated>
                             <NotificationBell />
                             <UserButton afterSignOutUrl="/" />
