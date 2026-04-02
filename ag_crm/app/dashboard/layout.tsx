@@ -189,7 +189,7 @@ export default function DashboardLayout({
                         <X size={20} />
                     </button>
                 </div>
-                <nav className="flex-1 overflow-y-auto p-4 space-y-2">
+                <nav className="flex-1 overflow-y-auto p-4 space-y-2" onClick={() => setMobileOpen(false)}>
                     {navigation.map((item) => (
                         <SidebarItem
                             key={item.href}
