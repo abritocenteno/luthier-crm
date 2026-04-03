@@ -38,6 +38,26 @@ function stripHtml(html: string): string {
         .trim();
 }
 
+/** Extract high-signal contact signals directly from HTML attributes & semantic tags */
+function extractContactSignals(html: string): string {
+    const signals: string[] = [];
+
+    // mailto: links → email
+    const emails = [...html.matchAll(/href=["']mailto:([^"'?\s]+)/gi)].map(m => m[1]);
+    if (emails.length) signals.push(`Emails found in links: ${[...new Set(emails)].join(", ")}`);
+
+    // tel: links → phone
+    const phones = [...html.matchAll(/href=["']tel:([^"'?\s]+)/gi)].map(m => m[1]);
+    if (phones.length) signals.push(`Phones found in links: ${[...new Set(phones)].join(", ")}`);
+
+    // <address> tag content
+    const addressBlocks = [...html.matchAll(/<address[^>]*>([\s\S]*?)<\/address>/gi)]
+        .map(m => stripHtml(m[1]).trim());
+    if (addressBlocks.length) signals.push(`Address blocks:\n${addressBlocks.join("\n")}`);
+
+    return signals.join("\n");
+}
+
 export const fetchSupplierInfo = action({
     args: { url: v.string() },
     handler: async (_ctx, { url }) => {
@@ -62,14 +82,18 @@ export const fetchSupplierInfo = action({
         const jsonLd = [extractJsonLd(homeHtml), contactHtml ? extractJsonLd(contactHtml) : ""]
             .filter(Boolean).join("\n").slice(0, 2000);
 
-        const homeText = stripHtml(homeHtml).slice(0, 2000);
-        const contactText = contactHtml ? stripHtml(contactHtml).slice(0, 2000) : "";
+        const homeText = stripHtml(homeHtml).slice(0, 1500);
+        const contactText = contactHtml ? stripHtml(contactHtml).slice(0, 1500) : "";
+        const homeSignals = extractContactSignals(homeHtml);
+        const contactSignals = contactHtml ? extractContactSignals(contactHtml) : "";
+        const signals = [homeSignals, contactSignals].filter(Boolean).join("\n");
 
-        console.log(`[fetchSupplierInfo] jsonLd: ${jsonLd.length} chars, homeText: ${homeText.length} chars, contactText: ${contactText.length} chars`);
+        console.log(`[fetchSupplierInfo] jsonLd: ${jsonLd.length}, signals: ${signals.length}, homeText: ${homeText.length}, contactText: ${contactText.length}`);
 
         const visibleText = [homeText, contactText].filter(Boolean).join("\n---\n");
 
         const content = [
+            signals ? `=== Contact Signals (mailto/tel/address tags) ===\n${signals}` : "",
             jsonLd ? `=== Structured Data (JSON-LD) ===\n${jsonLd}` : "",
             `=== Page Text ===\n${visibleText}`,
         ].filter(Boolean).join("\n\n");
