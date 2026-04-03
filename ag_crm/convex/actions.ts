@@ -8,52 +8,84 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
  * Given a supplier website URL, fetches the page HTML, condenses it,
  * and uses Gemini to extract name, email, phone, street, city, postcode.
  */
+/** Fetch a URL and return its HTML, or null on failure */
+async function fetchHtml(url: string): Promise<string | null> {
+    try {
+        const res = await fetch(url, {
+            headers: { "User-Agent": "Mozilla/5.0 (compatible; CRM-bot/1.0)" },
+            signal: AbortSignal.timeout(8_000),
+        });
+        if (!res.ok) return null;
+        return await res.text();
+    } catch {
+        return null;
+    }
+}
+
+/** Pull JSON-LD blocks out of HTML before stripping scripts */
+function extractJsonLd(html: string): string {
+    const matches = [...html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
+    return matches.map(m => m[1].trim()).join("\n");
+}
+
+/** Strip HTML tags and collapse whitespace */
+function stripHtml(html: string): string {
+    return html
+        .replace(/<script[\s\S]*?<\/script>/gi, "")
+        .replace(/<style[\s\S]*?<\/style>/gi, "")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s{2,}/g, " ")
+        .trim();
+}
+
 export const fetchSupplierInfo = action({
     args: { url: v.string() },
     handler: async (_ctx, { url }) => {
         const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
 
-        // 1. Fetch the page
-        let html: string;
-        try {
-            const res = await fetch(url, {
-                headers: { "User-Agent": "Mozilla/5.0 (compatible; CRM-bot/1.0)" },
-                signal: AbortSignal.timeout(10_000),
-            });
-            html = await res.text();
-        } catch (err: any) {
-            throw new Error(`Could not fetch ${url}: ${err.message}`);
-        }
+        // 1. Fetch homepage, then also try /contact page for richer data
+        const baseUrl = new URL(url).origin;
+        const [homeHtml, contactHtml] = await Promise.all([
+            fetchHtml(url),
+            fetchHtml(`${baseUrl}/contact`),
+        ]);
 
-        // 2. Strip tags and truncate to ~4 000 chars to stay within token budget
-        const text = html
-            .replace(/<script[\s\S]*?<\/script>/gi, "")
-            .replace(/<style[\s\S]*?<\/style>/gi, "")
-            .replace(/<[^>]+>/g, " ")
-            .replace(/\s{2,}/g, " ")
-            .trim()
-            .slice(0, 4000);
+        if (!homeHtml) throw new Error(`Could not fetch ${url}`);
 
-        // 3. Ask Gemini to extract structured contact info
+        // 2. Build condensed content: JSON-LD first (highest signal), then visible text
+        const jsonLd = [extractJsonLd(homeHtml), contactHtml ? extractJsonLd(contactHtml) : ""]
+            .filter(Boolean).join("\n").slice(0, 2000);
+
+        const visibleText = [
+            stripHtml(homeHtml).slice(0, 2000),
+            contactHtml ? stripHtml(contactHtml).slice(0, 2000) : "",
+        ].filter(Boolean).join("\n---\n");
+
+        const content = [
+            jsonLd ? `=== Structured Data (JSON-LD) ===\n${jsonLd}` : "",
+            `=== Page Text ===\n${visibleText}`,
+        ].filter(Boolean).join("\n\n");
+
+        // 3. Ask Gemini to extract all contact fields
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
         const prompt = `
-Extract supplier contact information from the following website text.
-Return ONLY a raw JSON object (no markdown, no code fences) with these keys:
+Extract supplier contact information from the following website content.
+Return ONLY a raw JSON object (no markdown, no code fences) with exactly these keys:
 {
-  "name": "string — company / business name",
-  "email": "string — primary contact email, or empty string",
-  "phone": "string — primary phone number, or empty string",
-  "street": "string — street address, or empty string",
-  "city": "string — city, or empty string",
-  "postcode": "string — postcode / zip, or empty string"
+  "name": "company or business name",
+  "email": "primary contact email, or empty string",
+  "phone": "primary phone number, or empty string",
+  "street": "street address line, or empty string",
+  "city": "city name, or empty string",
+  "postcode": "postcode or zip code, or empty string"
 }
-If a field cannot be found, use an empty string.
+Prefer data from the JSON-LD structured data section when available.
+If a field cannot be determined, use an empty string. Never invent data.
 
-Website text:
-${text}
+${content}
         `.trim();
 
         const result = await model.generateContent(prompt);
