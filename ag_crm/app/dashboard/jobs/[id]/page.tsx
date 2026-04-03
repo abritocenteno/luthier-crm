@@ -305,12 +305,11 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
                         <p className="text-xs font-bold text-zinc-500">This job is closed and locked for editing.</p>
                     </div>
                 )}
-                <div className="relative flex items-start gap-0">
+                <div className={cn("relative flex items-start gap-0", job.status === "closed" && "pointer-events-none select-none")}>
                     {STATUS_STEPS.map((step, i) => {
                         const isDone = i <= currentStepIndex;
                         const isCurrent = i === currentStepIndex;
                         const isLast = i === STATUS_STEPS.length - 1;
-                        const isClosed = job.status === "closed";
                         return (
                             <div key={step.key} className="flex-1 flex flex-col items-center relative">
                                 {/* Connector line */}
@@ -322,15 +321,13 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
                                 )}
                                 {/* Step button */}
                                 <button
-                                    onClick={() => !isClosed && handleStatusChange(step.key)}
-                                    disabled={isUpdatingStatus || isClosed}
+                                    onClick={() => handleStatusChange(step.key)}
+                                    disabled={isUpdatingStatus}
                                     className={cn(
                                         "relative z-10 w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all",
                                         isDone && !isCurrent && "bg-black border-black text-white",
                                         isCurrent && "bg-black border-black text-white ring-4 ring-black/10",
-                                        !isDone && "bg-white border-zinc-200 text-zinc-300",
-                                        !isClosed && !isDone && "hover:border-zinc-400",
-                                        isClosed && "cursor-not-allowed"
+                                        !isDone && "bg-white border-zinc-200 text-zinc-300 hover:border-zinc-400"
                                     )}
                                 >
                                     {isDone ? <CheckCircle2 size={14} /> : <span className="text-[10px] font-black">{i + 1}</span>}

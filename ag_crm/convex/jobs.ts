@@ -175,6 +175,9 @@ export const updateStatus = mutation({
         if (!existing || existing.userId !== identity.tokenIdentifier) {
             throw new Error("Job not found or unauthorized");
         }
+        if (existing.status === "closed") {
+            throw new Error("Closed jobs cannot be edited.");
+        }
 
         const patch: Record<string, any> = { status: args.status };
         if (args.completionDate !== undefined) patch.completionDate = args.completionDate;
