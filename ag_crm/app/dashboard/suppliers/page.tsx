@@ -160,6 +160,7 @@ export default function SuppliersPage() {
                 street: info.street || prev.street,
                 city: info.city || prev.city,
                 postcode: info.postcode || prev.postcode,
+                imageUrl: info.logoUrl || prev.imageUrl,
             }));
         } catch (err: any) {
             setFetchError(err.message ?? "Auto-fill failed.");

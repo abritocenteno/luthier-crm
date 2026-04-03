@@ -69,6 +69,38 @@ function extractContactSignals(html: string): string {
     return signals.join("\n");
 }
 
+/** Try to find a usable logo URL for the supplier domain */
+async function findLogoUrl(domain: string, html: string): Promise<string> {
+    // 1. Clearbit Logo API — best quality for known brands
+    const clearbit = `https://logo.clearbit.com/${domain}`;
+    try {
+        const r = await fetch(clearbit, { method: "HEAD", signal: AbortSignal.timeout(4_000) });
+        if (r.ok) return clearbit;
+    } catch {}
+
+    // 2. og:image meta tag
+    const ogImage = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
+        ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+    if (ogImage?.[1]) return ogImage[1];
+
+    // 3. Apple touch icon
+    const touchIcon = html.match(/<link[^>]+rel=["'][^"']*apple-touch-icon[^"']*["'][^>]+href=["']([^"']+)["']/i)
+        ?? html.match(/<link[^>]+href=["']([^"']+)["'][^>]+rel=["'][^"']*apple-touch-icon[^"']*["']/i);
+    if (touchIcon?.[1]) {
+        const href = touchIcon[1];
+        return href.startsWith("http") ? href : `https://${domain}${href.startsWith("/") ? "" : "/"}${href}`;
+    }
+
+    // 4. Favicon
+    const favicon = html.match(/<link[^>]+rel=["'][^"']*icon[^"']*["'][^>]+href=["']([^"']+)["']/i);
+    if (favicon?.[1]) {
+        const href = favicon[1];
+        return href.startsWith("http") ? href : `https://${domain}${href.startsWith("/") ? "" : "/"}${href}`;
+    }
+
+    return "";
+}
+
 /** Extract footer / bottom-of-page text where contact info usually lives */
 function extractFooterText(html: string, chars = 3000): string {
     // Try <footer> tag first
@@ -85,9 +117,10 @@ export const fetchSupplierInfo = action({
         const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
 
-        // 1. Fetch homepage
+        // 1. Fetch homepage + logo in parallel
         const baseUrl = new URL(url).origin;
-        const homeHtml = await fetchHtml(url);
+        const domain = new URL(url).hostname.replace(/^www\./, "");
+        const [homeHtml] = await Promise.all([fetchHtml(url)]);
         if (!homeHtml) throw new Error(`Could not fetch ${url}`);
 
         // 2. Find the contact page URL from links in the homepage HTML
@@ -160,16 +193,16 @@ If a field cannot be determined, use an empty string. Never invent data.
 ${content}
         `.trim();
 
-        const result = await model.generateContent(prompt);
+        const [result, logoUrl] = await Promise.all([
+            model.generateContent(prompt),
+            findLogoUrl(domain, homeHtml),
+        ]);
         const raw = result.response.text().replace(/```json/g, "").replace(/```/g, "").trim();
-        return JSON.parse(raw) as {
-            name: string;
-            email: string;
-            phone: string;
-            street: string;
-            city: string;
-            postcode: string;
+        const parsed = JSON.parse(raw) as {
+            name: string; email: string; phone: string;
+            street: string; city: string; postcode: string;
         };
+        return { ...parsed, logoUrl };
     },
 });
 
