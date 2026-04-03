@@ -44,23 +44,30 @@ export const fetchSupplierInfo = action({
         const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
 
-        // 1. Fetch homepage, then also try /contact page for richer data
+        // 1. Fetch homepage + several common contact page paths in parallel
         const baseUrl = new URL(url).origin;
-        const [homeHtml, contactHtml] = await Promise.all([
+        const contactPaths = ["/contact", "/contact-us", "/about", "/about-us", "/over-ons", "/kontakt"];
+        const [homeHtml, ...contactResults] = await Promise.all([
             fetchHtml(url),
-            fetchHtml(`${baseUrl}/contact`),
+            ...contactPaths.map(p => fetchHtml(`${baseUrl}${p}`)),
         ]);
 
         if (!homeHtml) throw new Error(`Could not fetch ${url}`);
+
+        // Pick the first contact page that returned content
+        const contactHtml = contactResults.find(r => r && r.length > 500) ?? null;
+        console.log(`[fetchSupplierInfo] home: ${homeHtml.length} chars, contact: ${contactHtml?.length ?? 0} chars`);
 
         // 2. Build condensed content: JSON-LD first (highest signal), then visible text
         const jsonLd = [extractJsonLd(homeHtml), contactHtml ? extractJsonLd(contactHtml) : ""]
             .filter(Boolean).join("\n").slice(0, 2000);
 
-        const visibleText = [
-            stripHtml(homeHtml).slice(0, 2000),
-            contactHtml ? stripHtml(contactHtml).slice(0, 2000) : "",
-        ].filter(Boolean).join("\n---\n");
+        const homeText = stripHtml(homeHtml).slice(0, 2000);
+        const contactText = contactHtml ? stripHtml(contactHtml).slice(0, 2000) : "";
+
+        console.log(`[fetchSupplierInfo] jsonLd: ${jsonLd.length} chars, homeText: ${homeText.length} chars, contactText: ${contactText.length} chars`);
+
+        const visibleText = [homeText, contactText].filter(Boolean).join("\n---\n");
 
         const content = [
             jsonLd ? `=== Structured Data (JSON-LD) ===\n${jsonLd}` : "",
@@ -90,6 +97,7 @@ ${content}
 
         const result = await model.generateContent(prompt);
         const raw = result.response.text().replace(/```json/g, "").replace(/```/g, "").trim();
+        console.log(`[fetchSupplierInfo] Gemini response: ${raw}`);
         return JSON.parse(raw) as {
             name: string;
             email: string;
