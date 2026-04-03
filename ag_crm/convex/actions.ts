@@ -55,6 +55,11 @@ function extractContactSignals(html: string): string {
     const uniqueEmails = [...new Set(rawEmails)].filter(e => !e.includes("example") && !e.includes("sentry") && !e.includes("schema"));
     if (uniqueEmails.length) signals.push(`Emails (text): ${uniqueEmails.slice(0, 5).join(", ")}`);
 
+    // Regex scan for phone numbers
+    const rawPhones = [...html.matchAll(/(?:\+?\d[\d\s\-().]{6,}\d)/g)].map(m => m[0].trim()).filter(p => p.replace(/\D/g, "").length >= 7);
+    const uniquePhones = [...new Set(rawPhones)];
+    if (uniquePhones.length) signals.push(`Phones (text): ${uniquePhones.slice(0, 5).join(" | ")}`);
+
     // <address> tag content
     const addressBlocks = [...html.matchAll(/<address[^>]*>([\s\S]*?)<\/address>/gi)]
         .map(m => stripHtml(m[1]).trim());
@@ -109,7 +114,19 @@ export const fetchSupplierInfo = action({
             .filter(Boolean).join("\n").slice(0, 2000);
 
         const homeFooter = extractFooterText(homeHtml);
-        const contactText = contactHtml ? stripHtml(contactHtml).slice(0, 2000) : "";
+
+        // For the contact page, prefer <main> content; fall back to middle slice of stripped text
+        let contactText = "";
+        if (contactHtml) {
+            const mainMatch = contactHtml.match(/<main[\s\S]*?<\/main>/i);
+            if (mainMatch) {
+                contactText = stripHtml(mainMatch[0]).slice(0, 3000);
+            } else {
+                const stripped = stripHtml(contactHtml);
+                const mid = Math.floor(stripped.length / 2);
+                contactText = stripped.slice(Math.max(0, mid - 1500), mid + 1500);
+            }
+        }
         const homeSignals = extractContactSignals(homeHtml);
         const contactSignals = contactHtml ? extractContactSignals(contactHtml) : "";
         const signals = [homeSignals, contactSignals].filter(Boolean).join("\n");
