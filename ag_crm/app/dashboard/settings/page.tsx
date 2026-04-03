@@ -27,8 +27,66 @@ export default function SettingsPage() {
 
     const INSTRUMENT_TYPES_LIST = ["Guitar", "Bass", "Ukulele", "Mandolin", "Banjo", "Violin", "Viola", "Cello", "Other"];
     const addService = useMutation(api.services.add);
+    const addServiceBatch = useMutation(api.services.addBatch);
     const updateService = useMutation(api.services.update);
     const removeService = useMutation(api.services.remove);
+    const [isImporting, setIsImporting] = useState(false);
+
+    const PRICING_GUIDE_SERVICES = [
+        // Setups
+        { name: "Basic Setup", description: "Adjustment of neck, string height and intonation. Light clean.", type: "fixed", defaultPrice: 70 },
+        { name: "Full Setup", description: "Full adjustment + fretboard clean, light fret polish and hardware check.", type: "fixed", defaultPrice: 85 },
+        { name: "Premium Setup", description: "Full setup + deep clean, full fret polish and detailed finishing.", type: "fixed", defaultPrice: 110 },
+        { name: "String Installation", description: "Labour only, strings not included.", type: "fixed", defaultPrice: 10 },
+        { name: "Floyd Rose / Floating Trem Setup", description: "Additional charge on top of setup.", type: "fixed", defaultPrice: 20 },
+        { name: "5/6-String Bass Surcharge", description: "Additional charge for 5 or 6 string bass setups.", type: "fixed", defaultPrice: 10 },
+        { name: "12-String Surcharge", description: "Additional charge for 12-string setups.", type: "fixed", defaultPrice: 20 },
+        // Nut & Saddle
+        { name: "Nut Adjustment", description: "Adjustment of existing nut.", type: "fixed", defaultPrice: 30 },
+        { name: "New Synthetic Nut", description: "Supply and fit new synthetic nut.", type: "fixed", defaultPrice: 70 },
+        { name: "New Bone Nut", description: "Supply and fit new bone nut.", type: "fixed", defaultPrice: 100 },
+        { name: "Saddle Adjustment", description: "Adjustment of existing saddle.", type: "fixed", defaultPrice: 30 },
+        { name: "New Saddle (Acoustic)", description: "Supply and fit new acoustic saddle.", type: "fixed", defaultPrice: 75 },
+        // Fretwork
+        { name: "Fret Polish", description: "Full fret polish and cleaning.", type: "fixed", defaultPrice: 45 },
+        { name: "Fret Level & Crown", description: "Full fret level, recrown and polish.", type: "fixed", defaultPrice: 130 },
+        { name: "Partial Refret", description: "Partial refret (price varies by scope).", type: "fixed", defaultPrice: 90 },
+        { name: "Full Refret", description: "Complete refret with fret level and setup.", type: "fixed", defaultPrice: 280 },
+        // Electronics
+        { name: "Pickup Installation", description: "Per pickup, labour only.", type: "fixed", defaultPrice: 40 },
+        { name: "Complete Wiring", description: "Full wiring harness installation.", type: "fixed", defaultPrice: 90 },
+        { name: "Output Jack Replacement", description: "Replace output jack.", type: "fixed", defaultPrice: 30 },
+        { name: "Potmeter Replacement", description: "Replace volume or tone potmeter.", type: "fixed", defaultPrice: 35 },
+        { name: "Shielding", description: "Cavity shielding to reduce noise.", type: "fixed", defaultPrice: 70 },
+        // Repairs
+        { name: "Crack Repair", description: "Structural crack repair (price varies by severity).", type: "fixed", defaultPrice: 80 },
+        { name: "Headstock Repair", description: "Headstock break or crack repair.", type: "fixed", defaultPrice: 120 },
+        { name: "Bridge Reglue (Acoustic)", description: "Reglue lifting acoustic bridge.", type: "fixed", defaultPrice: 120 },
+        { name: "Hardware Installation", description: "Tuners, strap buttons, guards, etc.", type: "fixed", defaultPrice: 40 },
+        // Advanced
+        { name: "Neck Reset (Acoustic)", description: "Acoustic neck reset (price varies by instrument).", type: "fixed", defaultPrice: 300 },
+        { name: "Restoration Work", description: "Instrument restoration, from quoted price.", type: "fixed", defaultPrice: 300 },
+        { name: "Custom Modifications", description: "Custom mods and non-standard work.", type: "fixed", defaultPrice: 100 },
+        // Hourly
+        { name: "Hourly Rate", description: "For complex or undefined repairs.", type: "hourly", defaultPrice: 65 },
+        // Bundles
+        { name: "Bundle: Full Setup + Strings", description: "Full setup + string installation (strings excl.).", type: "fixed", defaultPrice: 95 },
+        { name: "Bundle: Fret Polish + Setup", description: "Fret polish combined with full setup.", type: "fixed", defaultPrice: 110 },
+        { name: "Bundle: Revive Package", description: "Full setup + fret polish + deep clean.", type: "fixed", defaultPrice: 125 },
+        { name: "Bundle: Pickup Install (2x) + Setup", description: "Install 2 pickups plus full setup.", type: "fixed", defaultPrice: 150 },
+    ] as const;
+
+    const handleImportPricing = async () => {
+        if (!confirm(`This will add ${PRICING_GUIDE_SERVICES.length} services from your pricing guide. Continue?`)) return;
+        setIsImporting(true);
+        try {
+            await addServiceBatch({ services: PRICING_GUIDE_SERVICES.map(s => ({ ...s, type: s.type })) });
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setIsImporting(false);
+        }
+    };
 
     type ServiceDraft = { name: string; description: string; type: "fixed" | "hourly"; defaultPrice: number };
     const emptyDraft = (): ServiceDraft => ({ name: "", description: "", type: "fixed", defaultPrice: 0 });
@@ -392,6 +450,16 @@ export default function SettingsPage() {
                             </h3>
                             <p className="text-sm text-zinc-500 mt-0.5">Predefined services you can add to jobs with one click.</p>
                         </div>
+                        {services !== undefined && services.length === 0 && (
+                            <button
+                                onClick={handleImportPricing}
+                                disabled={isImporting}
+                                className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-xl text-sm font-bold hover:bg-zinc-800 transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-black/10"
+                            >
+                                {isImporting ? <Loader2 size={14} className="animate-spin" /> : <Guitar size={14} />}
+                                {isImporting ? "Importing…" : "Import Pricing Guide"}
+                            </button>
+                        )}
                     </div>
 
                     {/* Existing services */}

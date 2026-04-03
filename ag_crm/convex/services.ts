@@ -55,6 +55,24 @@ export const update = mutation({
     },
 });
 
+export const addBatch = mutation({
+    args: {
+        services: v.array(v.object({
+            name: v.string(),
+            description: v.optional(v.string()),
+            type: v.string(),
+            defaultPrice: v.number(),
+        })),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) throw new Error("Unauthorized");
+        for (const svc of args.services) {
+            await ctx.db.insert("services", { ...svc, userId: identity.tokenIdentifier });
+        }
+    },
+});
+
 export const remove = mutation({
     args: { id: v.id("services") },
     handler: async (ctx, { id }) => {
