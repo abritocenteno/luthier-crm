@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, X, CalendarDays, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, CalendarDays, Plus, Trash2, ExternalLink, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -53,6 +53,49 @@ function toDateKey(ts: number) {
 function isToday(year: number, month: number, day: number) {
     const t = new Date();
     return t.getFullYear() === year && t.getMonth() === month && t.getDate() === day;
+}
+
+// ── Calendar export helpers ────────────────────────────────────────────────
+
+function toIcsDate(ts: number) {
+    return new Date(ts).toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+}
+
+function downloadIcs(title: string, start: number, description?: string) {
+    const end = start + 60 * 60 * 1000; // default 1h
+    const ics = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//LuthierCRM//EN",
+        "BEGIN:VEVENT",
+        `DTSTART:${toIcsDate(start)}`,
+        `DTEND:${toIcsDate(end)}`,
+        `SUMMARY:${title}`,
+        description ? `DESCRIPTION:${description}` : "",
+        `UID:${start}-${Math.random().toString(36).slice(2)}@luthiercrm`,
+        "END:VEVENT",
+        "END:VCALENDAR",
+    ].filter(Boolean).join("\r\n");
+
+    const blob = new Blob([ics], { type: "text/calendar" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${title.replace(/\s+/g, "_")}.ics`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function googleCalendarUrl(title: string, start: number, description?: string) {
+    const fmt = (ts: number) => new Date(ts).toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+    const end = start + 60 * 60 * 1000;
+    const params = new URLSearchParams({
+        action: "TEMPLATE",
+        text: title,
+        dates: `${fmt(start)}/${fmt(end)}`,
+        ...(description ? { details: description } : {}),
+    });
+    return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -347,6 +390,25 @@ export default function CalendarPage() {
                                             </div>
                                             <p className="text-sm font-bold text-zinc-900 leading-tight">{evt.title}</p>
                                             {evt.description && <p className="text-xs text-zinc-400 mt-0.5">{evt.description}</p>}
+                                            <div className="flex items-center gap-2 mt-3">
+                                                <a
+                                                    href={googleCalendarUrl(evt.title, evt.start, evt.description)}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex items-center gap-1 text-[10px] font-bold text-zinc-400 hover:text-blue-600 transition-colors"
+                                                >
+                                                    <ExternalLink size={10} />
+                                                    Google Cal
+                                                </a>
+                                                <span className="text-zinc-200">·</span>
+                                                <button
+                                                    onClick={() => downloadIcs(evt.title, evt.start, evt.description)}
+                                                    className="flex items-center gap-1 text-[10px] font-bold text-zinc-400 hover:text-zinc-700 transition-colors"
+                                                >
+                                                    <Download size={10} />
+                                                    .ics
+                                                </button>
+                                            </div>
                                         </div>
                                     );
                                 })}

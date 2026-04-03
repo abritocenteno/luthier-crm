@@ -80,6 +80,7 @@ function CreateJobForm() {
     // Work items
     const [workItems, setWorkItems] = useState<WorkItem[]>([]);
     const [showLibrary, setShowLibrary] = useState(false);
+    const [librarySearch, setLibrarySearch] = useState("");
     const [showTemplates, setShowTemplates] = useState(false);
 
     // Internal notes
@@ -487,43 +488,59 @@ function CreateJobForm() {
                                 {showLibrary && (
                                     <>
                                         <div className="fixed inset-0 z-10" onClick={() => setShowLibrary(false)} />
-                                        <div className="absolute right-0 top-full mt-2 z-20 w-72 bg-white border border-zinc-200 rounded-2xl shadow-xl overflow-hidden">
-                                            <div className="px-4 py-3 border-b border-zinc-100">
-                                                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.15em]">Service Library</p>
+                                        <div className="absolute right-0 top-full mt-2 z-20 w-80 bg-white border border-zinc-200 rounded-2xl shadow-xl overflow-hidden">
+                                            <div className="px-3 py-2.5 border-b border-zinc-100">
+                                                <input
+                                                    autoFocus
+                                                    type="text"
+                                                    placeholder="Search services…"
+                                                    value={librarySearch}
+                                                    onChange={(e) => setLibrarySearch(e.target.value)}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="w-full text-sm bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-1.5 outline-none focus:border-zinc-400 placeholder:text-zinc-400"
+                                                />
                                             </div>
                                             {!services || services.length === 0 ? (
                                                 <div className="px-4 py-6 text-center text-zinc-400 text-sm italic">
                                                     No services saved yet.<br />
                                                     <span className="text-xs">Add them in Settings → Service Library.</span>
                                                 </div>
-                                            ) : (
-                                                <div className="max-h-64 overflow-y-auto divide-y divide-zinc-50">
-                                                    {services.map((svc) => (
-                                                        <button
-                                                            key={svc._id}
-                                                            type="button"
-                                                            onClick={() => addFromLibrary(svc)}
-                                                            className="w-full flex items-center justify-between px-4 py-3 hover:bg-zinc-50 transition-colors text-left group"
-                                                        >
-                                                            <div className="flex flex-col gap-0.5 min-w-0 mr-3">
-                                                                <span className="text-sm font-semibold text-zinc-900 truncate">{svc.name}</span>
-                                                                {svc.description && (
-                                                                    <span className="text-xs text-zinc-400 truncate">{svc.description}</span>
-                                                                )}
-                                                            </div>
-                                                            <div className="flex items-center gap-2 shrink-0">
-                                                                <span className={cn(
-                                                                    "text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md",
-                                                                    svc.type === "hourly" ? "bg-blue-50 text-blue-600" : "bg-emerald-50 text-emerald-600"
-                                                                )}>{svc.type}</span>
-                                                                <span className="text-sm font-black text-zinc-800">
-                                                                    {formatCurrency(svc.defaultPrice, settings?.currency)}
-                                                                </span>
-                                                            </div>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            )}
+                                            ) : (() => {
+                                                const filtered = services.filter((s) =>
+                                                    s.name.toLowerCase().includes(librarySearch.toLowerCase()) ||
+                                                    (s.description ?? "").toLowerCase().includes(librarySearch.toLowerCase())
+                                                );
+                                                return filtered.length === 0 ? (
+                                                    <div className="px-4 py-6 text-center text-zinc-400 text-sm">No matches.</div>
+                                                ) : (
+                                                    <div className="max-h-64 overflow-y-auto divide-y divide-zinc-50">
+                                                        {filtered.map((svc) => (
+                                                            <button
+                                                                key={svc._id}
+                                                                type="button"
+                                                                onClick={() => { addFromLibrary(svc); setLibrarySearch(""); }}
+                                                                className="w-full flex items-center justify-between px-4 py-3 hover:bg-zinc-50 transition-colors text-left group"
+                                                            >
+                                                                <div className="flex flex-col gap-0.5 min-w-0 mr-3">
+                                                                    <span className="text-sm font-semibold text-zinc-900 truncate">{svc.name}</span>
+                                                                    {svc.description && (
+                                                                        <span className="text-xs text-zinc-400 truncate">{svc.description}</span>
+                                                                    )}
+                                                                </div>
+                                                                <div className="flex items-center gap-2 shrink-0">
+                                                                    <span className={cn(
+                                                                        "text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md",
+                                                                        svc.type === "hourly" ? "bg-blue-50 text-blue-600" : "bg-emerald-50 text-emerald-600"
+                                                                    )}>{svc.type}</span>
+                                                                    <span className="text-sm font-black text-zinc-800">
+                                                                        {formatCurrency(svc.defaultPrice, settings?.currency)}
+                                                                    </span>
+                                                                </div>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                );
+                                            })()}
                                         </div>
                                     </>
                                 )}
