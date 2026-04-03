@@ -4,7 +4,7 @@ export const getStats = query({
     args: {},
     handler: async (ctx) => {
         const identity = await ctx.auth.getUserIdentity();
-        if (!identity) return { stats: null, activeJobs: [], upcomingDeadlines: [], recentActivity: [] };
+        if (!identity) return { stats: null, activeJobs: [], upcomingDeadlines: [], upcomingEvents: [], recentActivity: [] };
 
         const userId = identity.tokenIdentifier;
 

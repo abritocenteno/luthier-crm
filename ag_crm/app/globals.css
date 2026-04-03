@@ -120,42 +120,48 @@
     & .shadow-lg        { --tw-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.5); }
     & .shadow-xl        { --tw-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.5); }
     & .shadow-2xl       { --tw-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.6); }
+}
 
-    /* ── Hover/text fixes: non-zinc colours don't auto-invert ─────────────── */
+/* ── Dark mode hover & text overrides ─────────────────────────────────────
+   Written as flat rules (not nested) so Lightning CSS / PostCSS can't
+   mangle the escaped colon characters in Tailwind class names.
+   ─────────────────────────────────────────────────────────────────────── */
 
-    /* 1. Primary buttons: bg-black text-white hover:bg-zinc-800
-          In dark mode zinc-800 → #f4f4f5 (near-white) — keep it dark instead */
-    & .hover\:bg-zinc-800:hover {
-        background-color: #3f3f46 !important;
-    }
+/* 1. Primary buttons: bg-black text-white hover:bg-zinc-800
+      In dark mode --color-zinc-800 = #f4f4f5 (near-white), making white
+      text invisible. Keep the hover surface dark instead. */
+.dark .hover\:bg-zinc-800:hover {
+    background-color: #3f3f46 !important;
+}
 
-    /* 2. Link / icon hover text: hover:text-black stays pure black in dark mode */
-    & .hover\:text-black:hover,
-    & .group:hover .group-hover\:text-black {
-        color: #fafafa !important;
-    }
+/* 2. Link / icon hover text.
+      "black" is not a zinc CSS variable so it never inverts — it stays
+      pitch-black on dark surfaces. */
+.dark .hover\:text-black:hover {
+    color: #fafafa !important;
+}
+.dark .group:hover .group-hover\:text-black {
+    color: #fafafa !important;
+}
 
-    /* 3. Sidebar / small-button hover background:
-          hover:bg-zinc-100 → zinc-100 in dark mode = #18181b (near black, invisible).
-          Use a slightly lifted surface instead. */
-    & .hover\:bg-zinc-100:hover,
-    & .group:hover .group-hover\:bg-zinc-100 {
-        background-color: #27272a !important;
-    }
+/* 3. Sidebar & icon-button hover backgrounds.
+      hover:bg-zinc-100 → #18181b in dark mode (≈ invisible).
+      hover:bg-white / hover:bg-zinc-50 → would flash very light. */
+.dark .hover\:bg-zinc-100:hover,
+.dark .hover\:bg-white:hover,
+.dark .hover\:bg-zinc-50:hover {
+    background-color: #27272a !important;
+}
+.dark .group:hover .group-hover\:bg-zinc-100,
+.dark .group:hover .group-hover\:bg-white,
+.dark .group:hover .group-hover\:bg-zinc-50 {
+    background-color: #27272a !important;
+}
 
-    /* 4. hover:bg-white / hover:bg-zinc-50 — same problem */
-    & .hover\:bg-white:hover,
-    & .group:hover .group-hover\:bg-white,
-    & .hover\:bg-zinc-50:hover,
-    & .group:hover .group-hover\:bg-zinc-50 {
-        background-color: #27272a !important;
-    }
-
-    /* 5. Standalone text-black (e.g. empty-state links, back-nav links).
-          bg-black buttons use text-white (not text-black) so this is safe. */
-    & .text-black {
-        color: #fafafa !important;
-    }
+/* 4. Standalone text-black (empty-state links, back-nav, etc.).
+      Primary buttons use text-white, so this override is safe. */
+.dark .text-black {
+    color: #fafafa !important;
 }
 
 .animate-in {
