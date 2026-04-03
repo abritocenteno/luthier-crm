@@ -98,6 +98,14 @@ function EditJobForm({ id }: { id: Id<"jobs"> }) {
             <h2 className="text-xl font-bold">Job Not Found</h2>
         </div>
     );
+    if (job.status === "closed") return (
+        <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+            <CheckCircle2 className="text-zinc-400" size={48} />
+            <h2 className="text-xl font-bold">Job is Closed</h2>
+            <p className="text-zinc-500 text-sm">Closed jobs cannot be edited.</p>
+            <button onClick={() => router.back()} className="text-sm font-bold text-black underline">Go Back</button>
+        </div>
+    );
 
     const workTotal = workItems.reduce((acc, wi) => acc + (wi.type === "hourly" ? wi.unitPrice * wi.hours : wi.unitPrice), 0);
     const addWorkItem = () => setWorkItems((p) => [...p, { name: "", description: "", type: "fixed", unitPrice: 0, hours: 1 }]);

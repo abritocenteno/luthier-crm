@@ -6,6 +6,7 @@ import Link from "next/link";
 import {
     Users, FileText, Clock, ChevronRight, Plus,
     Wrench, AlertCircle, CheckCircle2, Package, ArrowRight, CalendarClock,
+    Calendar,
 } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 
@@ -266,24 +267,25 @@ export default function Dashboard() {
                 {/* Right column */}
                 <div className="space-y-6">
 
-                    {/* Upcoming Deadlines */}
+                    {/* Upcoming: job deadlines + calendar events */}
                     <div className="space-y-4">
                         <h2 className="text-xl font-bold tracking-tight flex items-center gap-2">
                             <CalendarClock size={18} className="text-zinc-400" />
-                            Due Soon
+                            Upcoming
                         </h2>
                         <div className="bg-white border border-zinc-200 rounded-2xl shadow-sm overflow-hidden">
                             {!data ? (
                                 <div className="p-6 space-y-3">
                                     {[...Array(3)].map((_, i) => <div key={i} className="h-10 bg-zinc-100 rounded animate-pulse" />)}
                                 </div>
-                            ) : data.upcomingDeadlines.length === 0 ? (
+                            ) : data.upcomingDeadlines.length === 0 && data.upcomingEvents.length === 0 ? (
                                 <div className="py-10 text-center">
                                     <Clock className="mx-auto text-zinc-200 mb-2" size={28} />
-                                    <p className="text-xs text-zinc-400 font-medium">No deadlines in the next 14 days.</p>
+                                    <p className="text-xs text-zinc-400 font-medium">Nothing coming up in the next 14 days.</p>
                                 </div>
                             ) : (
                                 <div className="divide-y divide-zinc-100">
+                                    {/* Job deadlines */}
                                     {data.upcomingDeadlines.map((job) => (
                                         <Link key={job.id} href={`/dashboard/jobs/${job.id}`}>
                                             <div className="flex items-center gap-3 px-4 py-3.5 hover:bg-zinc-50 transition-colors group cursor-pointer">
@@ -293,13 +295,34 @@ export default function Dashboard() {
                                                 )} />
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-sm font-semibold text-zinc-800 truncate">{job.title}</p>
-                                                    <p className="text-xs text-zinc-400 truncate">{job.clientName}</p>
+                                                    <p className="text-xs text-zinc-400 truncate flex items-center gap-1">
+                                                        <Wrench size={10} className="shrink-0" />
+                                                        {job.clientName}
+                                                    </p>
                                                 </div>
                                                 <div className="text-right shrink-0">
                                                     <p className={cn("text-xs font-black", job.isOverdue ? "text-red-500" : "text-zinc-700")}>
                                                         {formatDate(job.estimatedCompletionDate)}
                                                     </p>
                                                     {job.isOverdue && <p className="text-[9px] font-bold text-red-400 uppercase tracking-wider">Overdue</p>}
+                                                </div>
+                                            </div>
+                                        </Link>
+                                    ))}
+                                    {/* Calendar events */}
+                                    {data.upcomingEvents.map((evt) => (
+                                        <Link key={evt.id} href="/dashboard/schedule">
+                                            <div className="flex items-center gap-3 px-4 py-3.5 hover:bg-zinc-50 transition-colors group cursor-pointer">
+                                                <div className="w-1.5 h-8 rounded-full shrink-0 bg-blue-400" />
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-semibold text-zinc-800 truncate">{evt.title}</p>
+                                                    <p className="text-xs text-zinc-400 truncate flex items-center gap-1">
+                                                        <Calendar size={10} className="shrink-0" />
+                                                        {evt.type.charAt(0).toUpperCase() + evt.type.slice(1)}
+                                                    </p>
+                                                </div>
+                                                <div className="text-right shrink-0">
+                                                    <p className="text-xs font-black text-zinc-700">{formatDate(evt.start)}</p>
                                                 </div>
                                             </div>
                                         </Link>

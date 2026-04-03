@@ -269,6 +269,22 @@ export const removeJobPhoto = mutation({
     },
 });
 
+// Delete a job
+export const remove = mutation({
+    args: { id: v.id("jobs") },
+    handler: async (ctx, { id }) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) throw new Error("Unauthorized");
+
+        const job = await ctx.db.get(id);
+        if (!job || job.userId !== identity.tokenIdentifier) {
+            throw new Error("Job not found or unauthorized");
+        }
+
+        return ctx.db.delete(id);
+    },
+});
+
 // Mark quote as sent
 export const markQuoteSent = mutation({
     args: { id: v.id("jobs") },

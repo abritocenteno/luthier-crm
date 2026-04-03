@@ -52,6 +52,7 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
     const generateUploadUrl = useMutation(api.jobs.generateUploadUrl);
     const addJobPhoto = useMutation(api.jobs.addJobPhoto);
     const removeJobPhoto = useMutation(api.jobs.removeJobPhoto);
+    const deleteJob = useMutation(api.jobs.remove);
 
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -60,6 +61,7 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
     const [isSendingQuote, setIsSendingQuote] = useState(false);
     const [quoteSent, setQuoteSent] = useState(false);
     const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const photoInputRef = useRef<HTMLInputElement>(null);
 
     if (job === undefined) {
@@ -163,6 +165,18 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
         }
     };
 
+    const handleDelete = async () => {
+        if (!confirm(`Delete "${job.title}"? This cannot be undone.`)) return;
+        setIsDeleting(true);
+        try {
+            await deleteJob({ id });
+            router.push("/dashboard/jobs");
+        } catch (err: any) {
+            alert(err.message ?? "Failed to delete job.");
+            setIsDeleting(false);
+        }
+    };
+
     return (
         <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
             {/* Header */}
@@ -187,6 +201,14 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3 shrink-0">
+                    <button
+                        onClick={handleDelete}
+                        disabled={isDeleting}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-white border border-red-200 rounded-xl text-sm font-bold text-red-500 hover:bg-red-50 transition-all active:scale-95 shadow-sm disabled:opacity-50"
+                    >
+                        {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                        Delete
+                    </button>
                     <Link
                         href={`/dashboard/jobs/${id}/print`}
                         target="_blank"
@@ -276,12 +298,19 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
             </header>
 
             {/* Status Progression */}
-            <Card className="p-6">
+            <Card className={cn("p-6", job.status === "closed" && "opacity-70")}>
+                {job.status === "closed" && (
+                    <div className="flex items-center gap-2 mb-4 px-3 py-2 bg-zinc-100 rounded-xl">
+                        <CheckCircle2 size={14} className="text-zinc-500 shrink-0" />
+                        <p className="text-xs font-bold text-zinc-500">This job is closed and locked for editing.</p>
+                    </div>
+                )}
                 <div className="relative flex items-start gap-0">
                     {STATUS_STEPS.map((step, i) => {
                         const isDone = i <= currentStepIndex;
                         const isCurrent = i === currentStepIndex;
                         const isLast = i === STATUS_STEPS.length - 1;
+                        const isClosed = job.status === "closed";
                         return (
                             <div key={step.key} className="flex-1 flex flex-col items-center relative">
                                 {/* Connector line */}
@@ -293,13 +322,15 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
                                 )}
                                 {/* Step button */}
                                 <button
-                                    onClick={() => handleStatusChange(step.key)}
-                                    disabled={isUpdatingStatus}
+                                    onClick={() => !isClosed && handleStatusChange(step.key)}
+                                    disabled={isUpdatingStatus || isClosed}
                                     className={cn(
                                         "relative z-10 w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all",
                                         isDone && !isCurrent && "bg-black border-black text-white",
                                         isCurrent && "bg-black border-black text-white ring-4 ring-black/10",
-                                        !isDone && "bg-white border-zinc-200 text-zinc-300 hover:border-zinc-400"
+                                        !isDone && "bg-white border-zinc-200 text-zinc-300",
+                                        !isClosed && !isDone && "hover:border-zinc-400",
+                                        isClosed && "cursor-not-allowed"
                                     )}
                                 >
                                     {isDone ? <CheckCircle2 size={14} /> : <span className="text-[10px] font-black">{i + 1}</span>}

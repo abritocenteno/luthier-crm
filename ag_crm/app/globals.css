@@ -120,6 +120,19 @@
     & .shadow-lg        { --tw-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.5); }
     & .shadow-xl        { --tw-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.5); }
     & .shadow-2xl       { --tw-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.6); }
+
+    /* Fix hover:bg-white flashing white in dark mode */
+    & .hover\:bg-white:hover,
+    & .group:hover .group-hover\:bg-white {
+        background-color: #27272a !important;
+    }
+    /* Fix hover:bg-zinc-50 — in inverted scale zinc-50=#09090b which is too dark */
+    & .hover\:bg-zinc-50:hover {
+        background-color: #27272a !important;
+    }
+    & .group:hover .group-hover\:bg-zinc-50 {
+        background-color: #27272a !important;
+    }
 }
 
 .animate-in {

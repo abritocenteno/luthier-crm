@@ -8,11 +8,12 @@ export const getStats = query({
 
         const userId = identity.tokenIdentifier;
 
-        const [clients, invoices, orders, jobs] = await Promise.all([
+        const [clients, invoices, orders, jobs, events] = await Promise.all([
             ctx.db.query("clients").withIndex("by_user", (q) => q.eq("userId", userId)).collect(),
             ctx.db.query("invoices").withIndex("by_user", (q) => q.eq("userId", userId)).collect(),
             ctx.db.query("orders").withIndex("by_user", (q) => q.eq("userId", userId)).collect(),
             ctx.db.query("jobs").withIndex("by_user", (q) => q.eq("userId", userId)).collect(),
+            ctx.db.query("events").withIndex("by_user", (q) => q.eq("userId", userId)).collect(),
         ]);
 
         // Job breakdown
@@ -69,6 +70,18 @@ export const getStats = query({
                 status: j.status,
                 estimatedCompletionDate: j.estimatedCompletionDate!,
                 isOverdue: (j.estimatedCompletionDate ?? 0) < now,
+            }));
+
+        // Upcoming calendar events in the next 14 days (future only)
+        const upcomingEvents = events
+            .filter((e) => e.start >= now && e.start <= in14Days)
+            .sort((a, b) => a.start - b.start)
+            .slice(0, 5)
+            .map((e) => ({
+                id: e._id,
+                title: e.title,
+                type: e.type,
+                start: e.start,
             }));
 
         // Recent activity — mix of jobs, invoices, clients
@@ -128,6 +141,7 @@ export const getStats = query({
             },
             activeJobs,
             upcomingDeadlines,
+            upcomingEvents,
             recentActivity,
         };
     },
