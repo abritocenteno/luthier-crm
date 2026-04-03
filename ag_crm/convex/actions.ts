@@ -112,6 +112,8 @@ export const fetchSupplierInfo = action({
             contactText ? `=== Contact Page ===\n${contactText}` : "",
         ].filter(Boolean).join("\n\n");
 
+        console.log(`[fetchSupplierInfo] content preview: ${content.slice(0, 600)}`);
+
         // 3. Ask Gemini to extract all contact fields
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
