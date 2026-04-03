@@ -55,8 +55,9 @@ function extractContactSignals(html: string): string {
     const uniqueEmails = [...new Set(rawEmails)].filter(e => !e.includes("example") && !e.includes("sentry") && !e.includes("schema"));
     if (uniqueEmails.length) signals.push(`Emails (text): ${uniqueEmails.slice(0, 5).join(", ")}`);
 
-    // Regex scan for phone numbers
-    const rawPhones = [...html.matchAll(/(?:\+?\d[\d\s\-().]{6,}\d)/g)].map(m => m[0].trim()).filter(p => p.replace(/\D/g, "").length >= 7);
+    // Regex scan for phone numbers — require typical formatting patterns
+    const phonePattern = /(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]\d{3}[-.\s]\d{4}|\+\d{1,3}[\s\-]\d{1,4}[\s\-]\d{3,5}[\s\-]\d{3,5}/g;
+    const rawPhones = [...html.matchAll(phonePattern)].map(m => m[0].trim());
     const uniquePhones = [...new Set(rawPhones)];
     if (uniquePhones.length) signals.push(`Phones (text): ${uniquePhones.slice(0, 5).join(" | ")}`);
 
@@ -132,6 +133,7 @@ export const fetchSupplierInfo = action({
         const signals = [homeSignals, contactSignals].filter(Boolean).join("\n");
 
         console.log(`[fetchSupplierInfo] jsonLd: ${jsonLd.length}, signals: ${signals.length}, footer: ${homeFooter.length}, contactText: ${contactText.length}`);
+        if (contactText) console.log(`[fetchSupplierInfo] contactText: ${contactText}`);
 
         const content = [
             signals ? `=== Contact Signals ===\n${signals}` : "",
