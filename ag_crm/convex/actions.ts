@@ -38,17 +38,22 @@ function stripHtml(html: string): string {
         .trim();
 }
 
-/** Extract high-signal contact signals directly from HTML attributes & semantic tags */
+/** Extract high-signal contact signals directly from HTML */
 function extractContactSignals(html: string): string {
     const signals: string[] = [];
 
     // mailto: links → email
-    const emails = [...html.matchAll(/href=["']mailto:([^"'?\s]+)/gi)].map(m => m[1]);
-    if (emails.length) signals.push(`Emails found in links: ${[...new Set(emails)].join(", ")}`);
+    const linkedEmails = [...html.matchAll(/href=["']mailto:([^"'?\s]+)/gi)].map(m => m[1]);
+    if (linkedEmails.length) signals.push(`Emails (links): ${[...new Set(linkedEmails)].join(", ")}`);
 
     // tel: links → phone
-    const phones = [...html.matchAll(/href=["']tel:([^"'?\s]+)/gi)].map(m => m[1]);
-    if (phones.length) signals.push(`Phones found in links: ${[...new Set(phones)].join(", ")}`);
+    const linkedPhones = [...html.matchAll(/href=["']tel:([^"'?\s]+)/gi)].map(m => m[1]);
+    if (linkedPhones.length) signals.push(`Phones (links): ${[...new Set(linkedPhones)].join(", ")}`);
+
+    // Regex scan full HTML for email addresses
+    const rawEmails = [...html.matchAll(/\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b/g)].map(m => m[0]);
+    const uniqueEmails = [...new Set(rawEmails)].filter(e => !e.includes("example") && !e.includes("sentry") && !e.includes("schema"));
+    if (uniqueEmails.length) signals.push(`Emails (text): ${uniqueEmails.slice(0, 5).join(", ")}`);
 
     // <address> tag content
     const addressBlocks = [...html.matchAll(/<address[^>]*>([\s\S]*?)<\/address>/gi)]
@@ -56,6 +61,16 @@ function extractContactSignals(html: string): string {
     if (addressBlocks.length) signals.push(`Address blocks:\n${addressBlocks.join("\n")}`);
 
     return signals.join("\n");
+}
+
+/** Extract footer / bottom-of-page text where contact info usually lives */
+function extractFooterText(html: string, chars = 3000): string {
+    // Try <footer> tag first
+    const footerMatch = html.match(/<footer[\s\S]*?<\/footer>/i);
+    if (footerMatch) return stripHtml(footerMatch[0]).slice(0, chars);
+    // Fall back to last N chars of stripped text
+    const stripped = stripHtml(html);
+    return stripped.slice(Math.max(0, stripped.length - chars));
 }
 
 export const fetchSupplierInfo = action({
@@ -82,20 +97,19 @@ export const fetchSupplierInfo = action({
         const jsonLd = [extractJsonLd(homeHtml), contactHtml ? extractJsonLd(contactHtml) : ""]
             .filter(Boolean).join("\n").slice(0, 2000);
 
-        const homeText = stripHtml(homeHtml).slice(0, 1500);
-        const contactText = contactHtml ? stripHtml(contactHtml).slice(0, 1500) : "";
+        const homeFooter = extractFooterText(homeHtml);
+        const contactText = contactHtml ? stripHtml(contactHtml).slice(0, 2000) : "";
         const homeSignals = extractContactSignals(homeHtml);
         const contactSignals = contactHtml ? extractContactSignals(contactHtml) : "";
         const signals = [homeSignals, contactSignals].filter(Boolean).join("\n");
 
-        console.log(`[fetchSupplierInfo] jsonLd: ${jsonLd.length}, signals: ${signals.length}, homeText: ${homeText.length}, contactText: ${contactText.length}`);
-
-        const visibleText = [homeText, contactText].filter(Boolean).join("\n---\n");
+        console.log(`[fetchSupplierInfo] jsonLd: ${jsonLd.length}, signals: ${signals.length}, footer: ${homeFooter.length}, contactText: ${contactText.length}`);
 
         const content = [
-            signals ? `=== Contact Signals (mailto/tel/address tags) ===\n${signals}` : "",
+            signals ? `=== Contact Signals ===\n${signals}` : "",
             jsonLd ? `=== Structured Data (JSON-LD) ===\n${jsonLd}` : "",
-            `=== Page Text ===\n${visibleText}`,
+            homeFooter ? `=== Footer / Bottom of Page ===\n${homeFooter}` : "",
+            contactText ? `=== Contact Page ===\n${contactText}` : "",
         ].filter(Boolean).join("\n\n");
 
         // 3. Ask Gemini to extract all contact fields
