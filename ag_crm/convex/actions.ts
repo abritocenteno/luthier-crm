@@ -3,6 +3,73 @@ import { v } from "convex/values";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 /**
+ * Fetch Supplier Info Action
+ *
+ * Given a supplier website URL, fetches the page HTML, condenses it,
+ * and uses Gemini to extract name, email, phone, street, city, postcode.
+ */
+export const fetchSupplierInfo = action({
+    args: { url: v.string() },
+    handler: async (_ctx, { url }) => {
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
+
+        // 1. Fetch the page
+        let html: string;
+        try {
+            const res = await fetch(url, {
+                headers: { "User-Agent": "Mozilla/5.0 (compatible; CRM-bot/1.0)" },
+                signal: AbortSignal.timeout(10_000),
+            });
+            html = await res.text();
+        } catch (err: any) {
+            throw new Error(`Could not fetch ${url}: ${err.message}`);
+        }
+
+        // 2. Strip tags and truncate to ~4 000 chars to stay within token budget
+        const text = html
+            .replace(/<script[\s\S]*?<\/script>/gi, "")
+            .replace(/<style[\s\S]*?<\/style>/gi, "")
+            .replace(/<[^>]+>/g, " ")
+            .replace(/\s{2,}/g, " ")
+            .trim()
+            .slice(0, 4000);
+
+        // 3. Ask Gemini to extract structured contact info
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+
+        const prompt = `
+Extract supplier contact information from the following website text.
+Return ONLY a raw JSON object (no markdown, no code fences) with these keys:
+{
+  "name": "string — company / business name",
+  "email": "string — primary contact email, or empty string",
+  "phone": "string — primary phone number, or empty string",
+  "street": "string — street address, or empty string",
+  "city": "string — city, or empty string",
+  "postcode": "string — postcode / zip, or empty string"
+}
+If a field cannot be found, use an empty string.
+
+Website text:
+${text}
+        `.trim();
+
+        const result = await model.generateContent(prompt);
+        const raw = result.response.text().replace(/```json/g, "").replace(/```/g, "").trim();
+        return JSON.parse(raw) as {
+            name: string;
+            email: string;
+            phone: string;
+            street: string;
+            city: string;
+            postcode: string;
+        };
+    },
+});
+
+/**
  * Helper to convert ArrayBuffer to base64 string
  */
 function arrayBufferToBase64(buffer: ArrayBuffer) {

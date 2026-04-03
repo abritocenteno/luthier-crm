@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import Link from "next/link";
 import {
@@ -20,6 +20,7 @@ import {
     ChevronRight,
     Building2,
     Package,
+    Wand2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
@@ -55,6 +56,7 @@ export default function SuppliersPage() {
     const updateSupplier = useMutation(api.suppliers.update);
     const removeSupplier = useMutation(api.suppliers.remove);
     const generateUploadUrl = useMutation(api.suppliers.generateUploadUrl);
+    const fetchSupplierInfo = useAction(api.actions.fetchSupplierInfo);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [search, setSearch] = useState("");
@@ -62,6 +64,8 @@ export default function SuppliersPage() {
     const [editingSupplier, setEditingSupplier] = useState<any>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
+    const [isFetching, setIsFetching] = useState(false);
+    const [fetchError, setFetchError] = useState<string | null>(null);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -112,6 +116,7 @@ export default function SuppliersPage() {
                 imageStorageId: undefined,
             });
         }
+        setFetchError(null);
         setIsDrawerOpen(true);
     };
 
@@ -138,6 +143,28 @@ export default function SuppliersPage() {
             console.error("Upload failed:", error);
         } finally {
             setIsUploading(false);
+        }
+    };
+
+    const handleAutoFill = async () => {
+        if (!formData.website) return;
+        setFetchError(null);
+        setIsFetching(true);
+        try {
+            const info = await fetchSupplierInfo({ url: formData.website });
+            setFormData(prev => ({
+                ...prev,
+                name: info.name || prev.name,
+                email: info.email || prev.email,
+                phone: info.phone || prev.phone,
+                street: info.street || prev.street,
+                city: info.city || prev.city,
+                postcode: info.postcode || prev.postcode,
+            }));
+        } catch (err: any) {
+            setFetchError(err.message ?? "Auto-fill failed.");
+        } finally {
+            setIsFetching(false);
         }
     };
 
@@ -450,12 +477,30 @@ export default function SuppliersPage() {
                                     </div>
                                     <div className="md:col-span-2 space-y-1.5">
                                         <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Website</label>
-                                        <input
-                                            className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
-                                            value={formData.website}
-                                            onChange={e => setFormData({ ...formData, website: e.target.value })}
-                                            placeholder="https://www.supplier.com"
-                                        />
+                                        <div className="flex gap-2">
+                                            <input
+                                                className="flex-1 px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
+                                                value={formData.website}
+                                                onChange={e => { setFormData({ ...formData, website: e.target.value }); setFetchError(null); }}
+                                                placeholder="https://www.supplier.com"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={handleAutoFill}
+                                                disabled={!formData.website || isFetching}
+                                                title="Auto-fill from website"
+                                                className="flex items-center gap-1.5 px-3 py-2 bg-zinc-900 text-white text-xs font-bold rounded-xl hover:bg-zinc-700 transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+                                            >
+                                                {isFetching
+                                                    ? <Loader2 size={14} className="animate-spin" />
+                                                    : <Wand2 size={14} />
+                                                }
+                                                {isFetching ? "Fetching…" : "Auto-fill"}
+                                            </button>
+                                        </div>
+                                        {fetchError && (
+                                            <p className="text-xs text-red-500 font-medium">{fetchError}</p>
+                                        )}
                                     </div>
                                 </div>
 
