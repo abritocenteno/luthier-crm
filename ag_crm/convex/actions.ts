@@ -108,7 +108,6 @@ export const fetchSupplierInfo = action({
 
         const contactResults = await Promise.all(allContactUrls.map(u => fetchHtml(u)));
         const contactHtml = contactResults.find(r => r && r.length > 500) ?? null;
-        console.log(`[fetchSupplierInfo] home: ${homeHtml.length} chars, contact: ${contactHtml?.length ?? 0} chars, tried: ${allContactUrls.join(", ")}`);
 
         // 2. Build condensed content: JSON-LD first (highest signal), then visible text
         const jsonLd = [extractJsonLd(homeHtml), contactHtml ? extractJsonLd(contactHtml) : ""]
@@ -132,8 +131,6 @@ export const fetchSupplierInfo = action({
         const contactSignals = contactHtml ? extractContactSignals(contactHtml) : "";
         const signals = [homeSignals, contactSignals].filter(Boolean).join("\n");
 
-        console.log(`[fetchSupplierInfo] jsonLd: ${jsonLd.length}, signals: ${signals.length}, footer: ${homeFooter.length}, contactText: ${contactText.length}`);
-        if (contactText) console.log(`[fetchSupplierInfo] contactText: ${contactText}`);
 
         const content = [
             signals ? `=== Contact Signals ===\n${signals}` : "",
@@ -141,8 +138,6 @@ export const fetchSupplierInfo = action({
             homeFooter ? `=== Footer / Bottom of Page ===\n${homeFooter}` : "",
             contactText ? `=== Contact Page ===\n${contactText}` : "",
         ].filter(Boolean).join("\n\n");
-
-        console.log(`[fetchSupplierInfo] content preview: ${content.slice(0, 600)}`);
 
         // 3. Ask Gemini to extract all contact fields
         const genAI = new GoogleGenerativeAI(apiKey);
@@ -167,7 +162,6 @@ ${content}
 
         const result = await model.generateContent(prompt);
         const raw = result.response.text().replace(/```json/g, "").replace(/```/g, "").trim();
-        console.log(`[fetchSupplierInfo] Gemini response: ${raw}`);
         return JSON.parse(raw) as {
             name: string;
             email: string;
