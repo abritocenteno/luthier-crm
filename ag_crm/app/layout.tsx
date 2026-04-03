@@ -30,7 +30,17 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         {/* Anti-flash: apply dark class before first paint */}
-        <script dangerouslySetInnerHTML={{ __html: `(function(){var t=localStorage.getItem('theme');var d=window.matchMedia('(prefers-color-scheme: dark)').matches;if(t==='dark'||(t===null&&d))document.documentElement.classList.add('dark');})();` }} />
+        <script dangerouslySetInnerHTML={{ __html: `
+  (function() {
+    try {
+      var t = localStorage.getItem('accent-theme');
+      if (t && t !== 'zinc') document.documentElement.classList.add('theme-' + t);
+      var d = localStorage.getItem('theme');
+      var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (d === 'dark' || (d === null && prefersDark)) document.documentElement.classList.add('dark');
+    } catch(e) {}
+  })();
+` }} />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ThemeProvider>

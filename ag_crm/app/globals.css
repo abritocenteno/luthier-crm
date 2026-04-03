@@ -53,6 +53,9 @@
     --color-red-500: #ef4444;
     --color-red-600: #dc2626;
     --color-red-700: #b91c1c;
+
+    /* Accent theme: black is made themeable */
+    --color-black: #000000;
 }
 
 @layer base {
@@ -162,6 +165,20 @@
       Primary buttons use text-white, so this override is safe. */
 .dark .text-black {
     color: #fafafa !important;
+}
+
+/* ── Accent themes ─────────────────────────────────────────────────── */
+:root {
+    --color-black-hover: #27272a;
+}
+.theme-blue    { --color-black: #2563eb; --color-black-hover: #1d4ed8; }
+.theme-emerald { --color-black: #059669; --color-black-hover: #047857; }
+.theme-amber   { --color-black: #d97706; --color-black-hover: #b45309; }
+.theme-rose    { --color-black: #e11d48; --color-black-hover: #be123c; }
+
+/* Light mode: primary button hover tracks the accent */
+.hover\:bg-zinc-800:hover {
+    background-color: var(--color-black-hover) !important;
 }
 
 .animate-in {

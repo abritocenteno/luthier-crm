@@ -3,7 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { Save, Upload, Loader2, Building, Mail, MapPin, Phone, Globe, Hash, CreditCard, Languages, Coins, Wrench, Plus, Trash2, Pencil, Check, X, ChevronDown, Guitar } from "lucide-react";
+import { Save, Upload, Loader2, Building, Mail, MapPin, Phone, Globe, Hash, CreditCard, Languages, Coins, Wrench, Plus, Trash2, Pencil, Check, X, ChevronDown, Guitar, Link2, CheckCheck } from "lucide-react";
+import { ThemeSelector } from "@/components/ThemeSelector";
 import { cn, formatCurrency, getCurrencySymbol } from "@/lib/utils";
 import { Id } from "../../../convex/_generated/dataModel";
 
@@ -96,6 +97,7 @@ export default function SettingsPage() {
 
     const [isSaving, setIsSaving] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
+    const [copiedLink, setCopiedLink] = useState(false);
 
     // Form state
     const [companyName, setCompanyName] = useState("");
@@ -205,6 +207,17 @@ export default function SettingsPage() {
                 <p className="text-zinc-500 mt-2">
                     Manage your company details. These will appear on your generated invoices and communications.
                 </p>
+            </div>
+
+            {/* Appearance */}
+            <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
+                <div className="p-6 sm:p-8">
+                    <h3 className="text-lg font-semibold mb-4">Appearance</h3>
+                    <div className="flex items-center justify-between">
+                        <span className="text-sm text-zinc-500">Accent Colour</span>
+                        <ThemeSelector />
+                    </div>
+                </div>
             </div>
 
             <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
@@ -690,6 +703,34 @@ export default function SettingsPage() {
                             </div>
                         </div>
                     )}
+                </div>
+
+                {/* ── Intake Form ── */}
+                <div className="p-6 sm:p-8 border-t border-zinc-200 space-y-4">
+                    <div>
+                        <h3 className="text-base font-black tracking-tight flex items-center gap-2">
+                            <Link2 size={16} className="text-zinc-400" /> Intake Form
+                        </h3>
+                        <p className="text-xs text-zinc-500 mt-0.5">Share this link with clients so they can submit a service request online.</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <div className="flex-1 min-w-0 px-3 py-2.5 border border-zinc-200 rounded-xl bg-zinc-50 text-sm text-zinc-500 truncate select-all">
+                            {typeof window !== "undefined" ? window.location.origin + "/request" : "/request"}
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const url = window.location.origin + "/request";
+                                navigator.clipboard.writeText(url).then(() => {
+                                    setCopiedLink(true);
+                                    setTimeout(() => setCopiedLink(false), 2000);
+                                });
+                            }}
+                            className="flex items-center gap-2 px-4 py-2.5 bg-zinc-900 text-white rounded-xl text-xs font-bold hover:bg-black transition-all active:scale-95 shrink-0"
+                        >
+                            {copiedLink ? <><CheckCheck size={13} /> Copied!</> : <><Link2 size={13} /> Copy Link</>}
+                        </button>
+                    </div>
                 </div>
 
                 <div className="bg-zinc-50 p-6 sm:p-8 border-t border-zinc-200 flex justify-end">

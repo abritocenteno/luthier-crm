@@ -16,6 +16,7 @@ import type * as crons from "../crons.js";
 import type * as dashboard from "../dashboard.js";
 import type * as events from "../events.js";
 import type * as files from "../files.js";
+import type * as intake from "../intake.js";
 import type * as invoices from "../invoices.js";
 import type * as jobTemplates from "../jobTemplates.js";
 import type * as jobs from "../jobs.js";
@@ -45,6 +46,7 @@ declare const fullApi: ApiFromModules<{
   dashboard: typeof dashboard;
   events: typeof events;
   files: typeof files;
+  intake: typeof intake;
   invoices: typeof invoices;
   jobTemplates: typeof jobTemplates;
   jobs: typeof jobs;
