@@ -79,19 +79,30 @@ export const fetchSupplierInfo = action({
         const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
 
-        // 1. Fetch homepage + several common contact page paths in parallel
+        // 1. Fetch homepage
         const baseUrl = new URL(url).origin;
-        const contactPaths = ["/contact", "/contact-us", "/about", "/about-us", "/over-ons", "/kontakt"];
-        const [homeHtml, ...contactResults] = await Promise.all([
-            fetchHtml(url),
-            ...contactPaths.map(p => fetchHtml(`${baseUrl}${p}`)),
-        ]);
-
+        const homeHtml = await fetchHtml(url);
         if (!homeHtml) throw new Error(`Could not fetch ${url}`);
 
-        // Pick the first contact page that returned content
+        // 2. Find the contact page URL from links in the homepage HTML
+        const contactLinkMatches = [
+            ...homeHtml.matchAll(/href=["']([^"']*contact[^"']*)/gi),
+            ...homeHtml.matchAll(/href=["']([^"']*about[^"']*)/gi),
+        ];
+        const contactCandidates = [...new Set(
+            contactLinkMatches
+                .map(m => m[1])
+                .filter(h => !h.startsWith("mailto") && !h.includes("#"))
+                .map(h => h.startsWith("http") ? h : `${baseUrl}${h.startsWith("/") ? "" : "/"}${h}`)
+        )].slice(0, 4);
+
+        // Also try common static paths as fallback
+        const staticPaths = ["/contact", "/contact-us", "/pages/contact-us", "/pages/contact", "/about", "/over-ons", "/kontakt"];
+        const allContactUrls = [...new Set([...contactCandidates, ...staticPaths.map(p => `${baseUrl}${p}`)])].slice(0, 6);
+
+        const contactResults = await Promise.all(allContactUrls.map(u => fetchHtml(u)));
         const contactHtml = contactResults.find(r => r && r.length > 500) ?? null;
-        console.log(`[fetchSupplierInfo] home: ${homeHtml.length} chars, contact: ${contactHtml?.length ?? 0} chars`);
+        console.log(`[fetchSupplierInfo] home: ${homeHtml.length} chars, contact: ${contactHtml?.length ?? 0} chars, tried: ${allContactUrls.join(", ")}`);
 
         // 2. Build condensed content: JSON-LD first (highest signal), then visible text
         const jsonLd = [extractJsonLd(homeHtml), contactHtml ? extractJsonLd(contactHtml) : ""]
