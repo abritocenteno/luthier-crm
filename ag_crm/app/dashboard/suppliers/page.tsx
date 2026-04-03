@@ -382,7 +382,12 @@ export default function SuppliersPage() {
                                             {isUploading ? (
                                                 <Loader2 size={24} className="animate-spin" />
                                             ) : formData.imageUrl ? (
-                                                <img src={formData.imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                                                <img
+                                    src={formData.imageUrl}
+                                    alt="Preview"
+                                    className="w-full h-full object-cover"
+                                    onError={() => setFormData(prev => ({ ...prev, imageUrl: "" }))}
+                                />
                                             ) : (
                                                 <>
                                                     <Plus size={24} />

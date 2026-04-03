@@ -78,25 +78,22 @@ async function findLogoUrl(domain: string, html: string): Promise<string> {
         if (r.ok) return clearbit;
     } catch {}
 
+    const toAbsolute = (href: string) =>
+        href.startsWith("http") ? href : `https://${domain}${href.startsWith("/") ? "" : "/"}${href}`;
+
     // 2. og:image meta tag
     const ogImage = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
         ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
-    if (ogImage?.[1]) return ogImage[1];
+    if (ogImage?.[1]) return toAbsolute(ogImage[1]);
 
     // 3. Apple touch icon
     const touchIcon = html.match(/<link[^>]+rel=["'][^"']*apple-touch-icon[^"']*["'][^>]+href=["']([^"']+)["']/i)
         ?? html.match(/<link[^>]+href=["']([^"']+)["'][^>]+rel=["'][^"']*apple-touch-icon[^"']*["']/i);
-    if (touchIcon?.[1]) {
-        const href = touchIcon[1];
-        return href.startsWith("http") ? href : `https://${domain}${href.startsWith("/") ? "" : "/"}${href}`;
-    }
+    if (touchIcon?.[1]) return toAbsolute(touchIcon[1]);
 
     // 4. Favicon
     const favicon = html.match(/<link[^>]+rel=["'][^"']*icon[^"']*["'][^>]+href=["']([^"']+)["']/i);
-    if (favicon?.[1]) {
-        const href = favicon[1];
-        return href.startsWith("http") ? href : `https://${domain}${href.startsWith("/") ? "" : "/"}${href}`;
-    }
+    if (favicon?.[1]) return toAbsolute(favicon[1]);
 
     return "";
 }
