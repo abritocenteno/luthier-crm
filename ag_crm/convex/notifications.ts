@@ -11,9 +11,10 @@ export const list = query({
         const now = Date.now();
         const threeDays = 3 * 24 * 60 * 60 * 1000;
 
-        const [jobs, invoices, reads] = await Promise.all([
+        const [jobs, invoices, parts, reads] = await Promise.all([
             ctx.db.query("jobs").withIndex("by_user", (q) => q.eq("userId", userId)).collect(),
             ctx.db.query("invoices").withIndex("by_user", (q) => q.eq("userId", userId)).collect(),
+            ctx.db.query("parts").withIndex("by_user", (q) => q.eq("userId", userId)).collect(),
             ctx.db.query("notificationReads").withIndex("by_user", (q) => q.eq("userId", userId)).collect(),
         ]);
 
@@ -117,6 +118,22 @@ export const list = query({
                     href: `/dashboard/jobs/${job._id}`,
                     read: readKeys.has(key),
                     createdAt: job.estimatedCompletionDate,
+                });
+            }
+        }
+
+        // Parts at or below reorder threshold
+        for (const part of parts) {
+            if (part.reorderThreshold != null && part.quantity <= part.reorderThreshold) {
+                const key = `low_stock_${part._id}`;
+                notifications.push({
+                    key,
+                    type: "low_stock",
+                    title: "Low Stock",
+                    body: `${part.name} is at ${part.quantity} unit${part.quantity === 1 ? "" : "s"} (threshold: ${part.reorderThreshold}).`,
+                    href: `/dashboard/parts`,
+                    read: readKeys.has(key),
+                    createdAt: part._creationTime,
                 });
             }
         }
