@@ -29,6 +29,22 @@ export const list = query({
             createdAt: number;
         }> = [];
 
+        // New intake form requests (unactioned — still in 'quoted' status)
+        for (const job of jobs) {
+            if (job.fromIntake && job.status === "quoted") {
+                const key = `intake_request_${job._id}`;
+                notifications.push({
+                    key,
+                    type: "intake_request",
+                    title: "New Service Request",
+                    body: `${job.title.replace("Intake request – ", "")} request received via the intake form.`,
+                    href: `/dashboard/jobs/${job._id}`,
+                    read: readKeys.has(key),
+                    createdAt: job._creationTime,
+                });
+            }
+        }
+
         // Overdue invoices
         for (const inv of invoices) {
             if (inv.status === "overdue") {

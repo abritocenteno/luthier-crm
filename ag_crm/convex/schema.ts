@@ -157,6 +157,8 @@ export default defineSchema({
         sentQuoteAt: v.optional(v.number()),
         // Photos (before/after)
         photoIds: v.optional(v.array(v.id("_storage"))),
+        // Intake form flag
+        fromIntake: v.optional(v.boolean()),
     })
         .index("by_user", ["userId"])
         .index("by_client", ["clientId"]),

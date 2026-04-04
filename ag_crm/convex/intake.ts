@@ -1,5 +1,6 @@
 import { mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { api } from "./_generated/api";
 
 // Public mutation — no auth required. Creates a draft job from the intake form.
 export const submitRequest = mutation({
@@ -40,7 +41,7 @@ export const submitRequest = mutation({
 
         if (!client) throw new Error("Failed to create client.");
 
-        await ctx.db.insert("jobs", {
+        const jobId = await ctx.db.insert("jobs", {
             userId,
             clientId: client._id,
             title: `Intake request – ${instrumentType}`,
@@ -48,7 +49,22 @@ export const submitRequest = mutation({
             status: "quoted",
             instrumentType,
             intakeDate: Date.now(),
+            fromIntake: true,
         });
+
+        // Send notification email to shop owner (fire-and-forget)
+        if (settings.contactEmail) {
+            await ctx.scheduler.runAfter(0, api.resend.sendIntakeNotificationEmail, {
+                ownerEmail: settings.contactEmail,
+                companyName: settings.companyName ?? "Your shop",
+                clientName: name,
+                clientEmail: email,
+                clientPhone: phone ?? "",
+                instrumentType,
+                description,
+                jobId,
+            });
+        }
 
         return { success: true };
     },

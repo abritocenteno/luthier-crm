@@ -2,6 +2,58 @@ import { v } from "convex/values";
 import { action } from "./_generated/server";
 import { Resend } from "resend";
 import { api } from "./_generated/api";
+import { Id } from "./_generated/dataModel";
+
+export const sendIntakeNotificationEmail = action({
+    args: {
+        ownerEmail: v.string(),
+        companyName: v.string(),
+        clientName: v.string(),
+        clientEmail: v.string(),
+        clientPhone: v.string(),
+        instrumentType: v.string(),
+        description: v.string(),
+        jobId: v.id("jobs"),
+    },
+    handler: async (_ctx, args) => {
+        const resendApiKey = process.env.RESEND_API_KEY;
+        if (!resendApiKey) throw new Error("RESEND_API_KEY not set");
+
+        const resend = new Resend(resendApiKey);
+
+        const html = `
+            <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px 24px;color:#18181b;">
+                <h2 style="font-size:22px;font-weight:900;margin:0 0 4px;">New Service Request 🎸</h2>
+                <p style="color:#71717a;margin:0 0 32px;font-size:14px;">${args.companyName} — via intake form</p>
+
+                <div style="background:#f4f4f5;border-radius:12px;padding:20px 24px;margin-bottom:24px;">
+                    <p style="margin:0 0 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#71717a;">Client</p>
+                    <p style="margin:0 0 4px;font-weight:700;font-size:16px;">${args.clientName}</p>
+                    <p style="margin:0 0 2px;font-size:14px;color:#52525b;">${args.clientEmail}</p>
+                    ${args.clientPhone ? `<p style="margin:0;font-size:14px;color:#52525b;">${args.clientPhone}</p>` : ""}
+                </div>
+
+                <div style="background:#f4f4f5;border-radius:12px;padding:20px 24px;margin-bottom:24px;">
+                    <p style="margin:0 0 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#71717a;">Request</p>
+                    <p style="margin:0 0 4px;font-weight:700;font-size:16px;">${args.instrumentType}</p>
+                    <p style="margin:0;font-size:14px;color:#52525b;line-height:1.6;">${args.description}</p>
+                </div>
+
+                <hr style="border:none;border-top:1px solid #e4e4e7;margin:32px 0;" />
+                <p style="margin:0;font-size:12px;color:#a1a1aa;">© ${new Date().getFullYear()} ${args.companyName}</p>
+            </div>`;
+
+        await resend.emails.send({
+            from: "AG CRM <billing@thedotguitars.com>",
+            to: [args.ownerEmail],
+            subject: `New request: ${args.instrumentType} — ${args.clientName}`,
+            html,
+            text: `New service request from ${args.clientName} (${args.clientEmail}${args.clientPhone ? `, ${args.clientPhone}` : ""}).\n\nInstrument: ${args.instrumentType}\n\n${args.description}`,
+        });
+
+        return { success: true };
+    },
+});
 
 export const sendInvoiceEmail = action({
     args: {
