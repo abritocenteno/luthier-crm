@@ -295,6 +295,8 @@ export default function SettingsPage() {
         }
     };
 
+    const [activeTab, setActiveTab] = useState<"general" | "services" | "intake" | "appearance">("general");
+
     if (settings === undefined) {
         return (
             <div className="flex h-full items-center justify-center min-h-[500px]">
@@ -305,556 +307,592 @@ export default function SettingsPage() {
 
     return (
         <>
-        <div className="max-w-4xl mx-auto space-y-8 pb-12">
+        <div className="max-w-4xl mx-auto space-y-6 pb-12">
             <div>
-                <h1 className="text-3xl font-bold tracking-tight">Organization Settings</h1>
-                <p className="text-zinc-500 mt-2">
-                    Manage your company details. These will appear on your generated invoices and communications.
-                </p>
+                <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+                <p className="text-zinc-500 mt-1">Manage your workspace configuration.</p>
             </div>
 
-            {/* Appearance */}
-            <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
-                <div className="p-6 sm:p-8">
-                    <h3 className="text-lg font-semibold mb-4">Appearance</h3>
-                    <div className="flex items-center justify-between">
-                        <span className="text-sm text-zinc-500">Accent Colour</span>
-                        <ThemeSelector />
-                    </div>
-                </div>
-            </div>
-
-            <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
-                <div className="p-6 sm:p-8 space-y-8">
-
-                    {/* Logo Section */}
-                    <div>
-                        <h3 className="text-lg font-semibold mb-4">Company Logo</h3>
-                        <div className="flex items-start gap-6">
-                            <div className="h-24 w-24 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 flex items-center justify-center overflow-hidden flex-shrink-0 relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-                                {logoPreviewUrl ? (
-                                    <img src={logoPreviewUrl} alt="Company Logo" className="h-full w-full object-contain p-2" />
-                                ) : (
-                                    <div className="flex flex-col items-center text-zinc-400">
-                                        <Building className="h-8 w-8 mb-1" />
-                                        <span className="text-[10px] font-medium">Add Logo</span>
-                                    </div>
-                                )}
-
-                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                    {isUploading ? <Loader2 className="h-5 w-5 text-white animate-spin" /> : <Upload className="h-5 w-5 text-white" />}
-                                </div>
-                            </div>
-
-                            <div className="flex-1 space-y-2 pt-2">
-                                <input
-                                    type="file"
-                                    ref={fileInputRef}
-                                    onChange={handleImageUpload}
-                                    accept="image/*"
-                                    className="hidden"
-                                />
-                                <button
-                                    onClick={() => fileInputRef.current?.click()}
-                                    disabled={isUploading}
-                                    className="px-4 py-2 bg-white border border-zinc-200 text-sm font-medium rounded-lg hover:bg-zinc-50 transition-colors disabled:opacity-50"
-                                >
-                                    {isUploading ? "Uploading..." : "Upload Logo"}
-                                </button>
-                                <p className="text-xs text-zinc-500">
-                                    Recommended format: PNG with transparent background, at least 400x400px.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <hr className="border-zinc-100" />
-
-                    {/* Company Details */}
-                    <div>
-                        <h3 className="text-lg font-semibold mb-4">Company Details</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-2 md:col-span-2">
-                                <label className="text-sm font-medium text-zinc-700 flex items-center gap-2">
-                                    <Building className="h-4 w-4 text-zinc-400" />
-                                    Company or Trading Name *
-                                </label>
-                                <input
-                                    type="text"
-                                    value={companyName}
-                                    onChange={(e) => setCompanyName(e.target.value)}
-                                    className="w-full px-4 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-                                    placeholder="e.g. Acme Corp Ltd."
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-zinc-700 flex items-center gap-2">
-                                    <Mail className="h-4 w-4 text-zinc-400" />
-                                    Billing Contact Email *
-                                </label>
-                                <input
-                                    type="email"
-                                    value={contactEmail}
-                                    onChange={(e) => setContactEmail(e.target.value)}
-                                    className="w-full px-4 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-                                    placeholder="e.g. billing@acme.com"
-                                />
-                                <p className="text-[10px] text-zinc-500">Clients will see this email and use it when replying to invoices.</p>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-zinc-700 flex items-center gap-2">
-                                    <Phone className="h-4 w-4 text-zinc-400" />
-                                    Phone Number
-                                </label>
-                                <input
-                                    type="tel"
-                                    value={phone}
-                                    onChange={(e) => setPhone(e.target.value)}
-                                    className="w-full px-4 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-                                    placeholder="e.g. +31 6 12345678"
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-zinc-700 flex items-center gap-2">
-                                    <Globe className="h-4 w-4 text-zinc-400" />
-                                    Website
-                                </label>
-                                <input
-                                    type="url"
-                                    value={website}
-                                    onChange={(e) => setWebsite(e.target.value)}
-                                    className="w-full px-4 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-                                    placeholder="e.g. https://www.acme.com"
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-zinc-700 flex items-center gap-2">
-                                    <Hash className="h-4 w-4 text-zinc-400" />
-                                    KvK-Nummer
-                                </label>
-                                <input
-                                    type="text"
-                                    value={kvkNumber}
-                                    onChange={(e) => setKvkNumber(e.target.value)}
-                                    className="w-full px-4 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-                                    placeholder="e.g. 12345678"
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-zinc-700 flex items-center gap-2">
-                                    <Hash className="h-4 w-4 text-zinc-400" />
-                                    BTW-Nummer (VAT)
-                                </label>
-                                <input
-                                    type="text"
-                                    value={btwNumber}
-                                    onChange={(e) => setBtwNumber(e.target.value)}
-                                    className="w-full px-4 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-                                    placeholder="e.g. NL123456789B01"
-                                />
-                            </div>
-
-                            <div className="space-y-2 md:col-span-2">
-                                <hr className="border-zinc-100 my-2" />
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-zinc-700 flex items-center gap-2">
-                                    <MapPin className="h-4 w-4 text-zinc-400" />
-                                    Address Line 1 *
-                                </label>
-                                <input
-                                    type="text"
-                                    value={addressLine1}
-                                    onChange={(e) => setAddressLine1(e.target.value)}
-                                    className="w-full px-4 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-                                    placeholder="e.g. 123 Business Avenue"
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-zinc-700 flex items-center gap-2">
-                                    <MapPin className="h-4 w-4 opacity-0" />
-                                    Address Line 2
-                                </label>
-                                <input
-                                    type="text"
-                                    value={addressLine2}
-                                    onChange={(e) => setAddressLine2(e.target.value)}
-                                    className="w-full px-4 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-                                    placeholder="e.g. London, UK, E1 6AN"
-                                />
-                            </div>
-
-                            <div className="space-y-2 md:col-span-2">
-                                <hr className="border-zinc-100 my-2" />
-                            </div>
-
-                            <div className="space-y-2 md:col-span-2">
-                                <label className="text-sm font-medium text-zinc-700 flex items-center gap-2">
-                                    <CreditCard className="h-4 w-4 text-zinc-400" />
-                                    Bank Information
-                                </label>
-                                <textarea
-                                    value={bankAccounts}
-                                    onChange={(e) => setBankAccounts(e.target.value)}
-                                    rows={3}
-                                    className="w-full px-4 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent resize-y"
-                                    placeholder="e.g. IBAN: NL99 BANK 0123 4567 89&#10;BIC: BANKNL2A"
-                                />
-                                <p className="text-[10px] text-zinc-500">Provide payment coordinates. These will be appended to the bottom of the invoice.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <hr className="border-zinc-100" />
-
-                    {/* Regional Settings */}
-                    <div className="space-y-4">
-                        <h3 className="text-lg font-semibold">Regional Settings</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-zinc-700 flex items-center gap-2">
-                                    <Languages className="h-4 w-4 text-zinc-400" />
-                                    Preferred Language
-                                </label>
-                                <select
-                                    value={language}
-                                    onChange={(e) => setLanguage(e.target.value)}
-                                    className="w-full px-4 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white shadow-sm"
-                                >
-                                    <option value="en-US">English (United States)</option>
-                                    <option value="en-GB">English (United Kingdom)</option>
-                                    <option value="nl-NL">Nederlands (Netherlands)</option>
-                                    <option value="es-ES">Español (Spain)</option>
-                                    <option value="de-DE">Deutsch (Germany)</option>
-                                </select>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-zinc-700 flex items-center gap-2">
-                                    <Coins className="h-4 w-4 text-zinc-400" />
-                                    Default Currency
-                                </label>
-                                <select
-                                    value={currency}
-                                    onChange={(e) => setCurrency(e.target.value)}
-                                    className="w-full px-4 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white shadow-sm"
-                                >
-                                    <option value="USD">USD ($)</option>
-                                    <option value="EUR">EUR (€)</option>
-                                    <option value="GBP">GBP (£)</option>
-                                    <option value="JPY">JPY (¥)</option>
-                                    <option value="BRL">BRL (R$)</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* ── Service Library ── */}
-                <div className="p-6 sm:p-8 space-y-6 border-t border-zinc-100">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h3 className="text-lg font-semibold flex items-center gap-2">
-                                <Wrench className="h-4 w-4 text-zinc-400" />
-                                Service Library
-                            </h3>
-                            <p className="text-sm text-zinc-500 mt-0.5">Predefined services you can add to jobs with one click.</p>
-                        </div>
-                        {services !== undefined && services.length === 0 && (
-                            <button
-                                onClick={handleImportPricing}
-                                disabled={isImporting}
-                                className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-xl text-sm font-bold hover:bg-zinc-800 transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-black/10"
-                            >
-                                {isImporting ? <Loader2 size={14} className="animate-spin" /> : <Guitar size={14} />}
-                                {isImporting ? "Importing…" : "Import Pricing Guide"}
-                            </button>
+            {/* Tab bar */}
+            <div className="flex items-center gap-1 border-b border-zinc-200">
+                {([
+                    { id: "general",    label: "General" },
+                    { id: "services",   label: "Services" },
+                    { id: "intake",     label: "Intake" },
+                    { id: "appearance", label: "Appearance" },
+                ] as const).map(tab => (
+                    <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id)}
+                        className={cn(
+                            "px-4 py-2.5 text-sm font-semibold transition-all border-b-2 -mb-px",
+                            activeTab === tab.id
+                                ? "border-black text-black"
+                                : "border-transparent text-zinc-400 hover:text-zinc-600"
                         )}
-                    </div>
+                    >
+                        {tab.label}
+                    </button>
+                ))}
+            </div>
 
-                    {/* Existing services */}
-                    <div className="divide-y divide-zinc-100 border border-zinc-200 rounded-xl overflow-hidden">
-                        {services === undefined ? (
-                            <div className="p-6 text-center"><Loader2 className="animate-spin mx-auto text-zinc-300" size={20} /></div>
-                        ) : services.length === 0 ? (
-                            <div className="p-6 text-center text-sm text-zinc-400 italic">No services yet. Add one below.</div>
-                        ) : services.map((svc) => (
-                            editingId === svc._id ? (
-                                /* Inline edit row */
-                                <div key={svc._id} className="p-4 bg-zinc-50 space-y-3">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        <input
-                                            autoFocus
-                                            value={editDraft.name}
-                                            onChange={(e) => setEditDraft((p) => ({ ...p, name: e.target.value }))}
-                                            placeholder="Service name"
-                                            className="px-3 py-2 text-sm border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black/5"
-                                        />
-                                        <input
-                                            value={editDraft.description}
-                                            onChange={(e) => setEditDraft((p) => ({ ...p, description: e.target.value }))}
-                                            placeholder="Description (optional)"
-                                            className="px-3 py-2 text-sm border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black/5 text-zinc-500"
-                                        />
-                                    </div>
-                                    <div className="flex items-center gap-3 flex-wrap">
-                                        <div className="flex rounded-lg overflow-hidden border border-zinc-200 text-xs font-bold">
-                                            {(["fixed", "hourly"] as const).map((t) => (
-                                                <button key={t} type="button"
-                                                    onClick={() => setEditDraft((p) => ({ ...p, type: t }))}
-                                                    className={cn("px-3 py-1.5 uppercase tracking-wider transition-all", editDraft.type === t ? "bg-black text-white" : "bg-white text-zinc-400 hover:bg-zinc-50")}>
-                                                    {t === "fixed" ? "Fixed" : "Hourly"}
-                                                </button>
-                                            ))}
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                            <span className="text-xs text-zinc-400">{getCurrencySymbol(settings?.currency)}</span>
-                                            <input type="number" step="0.01" min="0"
-                                                value={editDraft.defaultPrice || ""}
-                                                onChange={(e) => setEditDraft((p) => ({ ...p, defaultPrice: parseFloat(e.target.value) || 0 }))}
-                                                className="w-24 px-3 py-1.5 text-sm border border-zinc-200 rounded-lg text-right focus:outline-none focus:ring-2 focus:ring-black/5"
-                                                placeholder="0.00" />
-                                            {editDraft.type === "hourly" && <span className="text-xs text-zinc-400">/hr</span>}
-                                        </div>
-                                        <div className="ml-auto flex gap-2">
-                                            <button type="button"
-                                                onClick={async () => {
-                                                    if (!editDraft.name) return;
-                                                    await updateService({ id: svc._id, ...editDraft });
-                                                    setEditingId(null);
-                                                }}
-                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-black text-white rounded-lg text-xs font-bold hover:bg-zinc-800 transition-all">
-                                                <Check size={12} /> Save
-                                            </button>
-                                            <button type="button" onClick={() => setEditingId(null)}
-                                                className="p-1.5 text-zinc-400 hover:text-black hover:bg-zinc-100 rounded-lg transition-all">
-                                                <X size={14} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : (
-                                /* Display row */
-                                <div key={svc._id} className="flex items-center justify-between px-4 py-3 group hover:bg-zinc-50/50 transition-colors">
-                                    <div className="min-w-0 flex-1 space-y-0.5">
-                                        <p className="text-sm font-bold text-zinc-900">{svc.name}</p>
-                                        {svc.description && <p className="text-xs text-zinc-400">{svc.description}</p>}
-                                    </div>
-                                    <div className="flex items-center gap-3 ml-4 shrink-0">
-                                        <span className={cn("text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-lg border",
-                                            svc.type === "hourly" ? "bg-blue-50 text-blue-600 border-blue-100" : "bg-zinc-50 text-zinc-500 border-zinc-100")}>
-                                            {svc.type === "hourly" ? "Hourly" : "Fixed"}
-                                        </span>
-                                        <span className="text-sm font-black text-zinc-900 w-20 text-right">
-                                            {formatCurrency(svc.defaultPrice, settings?.currency)}{svc.type === "hourly" ? "/hr" : ""}
-                                        </span>
-                                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button type="button"
-                                                onClick={() => { setEditingId(svc._id); setEditDraft({ name: svc.name, description: svc.description ?? "", type: svc.type as "fixed" | "hourly", defaultPrice: svc.defaultPrice }); }}
-                                                className="p-1.5 text-zinc-400 hover:text-black hover:bg-zinc-100 rounded-lg transition-all">
-                                                <Pencil size={13} />
-                                            </button>
-                                            <button type="button"
-                                                onClick={() => removeService({ id: svc._id })}
-                                                className="p-1.5 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all">
-                                                <Trash2 size={13} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )
-                        ))}
+            {/* ── General Tab ── */}
+            {activeTab === "general" && (
+                <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
+                    <div className="p-6 sm:p-8 space-y-8">
 
-                        {/* Add new service row */}
-                        <div className="p-4 bg-zinc-50/50 space-y-3">
-                            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Add New Service</p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <input
-                                    value={newService.name}
-                                    onChange={(e) => setNewService((p) => ({ ...p, name: e.target.value }))}
-                                    placeholder="Service name (e.g. Full Setup)"
-                                    className="px-3 py-2 text-sm border border-zinc-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-black/5"
-                                />
-                                <input
-                                    value={newService.description}
-                                    onChange={(e) => setNewService((p) => ({ ...p, description: e.target.value }))}
-                                    placeholder="Description (optional)"
-                                    className="px-3 py-2 text-sm border border-zinc-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-black/5 text-zinc-500"
-                                />
-                            </div>
-                            <div className="flex items-center gap-3 flex-wrap">
-                                <div className="flex rounded-lg overflow-hidden border border-zinc-200 text-xs font-bold">
-                                    {(["fixed", "hourly"] as const).map((t) => (
-                                        <button key={t} type="button"
-                                            onClick={() => setNewService((p) => ({ ...p, type: t }))}
-                                            className={cn("px-3 py-1.5 uppercase tracking-wider transition-all", newService.type === t ? "bg-black text-white" : "bg-white text-zinc-400 hover:bg-zinc-50")}>
-                                            {t === "fixed" ? "Fixed" : "Hourly"}
-                                        </button>
-                                    ))}
-                                </div>
-                                <div className="flex items-center gap-1">
-                                    <span className="text-xs text-zinc-400">{getCurrencySymbol(settings?.currency)}</span>
-                                    <input type="number" step="0.01" min="0"
-                                        value={newService.defaultPrice || ""}
-                                        onChange={(e) => setNewService((p) => ({ ...p, defaultPrice: parseFloat(e.target.value) || 0 }))}
-                                        className="w-24 px-3 py-1.5 text-sm border border-zinc-200 rounded-lg bg-white text-right focus:outline-none focus:ring-2 focus:ring-black/5"
-                                        placeholder="0.00" />
-                                    {newService.type === "hourly" && <span className="text-xs text-zinc-400">/hr</span>}
-                                </div>
-                                <button type="button"
-                                    disabled={!newService.name}
-                                    onClick={async () => {
-                                        if (!newService.name) return;
-                                        await addService(newService);
-                                        setNewService(emptyDraft());
-                                    }}
-                                    className="ml-auto flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg text-xs font-bold hover:bg-zinc-800 transition-all active:scale-95 disabled:opacity-40">
-                                    <Plus size={13} /> Add Service
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* ── Job Templates ── */}
-                <div className="p-6 sm:p-8 border-t border-zinc-200 space-y-6">
-                    <div className="flex items-center justify-between">
+                        {/* Logo Section */}
                         <div>
-                            <h3 className="text-base font-black tracking-tight flex items-center gap-2">
-                                <Guitar size={16} className="text-zinc-400" /> Job Templates
-                            </h3>
-                            <p className="text-xs text-zinc-500 mt-0.5">Preset job types for one-click creation of common repairs.</p>
+                            <h3 className="text-lg font-semibold mb-4">Company Logo</h3>
+                            <div className="flex items-start gap-6">
+                                <div className="h-24 w-24 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 flex items-center justify-center overflow-hidden flex-shrink-0 relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                                    {logoPreviewUrl ? (
+                                        <img src={logoPreviewUrl} alt="Company Logo" className="h-full w-full object-contain p-2" />
+                                    ) : (
+                                        <div className="flex flex-col items-center text-zinc-400">
+                                            <Building className="h-8 w-8 mb-1" />
+                                            <span className="text-[10px] font-medium">Add Logo</span>
+                                        </div>
+                                    )}
+
+                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                        {isUploading ? <Loader2 className="h-5 w-5 text-white animate-spin" /> : <Upload className="h-5 w-5 text-white" />}
+                                    </div>
+                                </div>
+
+                                <div className="flex-1 space-y-2 pt-2">
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        onChange={handleImageUpload}
+                                        accept="image/*"
+                                        className="hidden"
+                                    />
+                                    <button
+                                        onClick={() => fileInputRef.current?.click()}
+                                        disabled={isUploading}
+                                        className="px-4 py-2 bg-white border border-zinc-200 text-sm font-medium rounded-lg hover:bg-zinc-50 transition-colors disabled:opacity-50"
+                                    >
+                                        {isUploading ? "Uploading..." : "Upload Logo"}
+                                    </button>
+                                    <p className="text-xs text-zinc-500">
+                                        Recommended format: PNG with transparent background, at least 400x400px.
+                                    </p>
+                                </div>
+                            </div>
                         </div>
-                        <button type="button" onClick={() => setShowTemplateForm((v) => !v)}
-                            className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-xl text-xs font-bold hover:bg-black transition-all active:scale-95">
-                            <Plus size={13} /> New Template
+
+                        <hr className="border-zinc-100" />
+
+                        {/* Company Details */}
+                        <div>
+                            <h3 className="text-lg font-semibold mb-4">Company Details</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2 md:col-span-2">
+                                    <label className="text-sm font-medium text-zinc-700 flex items-center gap-2">
+                                        <Building className="h-4 w-4 text-zinc-400" />
+                                        Company or Trading Name *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={companyName}
+                                        onChange={(e) => setCompanyName(e.target.value)}
+                                        className="w-full px-4 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                                        placeholder="e.g. Acme Corp Ltd."
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-zinc-700 flex items-center gap-2">
+                                        <Mail className="h-4 w-4 text-zinc-400" />
+                                        Billing Contact Email *
+                                    </label>
+                                    <input
+                                        type="email"
+                                        value={contactEmail}
+                                        onChange={(e) => setContactEmail(e.target.value)}
+                                        className="w-full px-4 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                                        placeholder="e.g. billing@acme.com"
+                                    />
+                                    <p className="text-[10px] text-zinc-500">Clients will see this email and use it when replying to invoices.</p>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-zinc-700 flex items-center gap-2">
+                                        <Phone className="h-4 w-4 text-zinc-400" />
+                                        Phone Number
+                                    </label>
+                                    <input
+                                        type="tel"
+                                        value={phone}
+                                        onChange={(e) => setPhone(e.target.value)}
+                                        className="w-full px-4 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                                        placeholder="e.g. +31 6 12345678"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-zinc-700 flex items-center gap-2">
+                                        <Globe className="h-4 w-4 text-zinc-400" />
+                                        Website
+                                    </label>
+                                    <input
+                                        type="url"
+                                        value={website}
+                                        onChange={(e) => setWebsite(e.target.value)}
+                                        className="w-full px-4 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                                        placeholder="e.g. https://www.acme.com"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-zinc-700 flex items-center gap-2">
+                                        <Hash className="h-4 w-4 text-zinc-400" />
+                                        KvK-Nummer
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={kvkNumber}
+                                        onChange={(e) => setKvkNumber(e.target.value)}
+                                        className="w-full px-4 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                                        placeholder="e.g. 12345678"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-zinc-700 flex items-center gap-2">
+                                        <Hash className="h-4 w-4 text-zinc-400" />
+                                        BTW-Nummer (VAT)
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={btwNumber}
+                                        onChange={(e) => setBtwNumber(e.target.value)}
+                                        className="w-full px-4 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                                        placeholder="e.g. NL123456789B01"
+                                    />
+                                </div>
+
+                                <div className="space-y-2 md:col-span-2">
+                                    <hr className="border-zinc-100 my-2" />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-zinc-700 flex items-center gap-2">
+                                        <MapPin className="h-4 w-4 text-zinc-400" />
+                                        Address Line 1 *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={addressLine1}
+                                        onChange={(e) => setAddressLine1(e.target.value)}
+                                        className="w-full px-4 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                                        placeholder="e.g. 123 Business Avenue"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-zinc-700 flex items-center gap-2">
+                                        <MapPin className="h-4 w-4 opacity-0" />
+                                        Address Line 2
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={addressLine2}
+                                        onChange={(e) => setAddressLine2(e.target.value)}
+                                        className="w-full px-4 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                                        placeholder="e.g. London, UK, E1 6AN"
+                                    />
+                                </div>
+
+                                <div className="space-y-2 md:col-span-2">
+                                    <hr className="border-zinc-100 my-2" />
+                                </div>
+
+                                <div className="space-y-2 md:col-span-2">
+                                    <label className="text-sm font-medium text-zinc-700 flex items-center gap-2">
+                                        <CreditCard className="h-4 w-4 text-zinc-400" />
+                                        Bank Information
+                                    </label>
+                                    <textarea
+                                        value={bankAccounts}
+                                        onChange={(e) => setBankAccounts(e.target.value)}
+                                        rows={3}
+                                        className="w-full px-4 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent resize-y"
+                                        placeholder="e.g. IBAN: NL99 BANK 0123 4567 89&#10;BIC: BANKNL2A"
+                                    />
+                                    <p className="text-[10px] text-zinc-500">Provide payment coordinates. These will be appended to the bottom of the invoice.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr className="border-zinc-100" />
+
+                        {/* Regional Settings */}
+                        <div className="space-y-4">
+                            <h3 className="text-lg font-semibold">Regional Settings</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-zinc-700 flex items-center gap-2">
+                                        <Languages className="h-4 w-4 text-zinc-400" />
+                                        Preferred Language
+                                    </label>
+                                    <select
+                                        value={language}
+                                        onChange={(e) => setLanguage(e.target.value)}
+                                        className="w-full px-4 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white shadow-sm"
+                                    >
+                                        <option value="en-US">English (United States)</option>
+                                        <option value="en-GB">English (United Kingdom)</option>
+                                        <option value="nl-NL">Nederlands (Netherlands)</option>
+                                        <option value="es-ES">Español (Spain)</option>
+                                        <option value="de-DE">Deutsch (Germany)</option>
+                                    </select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-zinc-700 flex items-center gap-2">
+                                        <Coins className="h-4 w-4 text-zinc-400" />
+                                        Default Currency
+                                    </label>
+                                    <select
+                                        value={currency}
+                                        onChange={(e) => setCurrency(e.target.value)}
+                                        className="w-full px-4 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white shadow-sm"
+                                    >
+                                        <option value="USD">USD ($)</option>
+                                        <option value="EUR">EUR (€)</option>
+                                        <option value="GBP">GBP (£)</option>
+                                        <option value="JPY">JPY (¥)</option>
+                                        <option value="BRL">BRL (R$)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Save button */}
+                    <div className="bg-zinc-50 p-6 sm:p-8 border-t border-zinc-200 flex justify-end">
+                        <button onClick={handleSave} disabled={isSaving} className="flex items-center gap-2 bg-black text-white px-6 py-2.5 rounded-lg font-medium hover:bg-zinc-800 transition-colors disabled:opacity-50">
+                            {isSaving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
+                            {isSaving ? "Saving..." : "Save Settings"}
                         </button>
                     </div>
+                </div>
+            )}
 
-                    {/* Existing templates */}
-                    {templates && templates.length > 0 && (
-                        <div className="divide-y divide-zinc-100 border border-zinc-100 rounded-xl overflow-hidden">
-                            {templates.map((tpl) => (
-                                <div key={tpl._id} className="flex items-center justify-between px-4 py-3 bg-white hover:bg-zinc-50 group transition-colors">
-                                    <div className="min-w-0">
-                                        <p className="text-sm font-bold text-zinc-900 truncate">{tpl.name}</p>
-                                        <p className="text-xs text-zinc-400 truncate">
-                                            {tpl.instrumentType || "Any instrument"}
-                                            {tpl.description ? ` · ${tpl.description}` : ""}
-                                        </p>
+            {/* ── Services Tab ── */}
+            {activeTab === "services" && (
+                <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
+                    {/* ── Service Library ── */}
+                    <div className="p-6 sm:p-8 space-y-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h3 className="text-lg font-semibold flex items-center gap-2">
+                                    <Wrench className="h-4 w-4 text-zinc-400" />
+                                    Service Library
+                                </h3>
+                                <p className="text-sm text-zinc-500 mt-0.5">Predefined services you can add to jobs with one click.</p>
+                            </div>
+                            {services !== undefined && services.length === 0 && (
+                                <button
+                                    onClick={handleImportPricing}
+                                    disabled={isImporting}
+                                    className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-xl text-sm font-bold hover:bg-zinc-800 transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-black/10"
+                                >
+                                    {isImporting ? <Loader2 size={14} className="animate-spin" /> : <Guitar size={14} />}
+                                    {isImporting ? "Importing…" : "Import Pricing Guide"}
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Existing services */}
+                        <div className="divide-y divide-zinc-100 border border-zinc-200 rounded-xl overflow-hidden">
+                            {services === undefined ? (
+                                <div className="p-6 text-center"><Loader2 className="animate-spin mx-auto text-zinc-300" size={20} /></div>
+                            ) : services.length === 0 ? (
+                                <div className="p-6 text-center text-sm text-zinc-400 italic">No services yet. Add one below.</div>
+                            ) : services.map((svc) => (
+                                editingId === svc._id ? (
+                                    /* Inline edit row */
+                                    <div key={svc._id} className="p-4 bg-zinc-50 space-y-3">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <input
+                                                autoFocus
+                                                value={editDraft.name}
+                                                onChange={(e) => setEditDraft((p) => ({ ...p, name: e.target.value }))}
+                                                placeholder="Service name"
+                                                className="px-3 py-2 text-sm border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black/5"
+                                            />
+                                            <input
+                                                value={editDraft.description}
+                                                onChange={(e) => setEditDraft((p) => ({ ...p, description: e.target.value }))}
+                                                placeholder="Description (optional)"
+                                                className="px-3 py-2 text-sm border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black/5 text-zinc-500"
+                                            />
+                                        </div>
+                                        <div className="flex items-center gap-3 flex-wrap">
+                                            <div className="flex rounded-lg overflow-hidden border border-zinc-200 text-xs font-bold">
+                                                {(["fixed", "hourly"] as const).map((t) => (
+                                                    <button key={t} type="button"
+                                                        onClick={() => setEditDraft((p) => ({ ...p, type: t }))}
+                                                        className={cn("px-3 py-1.5 uppercase tracking-wider transition-all", editDraft.type === t ? "bg-black text-white" : "bg-white text-zinc-400 hover:bg-zinc-50")}>
+                                                        {t === "fixed" ? "Fixed" : "Hourly"}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-xs text-zinc-400">{getCurrencySymbol(settings?.currency)}</span>
+                                                <input type="number" step="0.01" min="0"
+                                                    value={editDraft.defaultPrice || ""}
+                                                    onChange={(e) => setEditDraft((p) => ({ ...p, defaultPrice: parseFloat(e.target.value) || 0 }))}
+                                                    className="w-24 px-3 py-1.5 text-sm border border-zinc-200 rounded-lg text-right focus:outline-none focus:ring-2 focus:ring-black/5"
+                                                    placeholder="0.00" />
+                                                {editDraft.type === "hourly" && <span className="text-xs text-zinc-400">/hr</span>}
+                                            </div>
+                                            <div className="ml-auto flex gap-2">
+                                                <button type="button"
+                                                    onClick={async () => {
+                                                        if (!editDraft.name) return;
+                                                        await updateService({ id: svc._id, ...editDraft });
+                                                        setEditingId(null);
+                                                    }}
+                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-black text-white rounded-lg text-xs font-bold hover:bg-zinc-800 transition-all">
+                                                    <Check size={12} /> Save
+                                                </button>
+                                                <button type="button" onClick={() => setEditingId(null)}
+                                                    className="p-1.5 text-zinc-400 hover:text-black hover:bg-zinc-100 rounded-lg transition-all">
+                                                    <X size={14} />
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <button type="button" onClick={() => removeTemplate({ id: tpl._id })}
-                                        className="p-1.5 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100 shrink-0 ml-2">
-                                        <Trash2 size={14} />
+                                ) : (
+                                    /* Display row */
+                                    <div key={svc._id} className="flex items-center justify-between px-4 py-3 group hover:bg-zinc-50/50 transition-colors">
+                                        <div className="min-w-0 flex-1 space-y-0.5">
+                                            <p className="text-sm font-bold text-zinc-900">{svc.name}</p>
+                                            {svc.description && <p className="text-xs text-zinc-400">{svc.description}</p>}
+                                        </div>
+                                        <div className="flex items-center gap-3 ml-4 shrink-0">
+                                            <span className={cn("text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-lg border",
+                                                svc.type === "hourly" ? "bg-blue-50 text-blue-600 border-blue-100" : "bg-zinc-50 text-zinc-500 border-zinc-100")}>
+                                                {svc.type === "hourly" ? "Hourly" : "Fixed"}
+                                            </span>
+                                            <span className="text-sm font-black text-zinc-900 w-20 text-right">
+                                                {formatCurrency(svc.defaultPrice, settings?.currency)}{svc.type === "hourly" ? "/hr" : ""}
+                                            </span>
+                                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button type="button"
+                                                    onClick={() => { setEditingId(svc._id); setEditDraft({ name: svc.name, description: svc.description ?? "", type: svc.type as "fixed" | "hourly", defaultPrice: svc.defaultPrice }); }}
+                                                    className="p-1.5 text-zinc-400 hover:text-black hover:bg-zinc-100 rounded-lg transition-all">
+                                                    <Pencil size={13} />
+                                                </button>
+                                                <button type="button"
+                                                    onClick={() => removeService({ id: svc._id })}
+                                                    className="p-1.5 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all">
+                                                    <Trash2 size={13} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )
+                            ))}
+
+                            {/* Add new service row */}
+                            <div className="p-4 bg-zinc-50/50 space-y-3">
+                                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Add New Service</p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <input
+                                        value={newService.name}
+                                        onChange={(e) => setNewService((p) => ({ ...p, name: e.target.value }))}
+                                        placeholder="Service name (e.g. Full Setup)"
+                                        className="px-3 py-2 text-sm border border-zinc-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-black/5"
+                                    />
+                                    <input
+                                        value={newService.description}
+                                        onChange={(e) => setNewService((p) => ({ ...p, description: e.target.value }))}
+                                        placeholder="Description (optional)"
+                                        className="px-3 py-2 text-sm border border-zinc-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-black/5 text-zinc-500"
+                                    />
+                                </div>
+                                <div className="flex items-center gap-3 flex-wrap">
+                                    <div className="flex rounded-lg overflow-hidden border border-zinc-200 text-xs font-bold">
+                                        {(["fixed", "hourly"] as const).map((t) => (
+                                            <button key={t} type="button"
+                                                onClick={() => setNewService((p) => ({ ...p, type: t }))}
+                                                className={cn("px-3 py-1.5 uppercase tracking-wider transition-all", newService.type === t ? "bg-black text-white" : "bg-white text-zinc-400 hover:bg-zinc-50")}>
+                                                {t === "fixed" ? "Fixed" : "Hourly"}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <span className="text-xs text-zinc-400">{getCurrencySymbol(settings?.currency)}</span>
+                                        <input type="number" step="0.01" min="0"
+                                            value={newService.defaultPrice || ""}
+                                            onChange={(e) => setNewService((p) => ({ ...p, defaultPrice: parseFloat(e.target.value) || 0 }))}
+                                            className="w-24 px-3 py-1.5 text-sm border border-zinc-200 rounded-lg bg-white text-right focus:outline-none focus:ring-2 focus:ring-black/5"
+                                            placeholder="0.00" />
+                                        {newService.type === "hourly" && <span className="text-xs text-zinc-400">/hr</span>}
+                                    </div>
+                                    <button type="button"
+                                        disabled={!newService.name}
+                                        onClick={async () => {
+                                            if (!newService.name) return;
+                                            await addService(newService);
+                                            setNewService(emptyDraft());
+                                        }}
+                                        className="ml-auto flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg text-xs font-bold hover:bg-zinc-800 transition-all active:scale-95 disabled:opacity-40">
+                                        <Plus size={13} /> Add Service
                                     </button>
                                 </div>
-                            ))}
+                            </div>
                         </div>
-                    )}
+                    </div>
 
-                    {/* Add template form */}
-                    {showTemplateForm && (
-                        <div className="border border-zinc-200 rounded-xl p-4 space-y-3 bg-zinc-50/50">
-                            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">New Template</p>
-                            <input
-                                placeholder="Template name (e.g. Standard Guitar Setup)"
-                                value={newTemplate.name}
-                                onChange={(e) => setNewTemplate((p) => ({ ...p, name: e.target.value }))}
-                                className="w-full px-3 py-2 text-sm border border-zinc-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-black/5"
-                            />
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <div className="relative">
-                                    <select
-                                        value={newTemplate.instrumentType}
-                                        onChange={(e) => setNewTemplate((p) => ({ ...p, instrumentType: e.target.value }))}
-                                        className="w-full px-3 py-2 text-sm border border-zinc-200 rounded-lg bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-black/5 text-zinc-500">
-                                        <option value="">Any instrument type</option>
-                                        {INSTRUMENT_TYPES_LIST.map((t) => <option key={t}>{t}</option>)}
-                                    </select>
-                                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
-                                </div>
+                    {/* ── Job Templates ── */}
+                    <div className="p-6 sm:p-8 border-t border-zinc-200 space-y-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h3 className="text-base font-black tracking-tight flex items-center gap-2">
+                                    <Guitar size={16} className="text-zinc-400" /> Job Templates
+                                </h3>
+                                <p className="text-xs text-zinc-500 mt-0.5">Preset job types for one-click creation of common repairs.</p>
+                            </div>
+                            <button type="button" onClick={() => setShowTemplateForm((v) => !v)}
+                                className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-xl text-xs font-bold hover:bg-black transition-all active:scale-95">
+                                <Plus size={13} /> New Template
+                            </button>
+                        </div>
+
+                        {/* Existing templates */}
+                        {templates && templates.length > 0 && (
+                            <div className="divide-y divide-zinc-100 border border-zinc-100 rounded-xl overflow-hidden">
+                                {templates.map((tpl) => (
+                                    <div key={tpl._id} className="flex items-center justify-between px-4 py-3 bg-white hover:bg-zinc-50 group transition-colors">
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-bold text-zinc-900 truncate">{tpl.name}</p>
+                                            <p className="text-xs text-zinc-400 truncate">
+                                                {tpl.instrumentType || "Any instrument"}
+                                                {tpl.description ? ` · ${tpl.description}` : ""}
+                                            </p>
+                                        </div>
+                                        <button type="button" onClick={() => removeTemplate({ id: tpl._id })}
+                                            className="p-1.5 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100 shrink-0 ml-2">
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Add template form */}
+                        {showTemplateForm && (
+                            <div className="border border-zinc-200 rounded-xl p-4 space-y-3 bg-zinc-50/50">
+                                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">New Template</p>
                                 <input
-                                    placeholder="Short description (optional)"
-                                    value={newTemplate.description}
-                                    onChange={(e) => setNewTemplate((p) => ({ ...p, description: e.target.value }))}
-                                    className="px-3 py-2 text-sm border border-zinc-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-black/5 text-zinc-500"
+                                    placeholder="Template name (e.g. Standard Guitar Setup)"
+                                    value={newTemplate.name}
+                                    onChange={(e) => setNewTemplate((p) => ({ ...p, name: e.target.value }))}
+                                    className="w-full px-3 py-2 text-sm border border-zinc-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-black/5"
                                 />
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div className="relative">
+                                        <select
+                                            value={newTemplate.instrumentType}
+                                            onChange={(e) => setNewTemplate((p) => ({ ...p, instrumentType: e.target.value }))}
+                                            className="w-full px-3 py-2 text-sm border border-zinc-200 rounded-lg bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-black/5 text-zinc-500">
+                                            <option value="">Any instrument type</option>
+                                            {INSTRUMENT_TYPES_LIST.map((t) => <option key={t}>{t}</option>)}
+                                        </select>
+                                        <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+                                    </div>
+                                    <input
+                                        placeholder="Short description (optional)"
+                                        value={newTemplate.description}
+                                        onChange={(e) => setNewTemplate((p) => ({ ...p, description: e.target.value }))}
+                                        className="px-3 py-2 text-sm border border-zinc-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-black/5 text-zinc-500"
+                                    />
+                                </div>
+                                <div className="flex items-center gap-2 justify-end">
+                                    <button type="button" onClick={() => { setShowTemplateForm(false); setNewTemplate(emptyTemplate()); }}
+                                        className="px-3 py-1.5 text-xs font-bold text-zinc-500 hover:text-black transition-colors">Cancel</button>
+                                    <button type="button" disabled={!newTemplate.name}
+                                        onClick={async () => {
+                                            if (!newTemplate.name) return;
+                                            await addTemplate({
+                                                name: newTemplate.name,
+                                                description: newTemplate.description || undefined,
+                                                instrumentType: newTemplate.instrumentType || undefined,
+                                            });
+                                            setNewTemplate(emptyTemplate());
+                                            setShowTemplateForm(false);
+                                        }}
+                                        className="flex items-center gap-2 px-4 py-1.5 bg-black text-white rounded-lg text-xs font-bold hover:bg-zinc-800 transition-all active:scale-95 disabled:opacity-40">
+                                        <Check size={13} /> Save Template
+                                    </button>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2 justify-end">
-                                <button type="button" onClick={() => { setShowTemplateForm(false); setNewTemplate(emptyTemplate()); }}
-                                    className="px-3 py-1.5 text-xs font-bold text-zinc-500 hover:text-black transition-colors">Cancel</button>
-                                <button type="button" disabled={!newTemplate.name}
-                                    onClick={async () => {
-                                        if (!newTemplate.name) return;
-                                        await addTemplate({
-                                            name: newTemplate.name,
-                                            description: newTemplate.description || undefined,
-                                            instrumentType: newTemplate.instrumentType || undefined,
-                                        });
-                                        setNewTemplate(emptyTemplate());
-                                        setShowTemplateForm(false);
-                                    }}
-                                    className="flex items-center gap-2 px-4 py-1.5 bg-black text-white rounded-lg text-xs font-bold hover:bg-zinc-800 transition-all active:scale-95 disabled:opacity-40">
-                                    <Check size={13} /> Save Template
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* ── Intake Form ── */}
-                <div className="p-6 sm:p-8 border-t border-zinc-200 space-y-4">
-                    <div>
-                        <h3 className="text-base font-black tracking-tight flex items-center gap-2">
-                            <Link2 size={16} className="text-zinc-400" /> Intake Form
-                        </h3>
-                        <p className="text-xs text-zinc-500 mt-0.5">Share this link with clients so they can submit a service request online.</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <div className="flex-1 min-w-0 px-3 py-2.5 border border-zinc-200 rounded-xl bg-zinc-50 text-sm text-zinc-500 truncate select-all">
-                            {typeof window !== "undefined" ? window.location.origin + "/request" : "/request"}
-                        </div>
-                        <button
-                            type="button"
-                            onClick={() => {
-                                const url = window.location.origin + "/request";
-                                navigator.clipboard.writeText(url).then(() => {
-                                    setCopiedLink(true);
-                                    setTimeout(() => setCopiedLink(false), 2000);
-                                });
-                            }}
-                            className="flex items-center gap-2 px-4 py-2.5 bg-zinc-900 text-white rounded-xl text-xs font-bold hover:bg-black transition-all active:scale-95 shrink-0"
-                        >
-                            {copiedLink ? <><CheckCheck size={13} /> Copied!</> : <><Link2 size={13} /> Copy Link</>}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setShowEmbedModal(true)}
-                            className="flex items-center gap-2 px-4 py-2.5 border border-zinc-200 bg-white text-zinc-700 rounded-xl text-xs font-bold hover:bg-zinc-50 transition-all active:scale-95 shrink-0"
-                        >
-                            <Code2 size={13} /> Embed
-                        </button>
+                        )}
                     </div>
                 </div>
+            )}
 
-                <div className="bg-zinc-50 p-6 sm:p-8 border-t border-zinc-200 flex justify-end">
-                    <button
-                        onClick={handleSave}
-                        disabled={isSaving}
-                        className="flex items-center gap-2 bg-black text-white px-6 py-2.5 rounded-lg font-medium hover:bg-zinc-800 transition-colors disabled:opacity-50"
-                    >
-                        {isSaving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
-                        {isSaving ? "Saving..." : "Save Settings"}
-                    </button>
+            {/* ── Intake Tab ── */}
+            {activeTab === "intake" && (
+                <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
+                    <div className="p-6 sm:p-8 space-y-6">
+                        <div>
+                            <h3 className="text-base font-black tracking-tight flex items-center gap-2">
+                                <Link2 size={16} className="text-zinc-400" /> Intake Form
+                            </h3>
+                            <p className="text-xs text-zinc-500 mt-0.5">Share this link with clients so they can submit a service request online.</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className="flex-1 min-w-0 px-3 py-2.5 border border-zinc-200 rounded-xl bg-zinc-50 text-sm text-zinc-500 truncate select-all">
+                                {typeof window !== "undefined" ? window.location.origin + "/request" : "/request"}
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const url = window.location.origin + "/request";
+                                    navigator.clipboard.writeText(url).then(() => {
+                                        setCopiedLink(true);
+                                        setTimeout(() => setCopiedLink(false), 2000);
+                                    });
+                                }}
+                                className="flex items-center gap-2 px-4 py-2.5 bg-zinc-900 text-white rounded-xl text-xs font-bold hover:bg-black transition-all active:scale-95 shrink-0"
+                            >
+                                {copiedLink ? <><CheckCheck size={13} /> Copied!</> : <><Link2 size={13} /> Copy Link</>}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setShowEmbedModal(true)}
+                                className="flex items-center gap-2 px-4 py-2.5 border border-zinc-200 bg-white text-zinc-700 rounded-xl text-xs font-bold hover:bg-zinc-50 transition-all active:scale-95 shrink-0"
+                            >
+                                <Code2 size={13} /> Embed
+                            </button>
+                        </div>
+                        <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-100">
+                            <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">Embed Widget</p>
+                            <p className="text-sm text-zinc-600">Add the intake form directly to your website. Click <strong>Embed</strong> to get a self-contained HTML snippet — no dependencies required.</p>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            )}
+
+            {/* ── Appearance Tab ── */}
+            {activeTab === "appearance" && (
+                <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
+                    <div className="p-6 sm:p-8 space-y-6">
+                        <h3 className="text-base font-black tracking-tight">Appearance</h3>
+                        <div className="flex items-center justify-between">
+                            <span className="text-sm text-zinc-500">Accent Colour</span>
+                            <ThemeSelector />
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
 
         {/* Embed Code Modal */}
