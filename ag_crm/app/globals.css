@@ -216,18 +216,12 @@
     }
 }
 
-/* Modal backdrop: strong blur over entire screen */
+/* Modal backdrop */
 .modal-backdrop {
-    background: rgba(0, 0, 0, 0.45);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
+    background: rgba(0, 0, 0, 0.5);
 }
 
-/* Modal card: remove hard border, add white glow that feathers the edges into the backdrop */
+/* Modal card */
 .modal-card {
-    border: none !important;
-    box-shadow:
-        0 0 0 1px rgba(255, 255, 255, 0.08),
-        0 0 60px 24px rgba(255, 255, 255, 0.45),
-        0 30px 80px -10px rgba(0, 0, 0, 0.55);
+    box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.25);
 }

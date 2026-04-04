@@ -34,9 +34,10 @@ import {
     Copy,
     Check,
     ShieldOff,
+    Loader2,
 } from "lucide-react";
 import { useMutation } from "convex/react";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion } from "motion/react";
 import { cn, formatCurrency } from "@/lib/utils";
 import Link from "next/link";
@@ -78,14 +79,19 @@ export default function ClientDetailPage() {
     const generatePortalToken = useMutation(api.portal.generateToken);
     const revokePortalToken = useMutation(api.portal.revokeToken);
     const updateClient = useMutation(api.clients.update);
+    const generateClientUploadUrl = useMutation(api.clients.generateUploadUrl);
     const addContact = useMutation(api.contacts.add);
     const removeContact = useMutation(api.contacts.remove);
     const generateUploadUrl = useMutation(api.contacts.generateUploadUrl);
     const addComm = useMutation(api.communications.add);
     const removeComm = useMutation(api.communications.remove);
 
+    const editAvatarRef = useRef<HTMLInputElement>(null);
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [editDraft, setEditDraft] = useState({ name: "", email: "", phone: "", type: "regular", website: "", street: "", postcode: "", city: "" });
+    const [editAvatarPreview, setEditAvatarPreview] = useState<string>("");
+    const [editAvatarStorageId, setEditAvatarStorageId] = useState<Id<"_storage"> | undefined>(undefined);
+    const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
     const [isSavingEdit, setIsSavingEdit] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -273,6 +279,8 @@ export default function ClientDetailPage() {
                                     postcode: client.postcode ?? "",
                                     city: client.city ?? "",
                                 });
+                                setEditAvatarPreview(client.imageUrl ?? "");
+                                setEditAvatarStorageId(client.imageStorageId);
                                 setIsEditOpen(true);
                             }}
                             className="flex items-center gap-2 px-6 py-2.5 bg-black text-white rounded-xl text-sm font-semibold hover:bg-zinc-800 transition-all shadow-lg shadow-black/10 active:scale-95"
@@ -764,13 +772,47 @@ export default function ClientDetailPage() {
                                     e.preventDefault();
                                     setIsSavingEdit(true);
                                     try {
-                                        await updateClient({ id: clientId, ...editDraft });
+                                        await updateClient({
+                                            id: clientId,
+                                            ...editDraft,
+                                            imageUrl: editAvatarPreview || undefined,
+                                            imageStorageId: editAvatarStorageId,
+                                        });
                                         setIsEditOpen(false);
                                     } catch (err) { console.error(err); }
                                     finally { setIsSavingEdit(false); }
                                 }}
                                 className="space-y-4"
                             >
+                                {/* Avatar */}
+                                <div className="flex items-center gap-4 pb-4 border-b border-zinc-100">
+                                    <button
+                                        type="button"
+                                        onClick={() => editAvatarRef.current?.click()}
+                                        disabled={isUploadingAvatar}
+                                        className="w-16 h-16 rounded-2xl bg-zinc-100 border-2 border-dashed border-zinc-200 flex items-center justify-center text-zinc-400 hover:border-black hover:text-black transition-all overflow-hidden relative shrink-0 disabled:opacity-50"
+                                    >
+                                        {isUploadingAvatar ? <Loader2 size={20} className="animate-spin" /> :
+                                         editAvatarPreview ? <img src={editAvatarPreview} alt="Avatar" className="w-full h-full object-cover" /> :
+                                         <Camera size={20} />}
+                                    </button>
+                                    <input ref={editAvatarRef} type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                                        const file = e.target.files?.[0];
+                                        if (!file) return;
+                                        setIsUploadingAvatar(true);
+                                        try {
+                                            const postUrl = await generateClientUploadUrl();
+                                            const res = await fetch(postUrl, { method: "POST", headers: { "Content-Type": file.type }, body: file });
+                                            const { storageId } = await res.json();
+                                            setEditAvatarStorageId(storageId);
+                                            setEditAvatarPreview(URL.createObjectURL(file));
+                                        } finally { setIsUploadingAvatar(false); }
+                                    }} />
+                                    <div>
+                                        <p className="text-sm font-bold text-zinc-900">Profile Photo</p>
+                                        <p className="text-xs text-zinc-400 mt-0.5">Click to upload a new photo</p>
+                                    </div>
+                                </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="col-span-2 space-y-1.5">
                                         <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Name *</label>
