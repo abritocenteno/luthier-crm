@@ -216,27 +216,28 @@
     }
 }
 
-/* Modal overlay — content-area-restricted fixed container (covers below header, right of sidebar) */
+/* Modal overlay — full-screen fixed container; used for centering the modal card */
 .modal-overlay {
     position: fixed;
-    top: 4rem;   /* h-16 header */
-    right: 0;
-    bottom: 0;
-    left: 0;     /* full width on mobile (sidebar is an overlay, not inline) */
+    inset: 0;
     z-index: 40;
 }
 
-@media (min-width: 1024px) {
-    .modal-overlay {
-        left: var(--sidebar-w, 16rem); /* respects sidebar width on desktop */
-    }
-}
-
-/* Modal backdrop — frosted glass effect */
+/* Modal backdrop — frosted glass, visually clipped to content area (below header, right of sidebar).
+   clip-path also restricts pointer-events to the clipped region, so sidebar/header stay interactive. */
 .modal-backdrop {
-    background: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.28);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
+    /* Mobile: clip below the top bar only (sidebar is a slide-over, not inline) */
+    clip-path: inset(4rem 0 0 0);
+}
+
+@media (min-width: 1024px) {
+    /* Desktop: also offset by the sidebar width */
+    .modal-backdrop {
+        clip-path: inset(4rem 0 0 var(--sidebar-w, 16rem));
+    }
 }
 
 /* Modal card */
