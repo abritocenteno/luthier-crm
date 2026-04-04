@@ -216,9 +216,27 @@
     }
 }
 
-/* Modal backdrop */
+/* Modal overlay — content-area-restricted fixed container (covers below header, right of sidebar) */
+.modal-overlay {
+    position: fixed;
+    top: 4rem;   /* h-16 header */
+    right: 0;
+    bottom: 0;
+    left: 0;     /* full width on mobile (sidebar is an overlay, not inline) */
+    z-index: 40;
+}
+
+@media (min-width: 1024px) {
+    .modal-overlay {
+        left: var(--sidebar-w, 16rem); /* respects sidebar width on desktop */
+    }
+}
+
+/* Modal backdrop — frosted glass effect */
 .modal-backdrop {
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
 }
 
 /* Modal card */

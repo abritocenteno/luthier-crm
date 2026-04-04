@@ -24,7 +24,7 @@ import { NotificationBell } from "@/components/NotificationBell";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import React, { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
 
@@ -203,6 +203,7 @@ export default function DashboardLayout({
 
             {/* Main Content */}
             <main
+                style={{ '--sidebar-w': collapsed ? '5rem' : '16rem' } as React.CSSProperties}
                 className={cn(
                     "flex-1 transition-all duration-300 min-h-screen relative flex flex-col",
                     "lg:ml-64",

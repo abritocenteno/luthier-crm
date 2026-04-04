@@ -897,8 +897,8 @@ export default function SettingsPage() {
 
         {/* Embed Code Modal */}
         {showEmbedModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                <div className="absolute inset-0 bg-black/50" onClick={() => setShowEmbedModal(false)} />
+            <div className="modal-overlay flex items-center justify-center p-4">
+                <div className="absolute inset-0 modal-backdrop" onClick={() => setShowEmbedModal(false)} />
                 <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
                     <div className="p-5 border-b border-zinc-100 flex items-center justify-between">
                         <div>

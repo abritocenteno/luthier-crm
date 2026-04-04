@@ -342,14 +342,14 @@ export default function SuppliersPage() {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => setIsDrawerOpen(false)}
-                            className="fixed inset-0 modal-backdrop z-[60]"
+                            className="modal-overlay modal-backdrop"
                         />
                         <motion.div
                             initial={{ x: "100%" }}
                             animate={{ x: 0 }}
                             exit={{ x: "100%" }}
                             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                            className="fixed inset-y-0 right-0 w-full max-w-xl bg-white shadow-2xl z-[70] flex flex-col"
+                            className="fixed top-16 bottom-0 right-0 w-full max-w-xl bg-white shadow-2xl z-[45] flex flex-col"
                         >
                             <div className="p-6 border-b border-zinc-100 flex items-center justify-between">
                                 <div>
