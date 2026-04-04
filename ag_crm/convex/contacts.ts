@@ -91,3 +91,25 @@ export const remove = mutation({
         await ctx.db.delete(args.id);
     },
 });
+
+export const update = mutation({
+    args: {
+        id: v.id("contacts"),
+        name: v.string(),
+        email: v.optional(v.string()),
+        phone: v.optional(v.string()),
+        role: v.optional(v.string()),
+        imageStorageId: v.optional(v.id("_storage")),
+    },
+    handler: async (ctx, { id, ...fields }) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) throw new Error("Unauthorized");
+
+        const existing = await ctx.db.get(id);
+        if (!existing || existing.userId !== identity.tokenIdentifier) {
+            throw new Error("Contact not found or unauthorized");
+        }
+
+        await ctx.db.patch(id, fields);
+    },
+});

@@ -35,6 +35,7 @@ import {
     Check,
     ShieldOff,
     Loader2,
+    Pencil,
 } from "lucide-react";
 import { useMutation } from "convex/react";
 import { useState, useRef } from "react";
@@ -82,6 +83,7 @@ export default function ClientDetailPage() {
     const generateClientUploadUrl = useMutation(api.clients.generateUploadUrl);
     const addContact = useMutation(api.contacts.add);
     const removeContact = useMutation(api.contacts.remove);
+    const updateContact = useMutation(api.contacts.update);
     const generateUploadUrl = useMutation(api.contacts.generateUploadUrl);
     const addComm = useMutation(api.communications.add);
     const removeComm = useMutation(api.communications.remove);
@@ -94,6 +96,11 @@ export default function ClientDetailPage() {
     const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
     const [isSavingEdit, setIsSavingEdit] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [editingContact, setEditingContact] = useState<null | { _id: any; name: string; email?: string | null; phone?: string | null; role?: string | null; imageUrl?: string | null; imageStorageId?: any }>(null);
+    const [editContactDraft, setEditContactDraft] = useState({ name: "", email: "", phone: "", role: "" });
+    const [editContactImage, setEditContactImage] = useState<File | null>(null);
+    const [editContactImagePreview, setEditContactImagePreview] = useState<string | null>(null);
+    const [isEditingContact, setIsEditingContact] = useState(false);
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [newContact, setNewContact] = useState({
@@ -175,6 +182,38 @@ export default function ClientDetailPage() {
             console.error("Failed to add contact:", error);
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const handleEditContact = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingContact) return;
+        setIsEditingContact(true);
+        try {
+            let imageStorageId = editingContact.imageStorageId;
+            if (editContactImage) {
+                const postUrl = await generateUploadUrl();
+                const result = await fetch(postUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": editContactImage.type },
+                    body: editContactImage,
+                });
+                const { storageId } = await result.json();
+                imageStorageId = storageId;
+            }
+            await updateContact({
+                id: editingContact._id,
+                name: editContactDraft.name,
+                email: editContactDraft.email || undefined,
+                phone: editContactDraft.phone || undefined,
+                role: editContactDraft.role || undefined,
+                imageStorageId: imageStorageId || undefined,
+            });
+            setEditingContact(null);
+        } catch (err) {
+            console.error("Failed to update contact:", err);
+        } finally {
+            setIsEditingContact(false);
         }
     };
 
@@ -346,6 +385,17 @@ export default function ClientDetailPage() {
                             {contacts && contacts.length > 0 ? (
                                 contacts.map((contact) => (
                                     <div key={contact._id} className="group relative bg-zinc-50/50 p-4 rounded-2xl border border-zinc-100 hover:border-zinc-200 transition-all">
+                                        <button
+                                            onClick={() => {
+                                                setEditingContact(contact);
+                                                setEditContactDraft({ name: contact.name, email: contact.email ?? "", phone: contact.phone ?? "", role: contact.role ?? "" });
+                                                setEditContactImagePreview(contact.imageUrl ?? null);
+                                                setEditContactImage(null);
+                                            }}
+                                            className="absolute top-2 right-10 p-1.5 text-zinc-300 hover:text-black hover:bg-zinc-100 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                        >
+                                            <Pencil size={14} />
+                                        </button>
                                         <button
                                             onClick={() => removeContact({ id: contact._id })}
                                             className="absolute top-2 right-2 p-1.5 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
@@ -860,6 +910,132 @@ export default function ClientDetailPage() {
                                         {isSavingEdit ? "Saving..." : "Save Changes"}
                                     </button>
                                 </div>
+                            </form>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
+
+            {/* Edit Contact Modal */}
+            {editingContact && (
+                <div className="modal-overlay flex items-center justify-center p-4">
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setEditingContact(null)}
+                        className="absolute inset-0 modal-backdrop"
+                    />
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        className="relative w-full max-w-md bg-white rounded-3xl overflow-hidden modal-card"
+                    >
+                        <div className="p-6 space-y-5">
+                            <div className="flex items-start justify-between gap-3">
+                                <div>
+                                    <h3 className="text-lg font-bold text-zinc-900">Edit Contact</h3>
+                                    <p className="text-sm text-zinc-500 mt-0.5">Update {editingContact.name}'s details.</p>
+                                </div>
+                                <button
+                                    onClick={() => setEditingContact(null)}
+                                    className="p-1.5 hover:bg-zinc-100 rounded-xl transition-colors text-zinc-400 hover:text-black shrink-0"
+                                >
+                                    <X size={18} />
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleEditContact} className="space-y-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="relative group/avatar shrink-0">
+                                        <div className="w-14 h-14 rounded-2xl bg-zinc-50 border-2 border-dashed border-zinc-200 flex items-center justify-center text-zinc-400 overflow-hidden transition-all group-hover/avatar:border-zinc-400 group-hover/avatar:bg-zinc-100 cursor-pointer">
+                                            {editContactImagePreview ? (
+                                                <img src={editContactImagePreview} alt="Preview" className="w-full h-full object-cover" />
+                                            ) : (
+                                                <Camera size={18} className="text-zinc-300" />
+                                            )}
+                                        </div>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) {
+                                                    setEditContactImage(file);
+                                                    const reader = new FileReader();
+                                                    reader.onloadend = () => setEditContactImagePreview(reader.result as string);
+                                                    reader.readAsDataURL(file);
+                                                }
+                                            }}
+                                            className="absolute inset-0 opacity-0 cursor-pointer"
+                                        />
+                                        {editContactImagePreview && (
+                                            <button
+                                                type="button"
+                                                onClick={() => { setEditContactImage(null); setEditContactImagePreview(null); }}
+                                                className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-lg flex items-center justify-center shadow border-2 border-white hover:scale-110 transition-all"
+                                            >
+                                                <X size={10} />
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-semibold text-zinc-700">Photo</p>
+                                        <p className="text-xs text-zinc-400 mt-0.5">Optional — click to change</p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-1">Full Name</label>
+                                    <input
+                                        required
+                                        type="text"
+                                        value={editContactDraft.name}
+                                        onChange={(e) => setEditContactDraft({ ...editContactDraft, name: e.target.value })}
+                                        placeholder="John Doe"
+                                        className="w-full bg-zinc-50 border border-zinc-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-black/5 outline-none transition-all font-medium"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-1">Email</label>
+                                        <input
+                                            type="email"
+                                            value={editContactDraft.email}
+                                            onChange={(e) => setEditContactDraft({ ...editContactDraft, email: e.target.value })}
+                                            placeholder="john@example.com"
+                                            className="w-full bg-zinc-50 border border-zinc-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-black/5 outline-none transition-all font-medium"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-1">Phone</label>
+                                        <input
+                                            type="text"
+                                            value={editContactDraft.phone}
+                                            onChange={(e) => setEditContactDraft({ ...editContactDraft, phone: e.target.value })}
+                                            placeholder="+31..."
+                                            className="w-full bg-zinc-50 border border-zinc-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-black/5 outline-none transition-all font-medium"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-1">Role / Position</label>
+                                    <input
+                                        type="text"
+                                        value={editContactDraft.role}
+                                        onChange={(e) => setEditContactDraft({ ...editContactDraft, role: e.target.value })}
+                                        placeholder="Purchasing Manager"
+                                        className="w-full bg-zinc-50 border border-zinc-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-black/5 outline-none transition-all font-medium"
+                                    />
+                                </div>
+
+                                <button
+                                    disabled={isEditingContact}
+                                    type="submit"
+                                    className="w-full bg-black text-white rounded-2xl py-3 text-sm font-bold hover:bg-zinc-800 transition-all active:scale-[0.98] disabled:opacity-50"
+                                >
+                                    {isEditingContact ? "Saving..." : "Save Changes"}
+                                </button>
                             </form>
                         </div>
                     </motion.div>
