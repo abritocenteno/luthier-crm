@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { Save, Upload, Loader2, Building, Mail, MapPin, Phone, Globe, Hash, CreditCard, Languages, Coins, Wrench, Plus, Trash2, Pencil, Check, X, ChevronDown, Guitar, Link2, CheckCheck } from "lucide-react";
+import { Save, Upload, Loader2, Building, Mail, MapPin, Phone, Globe, Hash, CreditCard, Languages, Coins, Wrench, Plus, Trash2, Pencil, Check, X, ChevronDown, Guitar, Link2, CheckCheck, Code2 } from "lucide-react";
 import { ThemeSelector } from "@/components/ThemeSelector";
 import { cn, formatCurrency, getCurrencySymbol } from "@/lib/utils";
 import { Id } from "../../../convex/_generated/dataModel";
@@ -98,6 +98,109 @@ export default function SettingsPage() {
     const [isSaving, setIsSaving] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [copiedLink, setCopiedLink] = useState(false);
+    const [showEmbedModal, setShowEmbedModal] = useState(false);
+    const [copiedEmbed, setCopiedEmbed] = useState(false);
+
+    const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL ?? "";
+    const embedCode = `<!-- Service Request Widget — AG CRM -->
+<div id="agcrm-widget">
+<style>
+#agcrm-widget *{box-sizing:border-box;margin:0;padding:0}
+#agcrm-widget{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:480px;width:100%}
+#agcrm-widget .aw-title{font-size:20px;font-weight:800;color:#18181b;margin-bottom:4px}
+#agcrm-widget .aw-sub{font-size:13px;color:#71717a;margin-bottom:24px}
+#agcrm-widget .aw-field{margin-bottom:16px}
+#agcrm-widget .aw-label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#71717a;margin-bottom:6px}
+#agcrm-widget .aw-input,#agcrm-widget .aw-select,#agcrm-widget .aw-textarea{width:100%;padding:10px 14px;border:1px solid #e4e4e7;border-radius:10px;font-size:14px;color:#18181b;background:#fafafa;outline:none;transition:border-color .15s}
+#agcrm-widget .aw-input:focus,#agcrm-widget .aw-select:focus,#agcrm-widget .aw-textarea:focus{border-color:#18181b;background:#fff}
+#agcrm-widget .aw-textarea{resize:vertical;min-height:100px}
+#agcrm-widget .aw-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+#agcrm-widget .aw-btn{width:100%;padding:12px 20px;background:#18181b;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;transition:background .15s;margin-top:4px}
+#agcrm-widget .aw-btn:hover{background:#3f3f46}
+#agcrm-widget .aw-btn:disabled{opacity:.5;cursor:not-allowed}
+#agcrm-widget .aw-success{text-align:center;padding:32px 16px}
+#agcrm-widget .aw-success-icon{font-size:40px;margin-bottom:12px}
+#agcrm-widget .aw-success-title{font-size:18px;font-weight:800;color:#18181b;margin-bottom:8px}
+#agcrm-widget .aw-success-body{font-size:14px;color:#71717a}
+#agcrm-widget .aw-error{font-size:13px;color:#dc2626;margin-top:12px;padding:10px 14px;background:#fef2f2;border-radius:8px}
+</style>
+<div id="agcrm-form-wrap">
+  <p class="aw-title">Request a Service</p>
+  <p class="aw-sub">Fill in the form and we\\'ll get back to you shortly.</p>
+  <form id="agcrm-form" novalidate>
+    <div class="aw-row">
+      <div class="aw-field">
+        <label class="aw-label" for="aw-name">Name *</label>
+        <input class="aw-input" id="aw-name" type="text" placeholder="Your name" required />
+      </div>
+      <div class="aw-field">
+        <label class="aw-label" for="aw-email">Email *</label>
+        <input class="aw-input" id="aw-email" type="email" placeholder="you@example.com" required />
+      </div>
+    </div>
+    <div class="aw-row">
+      <div class="aw-field">
+        <label class="aw-label" for="aw-phone">Phone</label>
+        <input class="aw-input" id="aw-phone" type="tel" placeholder="+31 6 00 00 00 00" />
+      </div>
+      <div class="aw-field">
+        <label class="aw-label" for="aw-instrument">Instrument *</label>
+        <select class="aw-select" id="aw-instrument" required>
+          <option value="">Select…</option>
+          <option>Electric Guitar</option>
+          <option>Acoustic Guitar</option>
+          <option>Bass Guitar</option>
+          <option>Classical Guitar</option>
+          <option>Ukulele</option>
+          <option>Mandolin</option>
+          <option>Banjo</option>
+          <option>Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="aw-field">
+      <label class="aw-label" for="aw-desc">Description *</label>
+      <textarea class="aw-textarea" id="aw-desc" placeholder="Describe the issue or work needed…" required></textarea>
+    </div>
+    <div id="aw-err" class="aw-error" style="display:none"></div>
+    <button class="aw-btn" type="submit" id="aw-submit">Send Request</button>
+  </form>
+</div>
+<div id="agcrm-success" class="aw-success" style="display:none">
+  <div class="aw-success-icon">🎸</div>
+  <p class="aw-success-title">Request received!</p>
+  <p class="aw-success-body">Thanks, we\\'ll be in touch soon.</p>
+</div>
+<script>
+(function(){
+  var CONVEX_URL="${convexUrl}";
+  var form=document.getElementById("agcrm-form");
+  var btn=document.getElementById("aw-submit");
+  var err=document.getElementById("aw-err");
+  var wrap=document.getElementById("agcrm-form-wrap");
+  var succ=document.getElementById("agcrm-success");
+  form.addEventListener("submit",async function(e){
+    e.preventDefault();
+    var name=document.getElementById("aw-name").value.trim();
+    var email=document.getElementById("aw-email").value.trim();
+    var phone=document.getElementById("aw-phone").value.trim();
+    var inst=document.getElementById("aw-instrument").value;
+    var desc=document.getElementById("aw-desc").value.trim();
+    if(!name||!email||!inst||!desc){err.textContent="Please fill in all required fields.";err.style.display="block";return;}
+    err.style.display="none";btn.disabled=true;btn.textContent="Sending…";
+    try{
+      var res=await fetch(CONVEX_URL+"/api/mutation",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({path:"intake:submitRequest",args:{name,email,phone:phone||undefined,instrumentType:inst,description:desc}})});
+      var json=await res.json();
+      if(json.status==="success"){wrap.style.display="none";succ.style.display="block";}
+      else{throw new Error(json.errorMessage||"Something went wrong.");}
+    }catch(ex){
+      err.textContent=ex.message||"Failed to send. Please try again.";
+      err.style.display="block";btn.disabled=false;btn.textContent="Send Request";
+    }
+  });
+})();
+</script>
+</div>`;
 
     // Form state
     const [companyName, setCompanyName] = useState("");
@@ -201,6 +304,7 @@ export default function SettingsPage() {
     }
 
     return (
+        <>
         <div className="max-w-4xl mx-auto space-y-8 pb-12">
             <div>
                 <h1 className="text-3xl font-bold tracking-tight">Organization Settings</h1>
@@ -730,6 +834,13 @@ export default function SettingsPage() {
                         >
                             {copiedLink ? <><CheckCheck size={13} /> Copied!</> : <><Link2 size={13} /> Copy Link</>}
                         </button>
+                        <button
+                            type="button"
+                            onClick={() => setShowEmbedModal(true)}
+                            className="flex items-center gap-2 px-4 py-2.5 border border-zinc-200 bg-white text-zinc-700 rounded-xl text-xs font-bold hover:bg-zinc-50 transition-all active:scale-95 shrink-0"
+                        >
+                            <Code2 size={13} /> Embed
+                        </button>
                     </div>
                 </div>
 
@@ -745,5 +856,40 @@ export default function SettingsPage() {
                 </div>
             </div>
         </div>
+
+        {/* Embed Code Modal */}
+        {showEmbedModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div className="absolute inset-0 bg-black/50" onClick={() => setShowEmbedModal(false)} />
+                <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+                    <div className="p-5 border-b border-zinc-100 flex items-center justify-between">
+                        <div>
+                            <h3 className="text-base font-black tracking-tight">Embed Widget</h3>
+                            <p className="text-xs text-zinc-500 mt-0.5">Paste this into your website's HTML where you want the form to appear.</p>
+                        </div>
+                        <button onClick={() => setShowEmbedModal(false)} className="p-1.5 hover:bg-zinc-100 rounded-xl text-zinc-400 hover:text-black transition-colors">
+                            <X size={18} />
+                        </button>
+                    </div>
+                    <div className="flex-1 overflow-auto p-4">
+                        <pre className="text-[11px] leading-relaxed bg-zinc-950 text-zinc-300 rounded-xl p-4 overflow-auto whitespace-pre-wrap break-all select-all">{embedCode}</pre>
+                    </div>
+                    <div className="p-4 border-t border-zinc-100 flex justify-end">
+                        <button
+                            onClick={() => {
+                                navigator.clipboard.writeText(embedCode).then(() => {
+                                    setCopiedEmbed(true);
+                                    setTimeout(() => setCopiedEmbed(false), 2000);
+                                });
+                            }}
+                            className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 text-white rounded-xl text-sm font-bold hover:bg-black transition-all active:scale-95"
+                        >
+                            {copiedEmbed ? <><CheckCheck size={14} /> Copied!</> : <><Code2 size={14} /> Copy Code</>}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+        </>
     );
 }
