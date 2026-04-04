@@ -81,7 +81,18 @@ async function findLogoUrl(domain: string, html: string): Promise<string> {
     const toAbsolute = (href: string) =>
         href.startsWith("http") ? href : `https://${domain}${href.startsWith("/") ? "" : "/"}${href}`;
 
-    // 2. og:image meta tag
+    // 2. <img> tag with "logo" in src, alt, or class (catches Shopify CDN logos etc.)
+    const logoImgPatterns = [
+        /<img[^>]+src=["']([^"']*logo[^"']*\.(png|jpg|jpeg|svg|webp)[^"']*)["']/gi,
+        /<img[^>]+(?:alt|class)=["'][^"']*logo[^"']*["'][^>]+src=["']([^"']+)["']/gi,
+        /<img[^>]+src=["']([^"']+)["'][^>]+(?:alt|class)=["'][^"']*logo[^"']*["']/gi,
+    ];
+    for (const pattern of logoImgPatterns) {
+        const match = pattern.exec(html);
+        if (match?.[1] && !match[1].includes("data:")) return toAbsolute(match[1]);
+    }
+
+    // 3. og:image meta tag
     const ogImage = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
         ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
     if (ogImage?.[1]) return toAbsolute(ogImage[1]);
