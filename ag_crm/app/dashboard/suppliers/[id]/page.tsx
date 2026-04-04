@@ -62,10 +62,14 @@ export default function SupplierDetailPage() {
     const orders = useQuery(api.orders.listBySupplier, { supplierId });
     const settings = useQuery(api.settings.get);
     const contacts = useQuery(api.contacts.listBySupplier, { supplierId });
+    const updateSupplier = useMutation(api.suppliers.update);
     const addContact = useMutation(api.contacts.add);
     const removeContact = useMutation(api.contacts.remove);
     const generateUploadUrl = useMutation(api.contacts.generateUploadUrl);
 
+    const [isEditOpen, setIsEditOpen] = useState(false);
+    const [editDraft, setEditDraft] = useState({ name: "", email: "", phone: "", type: "regular", website: "", street: "", postcode: "", city: "" });
+    const [isSavingEdit, setIsSavingEdit] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -189,7 +193,22 @@ export default function SupplierDetailPage() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <button className="flex items-center gap-2 px-6 py-2.5 bg-black text-white rounded-xl text-sm font-semibold hover:bg-zinc-800 transition-all shadow-lg shadow-black/10 active:scale-95">
+                        <button
+                            onClick={() => {
+                                setEditDraft({
+                                    name: supplier.name,
+                                    email: supplier.email,
+                                    phone: supplier.phone ?? "",
+                                    type: supplier.type,
+                                    website: supplier.website ?? "",
+                                    street: supplier.street ?? "",
+                                    postcode: supplier.postcode ?? "",
+                                    city: supplier.city ?? "",
+                                });
+                                setIsEditOpen(true);
+                            }}
+                            className="flex items-center gap-2 px-6 py-2.5 bg-black text-white rounded-xl text-sm font-semibold hover:bg-zinc-800 transition-all shadow-lg shadow-black/10 active:scale-95"
+                        >
                             <Edit2 size={16} />
                             Edit Profile
                         </button>
@@ -401,6 +420,93 @@ export default function SupplierDetailPage() {
                     </Card>
                 </div>
             </div>
+            {/* Edit Supplier Drawer */}
+            {isEditOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        onClick={() => setIsEditOpen(false)}
+                        className="absolute inset-0 modal-backdrop"
+                    />
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        className="relative w-full max-w-lg bg-white rounded-3xl overflow-hidden modal-card max-h-[90vh] flex flex-col"
+                    >
+                        <div className="p-6 border-b border-zinc-100 flex items-start justify-between gap-3">
+                            <div>
+                                <h3 className="text-lg font-bold text-zinc-900">Edit Supplier</h3>
+                                <p className="text-sm text-zinc-500 mt-0.5">Update {supplier.name}'s details.</p>
+                            </div>
+                            <button onClick={() => setIsEditOpen(false)} className="p-1.5 hover:bg-zinc-100 rounded-xl text-zinc-400 hover:text-black transition-colors shrink-0">
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <form
+                            onSubmit={async (e) => {
+                                e.preventDefault();
+                                setIsSavingEdit(true);
+                                try {
+                                    await updateSupplier({ id: supplierId, ...editDraft });
+                                    setIsEditOpen(false);
+                                } catch (err) { console.error(err); }
+                                finally { setIsSavingEdit(false); }
+                            }}
+                            className="flex-1 overflow-y-auto p-6 space-y-4"
+                        >
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="col-span-2 space-y-1.5">
+                                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Company Name *</label>
+                                    <input required value={editDraft.name} onChange={e => setEditDraft({ ...editDraft, name: e.target.value })} placeholder="e.g. Wood & Grain Co." className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-black/5 outline-none transition-all" />
+                                </div>
+                                <div className="col-span-2 space-y-1.5">
+                                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Email *</label>
+                                    <input required type="email" value={editDraft.email} onChange={e => setEditDraft({ ...editDraft, email: e.target.value })} placeholder="orders@supplier.com" className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-black/5 outline-none transition-all" />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Phone</label>
+                                    <input value={editDraft.phone} onChange={e => setEditDraft({ ...editDraft, phone: e.target.value })} placeholder="+44 20 0000 0000" className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-black/5 outline-none transition-all" />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Website</label>
+                                    <input value={editDraft.website} onChange={e => setEditDraft({ ...editDraft, website: e.target.value })} placeholder="https://supplier.com" className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-black/5 outline-none transition-all" />
+                                </div>
+                                <div className="col-span-2 space-y-1.5">
+                                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Type</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {["regular", "distributor"].map(t => (
+                                            <button key={t} type="button" onClick={() => setEditDraft({ ...editDraft, type: t })}
+                                                className={cn("py-2.5 rounded-xl text-sm font-bold capitalize border transition-all", editDraft.type === t ? "bg-black text-white border-black" : "bg-zinc-50 text-zinc-500 border-zinc-200 hover:border-zinc-300")}>
+                                                {t === "distributor" ? "Distributor" : "Regular"}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="col-span-2 space-y-1.5">
+                                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Street</label>
+                                    <input value={editDraft.street} onChange={e => setEditDraft({ ...editDraft, street: e.target.value })} placeholder="Industrial Estate, Unit 4" className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-black/5 outline-none transition-all" />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Postcode</label>
+                                    <input value={editDraft.postcode} onChange={e => setEditDraft({ ...editDraft, postcode: e.target.value })} placeholder="SE1 7PB" className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-black/5 outline-none transition-all" />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">City</label>
+                                    <input value={editDraft.city} onChange={e => setEditDraft({ ...editDraft, city: e.target.value })} placeholder="London" className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-black/5 outline-none transition-all" />
+                                </div>
+                            </div>
+                            <div className="flex gap-3 pt-2">
+                                <button type="button" onClick={() => setIsEditOpen(false)} className="flex-1 py-2.5 border border-zinc-200 rounded-xl text-sm font-bold text-zinc-600 hover:bg-zinc-50 transition-all">Cancel</button>
+                                <button type="submit" disabled={isSavingEdit} className="flex-1 py-2.5 bg-black text-white rounded-xl text-sm font-bold hover:bg-zinc-800 transition-all disabled:opacity-50">
+                                    {isSavingEdit ? "Saving…" : "Save Changes"}
+                                </button>
+                            </div>
+                        </form>
+                    </motion.div>
+                </div>
+            )}
+
             {/* Add Contact Modal */}
             {isAddModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
