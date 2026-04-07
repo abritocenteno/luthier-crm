@@ -62,10 +62,10 @@ export default function RequestPage() {
             {/* Header */}
             <header className="bg-white border-b border-zinc-200">
                 <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-xl bg-zinc-900 flex items-center justify-center">
-                        <span className="text-white text-sm font-black tracking-tight">L</span>
+                    <div className="h-9 w-9 rounded-xl flex items-center justify-center" style={{ background: "#402A1B" }}>
+                        <span className="text-sm font-bold" style={{ color: "#C9914C", fontFamily: "var(--font-domine)" }}>F</span>
                     </div>
-                    <span className="text-lg font-bold tracking-tight text-zinc-900">Luthier</span>
+                    <span className="text-lg font-bold tracking-tight" style={{ fontFamily: "var(--font-domine)", color: "#23211E" }}>Fret<span style={{ color: "#C9914C" }}>Ops</span></span>
                 </div>
             </header>
 
@@ -215,7 +215,7 @@ export default function RequestPage() {
 
             {/* Footer */}
             <footer className="py-6 text-center text-xs text-zinc-400">
-                Powered by Luthier CRM
+                Powered by FretOps
             </footer>
         </div>
     );

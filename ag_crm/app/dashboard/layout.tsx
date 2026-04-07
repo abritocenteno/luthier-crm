@@ -124,10 +124,10 @@ export default function DashboardLayout({
                 <div className="h-16 flex items-center justify-between px-6 border-b border-zinc-100">
                     {!collapsed && (
                         <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
-                                <span className="text-white font-bold text-lg">L</span>
+                            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#402A1B" }}>
+                                <span className="font-bold text-lg" style={{ color: "#C9914C", fontFamily: "var(--font-domine)" }}>F</span>
                             </div>
-                            <span className="font-bold text-xl tracking-tight">Luthier</span>
+                            <span className="font-bold text-xl tracking-tight" style={{ fontFamily: "var(--font-domine)" }}>Fret<span style={{ color: "#C9914C" }}>Ops</span></span>
                         </div>
                     )}
                     {collapsed && (
@@ -180,10 +180,10 @@ export default function DashboardLayout({
             >
                 <div className="h-16 flex items-center justify-between px-6 border-b border-zinc-100">
                     <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
-                            <span className="text-white font-bold text-lg">L</span>
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#402A1B" }}>
+                            <span className="font-bold text-lg" style={{ color: "#C9914C", fontFamily: "var(--font-domine)" }}>F</span>
                         </div>
-                        <span className="font-bold text-xl tracking-tight">Luthier</span>
+                        <span className="font-bold text-xl tracking-tight" style={{ fontFamily: "var(--font-domine)" }}>Fret<span style={{ color: "#C9914C" }}>Ops</span></span>
                     </div>
                     <button onClick={() => setMobileOpen(false)} className="p-1 hover:bg-zinc-100 rounded-lg">
                         <X size={20} />

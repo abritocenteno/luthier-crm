@@ -66,13 +66,13 @@ function downloadIcs(title: string, start: number, description?: string) {
     const ics = [
         "BEGIN:VCALENDAR",
         "VERSION:2.0",
-        "PRODID:-//LuthierCRM//EN",
+        "PRODID:-//FretOps//EN",
         "BEGIN:VEVENT",
         `DTSTART:${toIcsDate(start)}`,
         `DTEND:${toIcsDate(end)}`,
         `SUMMARY:${title}`,
         description ? `DESCRIPTION:${description}` : "",
-        `UID:${start}-${Math.random().toString(36).slice(2)}@luthiercrm`,
+        `UID:${start}-${Math.random().toString(36).slice(2)}@fretops`,
         "END:VEVENT",
         "END:VCALENDAR",
     ].filter(Boolean).join("\r\n");

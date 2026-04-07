@@ -229,7 +229,7 @@ export default function ClientPortalPage() {
                 </div>
                 <h1 className="text-2xl font-bold text-zinc-900">Link not found</h1>
                 <p className="text-zinc-500 max-w-sm">
-                    This portal link is invalid or has been revoked. Please contact your luthier for a new link.
+                    This portal link is invalid or has been revoked. Please contact your repair shop for a new link.
                 </p>
             </div>
         );
@@ -243,10 +243,10 @@ export default function ClientPortalPage() {
             {/* Header */}
             <header className="space-y-1">
                 <div className="flex items-center gap-2 mb-6">
-                    <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
-                        <span className="text-white font-black text-lg">L</span>
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#402A1B" }}>
+                        <span className="font-bold text-lg" style={{ color: "#C9914C", fontFamily: "var(--font-domine)" }}>F</span>
                     </div>
-                    <span className="font-bold text-lg tracking-tight">Luthier Workshop</span>
+                    <span className="font-bold text-lg tracking-tight" style={{ fontFamily: "var(--font-domine)" }}>Fret<span style={{ color: "#C9914C" }}>Ops</span></span>
                 </div>
                 <h1 className="text-3xl font-black tracking-tight text-zinc-900">
                     Hey, {client.name.split(" ")[0]}! 👋
