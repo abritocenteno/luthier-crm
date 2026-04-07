@@ -216,6 +216,15 @@ export default function SettingsPage() {
     const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
     const [language, setLanguage] = useState("en-US");
     const [currency, setCurrency] = useState("USD");
+    const [emailSenderName, setEmailSenderName] = useState("");
+    const [invoiceEmailSubject, setInvoiceEmailSubject] = useState("");
+    const [invoiceEmailIntro, setInvoiceEmailIntro] = useState("");
+    const [quoteEmailSubject, setQuoteEmailSubject] = useState("");
+    const [quoteEmailIntro, setQuoteEmailIntro] = useState("");
+    const [jobReadyEmailSubject, setJobReadyEmailSubject] = useState("");
+    const [jobReadyEmailIntro, setJobReadyEmailIntro] = useState("");
+    const [overdueEmailSubject, setOverdueEmailSubject] = useState("");
+    const [overdueEmailIntro, setOverdueEmailIntro] = useState("");
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -235,6 +244,15 @@ export default function SettingsPage() {
             if (settings.logoUrl) setLogoPreviewUrl(settings.logoUrl);
             if (settings.language) setLanguage(settings.language);
             if (settings.currency) setCurrency(settings.currency);
+            if (settings.emailSenderName) setEmailSenderName(settings.emailSenderName);
+            if (settings.invoiceEmailSubject) setInvoiceEmailSubject(settings.invoiceEmailSubject);
+            if (settings.invoiceEmailIntro) setInvoiceEmailIntro(settings.invoiceEmailIntro);
+            if (settings.quoteEmailSubject) setQuoteEmailSubject(settings.quoteEmailSubject);
+            if (settings.quoteEmailIntro) setQuoteEmailIntro(settings.quoteEmailIntro);
+            if (settings.jobReadyEmailSubject) setJobReadyEmailSubject(settings.jobReadyEmailSubject);
+            if (settings.jobReadyEmailIntro) setJobReadyEmailIntro(settings.jobReadyEmailIntro);
+            if (settings.overdueEmailSubject) setOverdueEmailSubject(settings.overdueEmailSubject);
+            if (settings.overdueEmailIntro) setOverdueEmailIntro(settings.overdueEmailIntro);
         }
     }, [settings]);
 
@@ -285,6 +303,15 @@ export default function SettingsPage() {
                 logoStorageId: logoStorageId as any || undefined,
                 language,
                 currency,
+                emailSenderName: emailSenderName || undefined,
+                invoiceEmailSubject: invoiceEmailSubject || undefined,
+                invoiceEmailIntro: invoiceEmailIntro || undefined,
+                quoteEmailSubject: quoteEmailSubject || undefined,
+                quoteEmailIntro: quoteEmailIntro || undefined,
+                jobReadyEmailSubject: jobReadyEmailSubject || undefined,
+                jobReadyEmailIntro: jobReadyEmailIntro || undefined,
+                overdueEmailSubject: overdueEmailSubject || undefined,
+                overdueEmailIntro: overdueEmailIntro || undefined,
             });
             alert("Settings saved successfully!");
         } catch (error) {
@@ -295,7 +322,7 @@ export default function SettingsPage() {
         }
     };
 
-    const [activeTab, setActiveTab] = useState<"general" | "services" | "intake" | "appearance">("general");
+    const [activeTab, setActiveTab] = useState<"general" | "services" | "intake" | "appearance" | "email">("general");
 
     if (settings === undefined) {
         return (
@@ -320,6 +347,7 @@ export default function SettingsPage() {
                     { id: "services",   label: "Services" },
                     { id: "intake",     label: "Intake" },
                     { id: "appearance", label: "Appearance" },
+                    { id: "email",      label: "Email" },
                 ] as const).map(tab => (
                     <button
                         key={tab.id}
@@ -890,6 +918,134 @@ export default function SettingsPage() {
                             <span className="text-sm text-zinc-500">Accent Colour</span>
                             <ThemeSelector />
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Email Tab ── */}
+            {activeTab === "email" && (
+                <div className="space-y-6">
+
+                    {/* Sender */}
+                    <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm p-6 sm:p-8 space-y-4">
+                        <div>
+                            <h3 className="text-lg font-semibold">Sender Identity</h3>
+                            <p className="text-sm text-zinc-500 mt-1">The name that appears in the "From" field of every email you send.</p>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Sender Name</label>
+                            <input
+                                type="text"
+                                value={emailSenderName}
+                                onChange={(e) => setEmailSenderName(e.target.value)}
+                                placeholder={companyName || "Your Shop Name"}
+                                className="w-full max-w-sm bg-zinc-50 border border-zinc-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-black/5 outline-none transition-all"
+                            />
+                            <p className="text-xs text-zinc-400">Leave blank to use your company name. The email address itself is set in your Resend account.</p>
+                        </div>
+                    </div>
+
+                    {/* Per-email templates */}
+                    {([
+                        {
+                            key: "invoice",
+                            label: "Invoice Email",
+                            description: "Sent to the client when you email an invoice.",
+                            subjectState: invoiceEmailSubject,
+                            setSubject: setInvoiceEmailSubject,
+                            introState: invoiceEmailIntro,
+                            setIntro: setInvoiceEmailIntro,
+                            defaultSubject: "Invoice {{invoiceNumber}} — {{companyName}}",
+                            defaultIntro: "Please find your invoice attached to this email. If you have any questions, feel free to reply directly to this message.",
+                            vars: ["{{invoiceNumber}}", "{{companyName}}", "{{clientName}}"],
+                        },
+                        {
+                            key: "quote",
+                            label: "Quote Email",
+                            description: "Sent to the client when you send a quote for approval.",
+                            subjectState: quoteEmailSubject,
+                            setSubject: setQuoteEmailSubject,
+                            introState: quoteEmailIntro,
+                            setIntro: setQuoteEmailIntro,
+                            defaultSubject: "Quote for your {{instrumentType}} — {{companyName}}",
+                            defaultIntro: "Thank you for bringing in your {{instrumentType}}. Here's a quote for the work we discussed:",
+                            vars: ["{{instrumentType}}", "{{companyName}}", "{{clientName}}"],
+                        },
+                        {
+                            key: "jobReady",
+                            label: "Job Ready Email",
+                            description: "Sent to the client when their instrument is ready for pickup.",
+                            subjectState: jobReadyEmailSubject,
+                            setSubject: setJobReadyEmailSubject,
+                            introState: jobReadyEmailIntro,
+                            setIntro: setJobReadyEmailIntro,
+                            defaultSubject: "Your {{instrumentType}} is ready for pickup! 🎸",
+                            defaultIntro: "We're happy to let you know that your {{instrumentType}} is done and ready for pickup! Come by whenever it suits you.",
+                            vars: ["{{instrumentType}}", "{{companyName}}", "{{clientName}}"],
+                        },
+                        {
+                            key: "overdue",
+                            label: "Overdue Reminder",
+                            description: "Sent to the client when an invoice is overdue.",
+                            subjectState: overdueEmailSubject,
+                            setSubject: setOverdueEmailSubject,
+                            introState: overdueEmailIntro,
+                            setIntro: setOverdueEmailIntro,
+                            defaultSubject: "Payment reminder: Invoice {{invoiceNumber}} — {{companyName}}",
+                            defaultIntro: "We'd like to remind you that invoice {{invoiceNumber}} was due on {{dueDate}} and is still outstanding.",
+                            vars: ["{{invoiceNumber}}", "{{companyName}}", "{{clientName}}", "{{dueDate}}"],
+                        },
+                    ]).map((tpl) => (
+                        <div key={tpl.key} className="bg-white rounded-2xl border border-zinc-200 shadow-sm p-6 sm:p-8 space-y-5">
+                            <div>
+                                <h3 className="text-base font-semibold">{tpl.label}</h3>
+                                <p className="text-sm text-zinc-500 mt-0.5">{tpl.description}</p>
+                            </div>
+
+                            {/* Variables */}
+                            <div className="flex flex-wrap gap-1.5">
+                                {tpl.vars.map((v) => (
+                                    <code key={v} className="text-[11px] font-mono bg-zinc-100 text-zinc-600 px-2 py-0.5 rounded-lg border border-zinc-200">{v}</code>
+                                ))}
+                                <span className="text-[11px] text-zinc-400 self-center ml-1">— available variables</span>
+                            </div>
+
+                            {/* Subject */}
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Subject Line</label>
+                                <input
+                                    type="text"
+                                    value={tpl.subjectState}
+                                    onChange={(e) => tpl.setSubject(e.target.value)}
+                                    placeholder={tpl.defaultSubject}
+                                    className="w-full bg-zinc-50 border border-zinc-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-black/5 outline-none transition-all"
+                                />
+                            </div>
+
+                            {/* Intro */}
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Opening Paragraph</label>
+                                <textarea
+                                    rows={3}
+                                    value={tpl.introState}
+                                    onChange={(e) => tpl.setIntro(e.target.value)}
+                                    placeholder={tpl.defaultIntro}
+                                    className="w-full bg-zinc-50 border border-zinc-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-black/5 outline-none transition-all resize-none"
+                                />
+                                <p className="text-xs text-zinc-400">Leave blank to use the default text shown as placeholder.</p>
+                            </div>
+                        </div>
+                    ))}
+
+                    {/* Save */}
+                    <div className="flex justify-end">
+                        <button
+                            onClick={handleSave}
+                            disabled={isSaving}
+                            className="flex items-center gap-2 bg-black text-white px-6 py-3 rounded-2xl text-sm font-bold hover:bg-zinc-800 transition-all active:scale-95 disabled:opacity-50"
+                        >
+                            {isSaving ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : <><Save className="h-4 w-4" /> Save Changes</>}
+                        </button>
                     </div>
                 </div>
             )}

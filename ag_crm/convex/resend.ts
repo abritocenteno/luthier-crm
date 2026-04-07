@@ -4,6 +4,10 @@ import { Resend } from "resend";
 import { api } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 
+function replaceVars(template: string, vars: Record<string, string>): string {
+    return Object.entries(vars).reduce((str, [k, v]) => str.replaceAll(`{{${k}}}`, v), template);
+}
+
 export const sendIntakeNotificationEmail = action({
     args: {
         ownerEmail: v.string(),
@@ -15,11 +19,14 @@ export const sendIntakeNotificationEmail = action({
         description: v.string(),
         jobId: v.id("jobs"),
     },
-    handler: async (_ctx, args) => {
+    handler: async (ctx, args) => {
         const resendApiKey = process.env.RESEND_API_KEY;
         if (!resendApiKey) throw new Error("RESEND_API_KEY not set");
 
         const resend = new Resend(resendApiKey);
+
+        const settings = await ctx.runQuery(api.settings.get);
+        const senderName = settings?.emailSenderName || args.companyName;
 
         const html = `
             <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px 24px;color:#18181b;">
@@ -44,7 +51,7 @@ export const sendIntakeNotificationEmail = action({
             </div>`;
 
         await resend.emails.send({
-            from: "AG CRM <billing@thedotguitars.com>",
+            from: `${senderName} <billing@thedotguitars.com>`,
             to: [args.ownerEmail],
             subject: `New request: ${args.instrumentType} — ${args.clientName}`,
             html,
@@ -77,12 +84,23 @@ export const sendInvoiceEmail = action({
         const resend = new Resend(resendApiKey);
         const company = args.companyName || "Your repair shop";
 
+        const settings = await ctx.runQuery(api.settings.get);
+        const senderName = settings?.emailSenderName || args.companyName || "Your repair shop";
+
+        const invoiceIntro = replaceVars(
+            settings?.invoiceEmailIntro || "Please find your invoice attached to this email. If you have any questions, feel free to reply directly to this message.",
+            { clientName: args.clientName, companyName: args.companyName || "Your repair shop", invoiceNumber: args.invoiceNumber }
+        );
+
         try {
             const data = await resend.emails.send({
-                from: "AG CRM <billing@thedotguitars.com>",
+                from: `${senderName} <billing@thedotguitars.com>`,
                 to: [args.clientEmail],
                 replyTo: args.replyToEmail,
-                subject: `Invoice ${args.invoiceNumber} — ${company}`,
+                subject: replaceVars(
+                    settings?.invoiceEmailSubject || "Invoice {{invoiceNumber}} — {{companyName}}",
+                    { invoiceNumber: args.invoiceNumber, companyName: args.companyName || "Your repair shop", clientName: args.clientName }
+                ),
                 text: `Dear ${args.clientName},\n\nPlease find attached invoice ${args.invoiceNumber} from ${company}.\n\nThank you for your business!\n\nBest regards,\n${company}`,
                 html: `
                     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 24px; color: #18181b;">
@@ -91,7 +109,7 @@ export const sendInvoiceEmail = action({
 
                         <p style="margin: 0 0 16px;">Dear <strong>${args.clientName}</strong>,</p>
                         <p style="margin: 0 0 24px; line-height: 1.6;">
-                            Please find your invoice attached to this email. If you have any questions, feel free to reply directly to this message.
+                            ${invoiceIntro}
                         </p>
 
                         <hr style="border: none; border-top: 1px solid #e4e4e7; margin: 32px 0;" />
@@ -140,6 +158,13 @@ export const sendOverdueReminderEmail = action({
         const formatAmt = (n: number) => new Intl.NumberFormat("nl-NL", { style: "currency", currency }).format(n);
         const dueDate = new Date((invoice as any).date + 14 * 24 * 60 * 60 * 1000).toLocaleDateString("en-NL", { day: "numeric", month: "long", year: "numeric" });
 
+        const senderName = settings?.emailSenderName || companyName;
+
+        const overdueIntro = replaceVars(
+            settings?.overdueEmailIntro || "We'd like to remind you that invoice {{invoiceNumber}} was due on {{dueDate}} and is still outstanding.",
+            { invoiceNumber: (invoice as any).invoiceNumber, dueDate, clientName: client.name, companyName }
+        );
+
         const resend = new Resend(resendApiKey);
 
         const html = `
@@ -149,8 +174,7 @@ export const sendOverdueReminderEmail = action({
 
                 <p style="margin:0 0 16px;">Dear <strong>${client.name}</strong>,</p>
                 <p style="margin:0 0 24px;line-height:1.6;">
-                    We'd like to remind you that invoice <strong>${(invoice as any).invoiceNumber}</strong>
-                    was due on <strong>${dueDate}</strong> and is still outstanding.
+                    ${overdueIntro}
                 </p>
 
                 <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:12px;padding:20px 24px;margin-bottom:24px;">
@@ -170,10 +194,13 @@ export const sendOverdueReminderEmail = action({
             </div>`;
 
         await resend.emails.send({
-            from: "AG CRM <billing@thedotguitars.com>",
+            from: `${senderName} <billing@thedotguitars.com>`,
             to: [client.email],
             replyTo: contactEmail || undefined,
-            subject: `Payment reminder: Invoice ${(invoice as any).invoiceNumber} — ${companyName}`,
+            subject: replaceVars(
+                settings?.overdueEmailSubject || "Payment reminder: Invoice {{invoiceNumber}} — {{companyName}}",
+                { invoiceNumber: (invoice as any).invoiceNumber, companyName, clientName: client.name }
+            ),
             html,
             text: `Dear ${client.name},\n\nThis is a reminder that invoice ${(invoice as any).invoiceNumber} (${formatAmt((invoice as any).amount)}) was due on ${dueDate} and is still outstanding.\n\n${bankAccounts ? `Payment details:\n${bankAccounts}\n\n` : ""}${contactEmail ? `Contact: ${contactEmail}\n` : ""}${phone}\n\n${companyName}`,
         });
@@ -209,6 +236,13 @@ export const sendQuoteEmail = action({
         const currency = settings?.currency ?? "EUR";
         const formatAmt = (n: number) => new Intl.NumberFormat("nl-NL", { style: "currency", currency }).format(n);
 
+        const senderName = settings?.emailSenderName || companyName;
+
+        const quoteIntro = replaceVars(
+            settings?.quoteEmailIntro || "Thank you for bringing in your {{instrumentType}}. Here's a quote for the work we discussed:",
+            { instrumentType: instrumentLabel, clientName: client.name, companyName }
+        );
+
         const itemRows = workItems.map((wi: any) => {
             const total = wi.type === "hourly" ? wi.unitPrice * (wi.hours ?? 1) : wi.unitPrice;
             const detail = wi.type === "hourly" ? `${wi.hours}h × ${formatAmt(wi.unitPrice)}/h` : "Fixed price";
@@ -234,8 +268,7 @@ export const sendQuoteEmail = action({
 
                 <p style="margin:0 0 16px;">Dear <strong>${client.name}</strong>,</p>
                 <p style="margin:0 0 24px;line-height:1.6;">
-                    Thank you for bringing in your <strong>${instrumentLabel}</strong>.
-                    Here's a quote for the work we discussed:
+                    ${quoteIntro}
                 </p>
 
                 <div style="background:#f4f4f5;border-radius:12px;padding:20px 24px;margin-bottom:24px;">
@@ -265,10 +298,13 @@ export const sendQuoteEmail = action({
             </div>`;
 
         await resend.emails.send({
-            from: "AG CRM <billing@thedotguitars.com>",
+            from: `${senderName} <billing@thedotguitars.com>`,
             to: [client.email],
             replyTo: contactEmail || undefined,
-            subject: `Quote for your ${instrumentLabel} — ${companyName}`,
+            subject: replaceVars(
+                settings?.quoteEmailSubject || "Quote for your {{instrumentType}} — {{companyName}}",
+                { instrumentType: instrumentLabel, companyName, clientName: client.name }
+            ),
             html,
             text: `Dear ${client.name},\n\nHere's a quote for your ${instrumentLabel}:\n\n${workItems.map((wi: any) => `- ${wi.name}: ${formatAmt(wi.type === "hourly" ? wi.unitPrice * (wi.hours ?? 1) : wi.unitPrice)}`).join("\n")}\n\nTotal: ${formatAmt(workTotal)}\n\nTo accept, just reply to this email.\n\n${contactEmail}\n${phone}\n\n${companyName}`,
         });
@@ -301,6 +337,13 @@ export const sendJobReadyEmail = action({
             job.instrumentType,
         ].filter(Boolean).join(" ");
 
+        const senderName = settings?.emailSenderName || companyName;
+
+        const jobReadyIntro = replaceVars(
+            settings?.jobReadyEmailIntro || "We're happy to let you know that your {{instrumentType}} is done and ready for pickup! Come by whenever it suits you.",
+            { instrumentType: instrumentLabel, clientName: client.name, companyName }
+        );
+
         const resend = new Resend(resendApiKey);
 
         const html = `
@@ -310,8 +353,7 @@ export const sendJobReadyEmail = action({
 
                 <p style="margin: 0 0 16px;">Dear <strong>${client.name}</strong>,</p>
                 <p style="margin: 0 0 24px; line-height: 1.6;">
-                    We're happy to let you know that your <strong>${instrumentLabel}</strong> is done and ready for pickup!
-                    Come by whenever it suits you.
+                    ${jobReadyIntro}
                 </p>
 
                 <div style="background: #f4f4f5; border-radius: 12px; padding: 20px 24px; margin-bottom: 32px;">
@@ -333,10 +375,13 @@ export const sendJobReadyEmail = action({
 
         try {
             await resend.emails.send({
-                from: "AG CRM <billing@thedotguitars.com>",
+                from: `${senderName} <billing@thedotguitars.com>`,
                 to: [client.email],
                 replyTo: contactEmail || undefined,
-                subject: `Your ${instrumentLabel} is ready for pickup! 🎸`,
+                subject: replaceVars(
+                    settings?.jobReadyEmailSubject || "Your {{instrumentType}} is ready for pickup! 🎸",
+                    { instrumentType: instrumentLabel, companyName, clientName: client.name }
+                ),
                 html,
                 text: `Dear ${client.name},\n\nYour ${instrumentLabel} is ready for pickup at ${companyName}!\n\nJob: ${job.title}\n\n${contactEmail ? `Contact: ${contactEmail}\n` : ""}${phone ? `Phone: ${phone}\n` : ""}\nSee you soon!\n${companyName}`,
             });
