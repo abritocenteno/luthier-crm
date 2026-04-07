@@ -89,11 +89,12 @@ export default function SettingsPage() {
         }
     };
 
-    type ServiceDraft = { name: string; description: string; type: "fixed" | "hourly"; defaultPrice: number };
-    const emptyDraft = (): ServiceDraft => ({ name: "", description: "", type: "fixed", defaultPrice: 0 });
+    type ServiceDraft = { name: string; description: string; type: "fixed" | "hourly"; defaultPrice: number; checklistItems: string[] };
+    const emptyDraft = (): ServiceDraft => ({ name: "", description: "", type: "fixed", defaultPrice: 0, checklistItems: [] });
     const [newService, setNewService] = useState<ServiceDraft>(emptyDraft());
     const [editingId, setEditingId] = useState<Id<"services"> | null>(null);
     const [editDraft, setEditDraft] = useState<ServiceDraft>(emptyDraft());
+    const [newChecklistItem, setNewChecklistItem] = useState("");
 
     const [isSaving, setIsSaving] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
@@ -682,7 +683,7 @@ export default function SettingsPage() {
                                                 <button type="button"
                                                     onClick={async () => {
                                                         if (!editDraft.name) return;
-                                                        await updateService({ id: svc._id, ...editDraft });
+                                                        await updateService({ id: svc._id, ...editDraft, checklistItems: editDraft.checklistItems.length ? editDraft.checklistItems : undefined });
                                                         setEditingId(null);
                                                     }}
                                                     className="flex items-center gap-1.5 px-3 py-1.5 bg-black text-white rounded-lg text-xs font-bold hover:bg-zinc-800 transition-all">
@@ -691,6 +692,51 @@ export default function SettingsPage() {
                                                 <button type="button" onClick={() => setEditingId(null)}
                                                     className="p-1.5 text-zinc-400 hover:text-black hover:bg-zinc-100 rounded-lg transition-all">
                                                     <X size={14} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {/* Completion checklist items */}
+                                        <div className="pt-2 border-t border-zinc-200 space-y-2">
+                                            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1.5">
+                                                <CheckCheck size={11} /> Completion Checklist
+                                            </p>
+                                            {editDraft.checklistItems.length > 0 && (
+                                                <ul className="space-y-1">
+                                                    {editDraft.checklistItems.map((item, idx) => (
+                                                        <li key={idx} className="flex items-center gap-2 text-sm text-zinc-700 bg-white border border-zinc-100 rounded-lg px-3 py-1.5">
+                                                            <span className="flex-1">{item}</span>
+                                                            <button type="button"
+                                                                onClick={() => setEditDraft((p) => ({ ...p, checklistItems: p.checklistItems.filter((_, i) => i !== idx) }))}
+                                                                className="text-zinc-300 hover:text-red-500 transition-colors">
+                                                                <X size={12} />
+                                                            </button>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            )}
+                                            <div className="flex gap-2">
+                                                <input
+                                                    value={newChecklistItem}
+                                                    onChange={(e) => setNewChecklistItem(e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === "Enter" && newChecklistItem.trim()) {
+                                                            e.preventDefault();
+                                                            setEditDraft((p) => ({ ...p, checklistItems: [...p.checklistItems, newChecklistItem.trim()] }));
+                                                            setNewChecklistItem("");
+                                                        }
+                                                    }}
+                                                    placeholder="Add checklist item…"
+                                                    className="flex-1 px-3 py-1.5 text-sm border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black/5"
+                                                />
+                                                <button type="button"
+                                                    disabled={!newChecklistItem.trim()}
+                                                    onClick={() => {
+                                                        if (!newChecklistItem.trim()) return;
+                                                        setEditDraft((p) => ({ ...p, checklistItems: [...p.checklistItems, newChecklistItem.trim()] }));
+                                                        setNewChecklistItem("");
+                                                    }}
+                                                    className="px-3 py-1.5 bg-zinc-900 text-white rounded-lg text-xs font-bold hover:bg-black transition-all disabled:opacity-40">
+                                                    <Plus size={12} />
                                                 </button>
                                             </div>
                                         </div>
@@ -712,7 +758,7 @@ export default function SettingsPage() {
                                             </span>
                                             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <button type="button"
-                                                    onClick={() => { setEditingId(svc._id); setEditDraft({ name: svc.name, description: svc.description ?? "", type: svc.type as "fixed" | "hourly", defaultPrice: svc.defaultPrice }); }}
+                                                    onClick={() => { setEditingId(svc._id); setNewChecklistItem(""); setEditDraft({ name: svc.name, description: svc.description ?? "", type: svc.type as "fixed" | "hourly", defaultPrice: svc.defaultPrice, checklistItems: svc.checklistItems ?? [] }); }}
                                                     className="p-1.5 text-zinc-400 hover:text-black hover:bg-zinc-100 rounded-lg transition-all">
                                                     <Pencil size={13} />
                                                 </button>

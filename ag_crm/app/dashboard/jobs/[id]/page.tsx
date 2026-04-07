@@ -9,7 +9,7 @@ import { Id } from "../../../../convex/_generated/dataModel";
 import {
     ArrowLeft, Wrench, Edit2, FileText, Guitar, Calendar, Clock,
     CheckCircle2, AlertCircle, Loader2, ExternalLink, StickyNote,
-    ChevronRight, Package, User, Inbox, Bell, Send, ImagePlus, X, Trash2, Printer,
+    ChevronRight, Package, User, Inbox, Bell, Send, ImagePlus, X, Trash2, Printer, ClipboardList,
 } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 
@@ -209,6 +209,14 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
                         {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
                         Delete
                     </button>
+                    <Link
+                        href={`/dashboard/jobs/${id}/checklist`}
+                        target="_blank"
+                        className="flex items-center gap-2 px-5 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-bold hover:bg-zinc-50 transition-all active:scale-95 shadow-sm"
+                    >
+                        <ClipboardList size={16} />
+                        Checklist
+                    </Link>
                     <Link
                         href={`/dashboard/jobs/${id}/print`}
                         target="_blank"

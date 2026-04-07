@@ -40,6 +40,7 @@ export const update = mutation({
         description: v.optional(v.string()),
         type: v.string(),
         defaultPrice: v.number(),
+        checklistItems: v.optional(v.array(v.string())),
     },
     handler: async (ctx, args) => {
         const identity = await ctx.auth.getUserIdentity();

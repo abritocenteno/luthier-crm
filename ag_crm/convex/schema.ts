@@ -121,6 +121,7 @@ export default defineSchema({
         description: v.optional(v.string()),
         type: v.string(), // 'fixed' | 'hourly'
         defaultPrice: v.number(),
+        checklistItems: v.optional(v.array(v.string())),
     }).index("by_user", ["userId"]),
     jobs: defineTable({
         userId: v.string(),
