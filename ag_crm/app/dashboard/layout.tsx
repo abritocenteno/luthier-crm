@@ -131,8 +131,8 @@ export default function DashboardLayout({
                         </div>
                     )}
                     {collapsed && (
-                        <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center mx-auto">
-                            <span className="text-white font-bold text-lg">L</span>
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto" style={{ background: "#402A1B" }}>
+                            <span className="font-bold text-lg" style={{ color: "#C9914C", fontFamily: "var(--font-domine)" }}>F</span>
                         </div>
                     )}
                 </div>
