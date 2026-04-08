@@ -54,7 +54,7 @@ function ChecklistPrint({ id }: { id: Id<"jobs"> }) {
     const checklist = job.intakeChecklist as Record<string, string> | undefined;
     const hasIntake = checklist && CHECKLIST_PARTS.some((p) => checklist[p.key]);
     const instrument = [job.instrumentBrand, job.instrumentModel].filter(Boolean).join(" ") || job.instrumentType;
-    const company = settings.companyName || "FretOps";
+    const company = settings?.companyName || "FretOps";
 
     return (
         <>
