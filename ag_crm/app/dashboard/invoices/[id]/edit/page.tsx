@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, Suspense, use } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useState, useEffect, Suspense, use, useRef } from "react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { useRouter } from "next/navigation";
 import { api } from "../../../../../convex/_generated/api";
 import {
@@ -16,6 +16,8 @@ import {
     ChevronDown,
     Plus,
     Trash2,
+    Upload,
+    X,
 } from "lucide-react";
 import { cn, formatCurrency, getCurrencySymbol } from "@/lib/utils";
 import { Id } from "../../../../../convex/_generated/dataModel";
@@ -33,6 +35,20 @@ function EditInvoiceForm({ id }: { id: Id<"invoices"> }) {
     const invoice = useQuery(api.invoices.get, { id });
     const settings = useQuery(api.settings.get);
     const updateInvoice = useMutation(api.invoices.update);
+    const orders = useQuery(api.orders.list);
+    const suppliers = useQuery(api.suppliers.list);
+    const addOrder = useMutation(api.orders.add);
+    const generateUploadUrl = useMutation(api.files.generateUploadUrl);
+    const smartExtractAction = useAction(api.actions.smartExtract);
+
+    const quickAddFileInputRef = useRef<HTMLInputElement>(null);
+    const [isQuickAdding, setIsQuickAdding] = useState(false);
+    const [quickAddStep, setQuickAddStep] = useState<'upload' | 'extract' | 'confirm'>('upload');
+    const [quickAddData, setQuickAddData] = useState<{
+        storageId?: Id<"_storage">;
+        extracted?: any;
+        supplierId?: Id<"suppliers">;
+    }>({});
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formData, setFormData] = useState({
@@ -42,8 +58,9 @@ function EditInvoiceForm({ id }: { id: Id<"invoices"> }) {
         amount: 0,
         status: "pending",
         paymentMethod: "",
-        items: [] as { name: string; description: string; remark: string; amount: number; unitPrice: number }[],
+        items: [] as { name: string; description: string; remark: string; amount: number; unitPrice: number; fromOrderId?: Id<"orders"> }[],
         credits: [] as { description: string; amount: number }[],
+        orderIds: [] as Id<"orders">[],
     });
 
     // Pre-fill form data when invoice is loaded
@@ -56,8 +73,9 @@ function EditInvoiceForm({ id }: { id: Id<"invoices"> }) {
                 amount: invoice.amount,
                 status: invoice.status,
                 paymentMethod: invoice.paymentMethod || "",
-                items: invoice.items || [],
+                items: (invoice.items || []) as any,
                 credits: (invoice as any).credits || [],
+                orderIds: (invoice as any).orderIds || [],
             });
         }
     }, [invoice]);
@@ -116,6 +134,61 @@ function EditInvoiceForm({ id }: { id: Id<"invoices"> }) {
         });
     };
 
+    const handleQuickAddUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setIsQuickAdding(true);
+        setQuickAddStep('extract');
+        try {
+            const postUrl = await generateUploadUrl();
+            const result = await fetch(postUrl, { method: "POST", headers: { "Content-Type": file.type }, body: file });
+            const { storageId } = await result.json();
+            const extracted = await smartExtractAction({ storageId: storageId as Id<"_storage"> });
+            const matchedSupplier = suppliers?.find(s =>
+                s.name.toLowerCase().includes(extracted.supplierName?.toLowerCase() || "") ||
+                extracted.supplierName?.toLowerCase().includes(s.name.toLowerCase())
+            );
+            setQuickAddData({ storageId: storageId as Id<"_storage">, extracted, supplierId: matchedSupplier?._id });
+            setQuickAddStep('confirm');
+        } catch (error) {
+            console.error("Quick add failed:", error);
+            alert("Upload or extraction failed. Please try again.");
+            setIsQuickAdding(false);
+            setQuickAddStep('upload');
+        }
+    };
+
+    const handleConfirmQuickAdd = async () => {
+        if (!quickAddData.supplierId || !quickAddData.extracted) return;
+        try {
+            const orderId = await addOrder({
+                supplierId: quickAddData.supplierId,
+                orderNumber: quickAddData.extracted.orderNumber || `QUICK-${Math.floor(1000 + Math.random() * 9000)}`,
+                date: quickAddData.extracted.date || Date.now(),
+                amount: quickAddData.extracted.totalAmount || 0,
+                status: "pending",
+                items: (quickAddData.extracted.items || []).map((item: any) => ({ ...item, amount: Math.max(1, item.amount || 0) })),
+                invoiceStorageId: quickAddData.storageId,
+            });
+            setFormData(prev => {
+                const newItems = (quickAddData.extracted.items || []).map((item: any) => ({
+                    ...item,
+                    amount: Math.max(1, item.amount || 0),
+                    remark: item.remark ? `${item.remark} (Ref: ${quickAddData.extracted.orderNumber})` : `(Ref: ${quickAddData.extracted.orderNumber})`,
+                    fromOrderId: orderId as Id<"orders">
+                }));
+                const updatedItems = [...prev.items, ...newItems];
+                return { ...prev, orderIds: [...prev.orderIds, orderId as Id<"orders">], items: updatedItems, amount: calculateTotal(updatedItems, prev.credits) };
+            });
+            setIsQuickAdding(false);
+            setQuickAddStep('upload');
+            setQuickAddData({});
+        } catch (error) {
+            console.error("Failed to create order:", error);
+            alert("Failed to create order. Please try again.");
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!formData.clientId) {
@@ -130,6 +203,7 @@ function EditInvoiceForm({ id }: { id: Id<"invoices"> }) {
                 ...formData,
                 clientId: formData.clientId as Id<"clients">,
                 credits: formData.credits,
+                orderIds: formData.orderIds,
             });
             router.push("/dashboard/invoices");
         } catch (error) {
@@ -251,6 +325,128 @@ function EditInvoiceForm({ id }: { id: Id<"invoices"> }) {
                                 </select>
                                 <ChevronDown className="absolute right-4 text-zinc-400 pointer-events-none" size={18} />
                             </div>
+                        </div>
+                    </Card>
+                </div>
+
+                {/* Linked Supplier Invoices */}
+                <div className="space-y-4">
+                    <div className="space-y-1">
+                        <h2 className="text-xl font-bold tracking-tight text-zinc-900">Attached Supplier Invoices</h2>
+                        <p className="text-sm text-zinc-500">Link relevant supplier invoices/orders to this client invoice.</p>
+                    </div>
+                    <Card className="p-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {/* Quick Add Card */}
+                            <div
+                                className={cn(
+                                    "p-4 rounded-xl border transition-all flex flex-col items-center justify-center text-center space-y-2 group min-h-[120px]",
+                                    isQuickAdding ? "bg-zinc-50 border-zinc-200" : "bg-white border-zinc-200 border-dashed hover:border-black cursor-pointer"
+                                )}
+                                onClick={() => !isQuickAdding && quickAddFileInputRef.current?.click()}
+                            >
+                                {isQuickAdding ? (
+                                    quickAddStep === 'extract' ? (
+                                        <div className="flex flex-col items-center gap-2">
+                                            <Loader2 className="animate-spin text-zinc-400" size={24} />
+                                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Analyzing File...</p>
+                                        </div>
+                                    ) : (
+                                        <div className="w-full space-y-3">
+                                            <select
+                                                className="w-full py-1.5 px-2 bg-white border border-zinc-200 rounded-lg text-xs focus:ring-2 focus:ring-black/5 outline-none"
+                                                value={quickAddData.supplierId || ""}
+                                                onClick={e => e.stopPropagation()}
+                                                onChange={e => setQuickAddData(prev => ({ ...prev, supplierId: e.target.value as Id<"suppliers"> }))}
+                                            >
+                                                <option value="" disabled>Select Supplier...</option>
+                                                {suppliers?.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
+                                            </select>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={e => { e.stopPropagation(); handleConfirmQuickAdd(); }}
+                                                    disabled={!quickAddData.supplierId}
+                                                    className="flex-1 py-1.5 bg-black text-white rounded-lg text-[10px] font-bold uppercase tracking-wider disabled:opacity-50"
+                                                >Add</button>
+                                                <button
+                                                    onClick={e => { e.stopPropagation(); setIsQuickAdding(false); setQuickAddStep('upload'); }}
+                                                    className="px-2 py-1.5 bg-zinc-100 text-zinc-500 rounded-lg text-[10px] font-bold"
+                                                ><X size={12} /></button>
+                                            </div>
+                                        </div>
+                                    )
+                                ) : (
+                                    <>
+                                        <div className="w-10 h-10 rounded-full bg-zinc-50 flex items-center justify-center text-zinc-400 group-hover:bg-black group-hover:text-white transition-all">
+                                            <Upload size={18} />
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-900">Upload New</p>
+                                            <p className="text-[10px] text-zinc-400 font-medium">Add supplier invoice file</p>
+                                        </div>
+                                    </>
+                                )}
+                                <input
+                                    type="file"
+                                    ref={quickAddFileInputRef}
+                                    onChange={handleQuickAddUpload}
+                                    className="hidden"
+                                    accept=".pdf,image/*"
+                                />
+                            </div>
+
+                            {/* Existing orders */}
+                            {orders?.map(order => (
+                                <div
+                                    key={order._id}
+                                    onClick={() => {
+                                        const exists = formData.orderIds.includes(order._id);
+                                        setFormData(prev => {
+                                            const newOrderIds = exists
+                                                ? prev.orderIds.filter(oid => oid !== order._id)
+                                                : [...prev.orderIds, order._id];
+                                            let updatedItems;
+                                            if (exists) {
+                                                updatedItems = prev.items.filter((item: any) => item.fromOrderId !== order._id);
+                                            } else {
+                                                const newItems = (order.items || []).map(item => ({
+                                                    ...item,
+                                                    amount: Math.max(1, item.amount || 0),
+                                                    remark: item.remark ? `${item.remark} (Ref: ${order.orderNumber})` : `(Ref: ${order.orderNumber})`,
+                                                    fromOrderId: order._id
+                                                }));
+                                                updatedItems = [...prev.items, ...newItems];
+                                            }
+                                            return { ...prev, orderIds: newOrderIds, items: updatedItems, amount: calculateTotal(updatedItems, prev.credits) };
+                                        });
+                                    }}
+                                    className={cn(
+                                        "p-4 rounded-xl border transition-all cursor-pointer flex justify-between items-start group",
+                                        formData.orderIds.includes(order._id)
+                                            ? "bg-black border-black text-white"
+                                            : "bg-white border-zinc-200 hover:border-zinc-300"
+                                    )}
+                                >
+                                    <div className="space-y-1">
+                                        <p className={cn("text-xs font-bold truncate", formData.orderIds.includes(order._id) ? "text-zinc-300" : "text-zinc-500")}>
+                                            {(order as any).supplierName}
+                                        </p>
+                                        <p className="text-sm font-black">{order.orderNumber}</p>
+                                        <p className={cn("text-[10px] font-medium", formData.orderIds.includes(order._id) ? "text-zinc-400" : "text-zinc-400")}>
+                                            {formatCurrency(order.amount, settings?.currency)} • {new Date(order.date).toLocaleDateString()}
+                                        </p>
+                                    </div>
+                                    <div className={cn(
+                                        "w-5 h-5 rounded-full border flex items-center justify-center transition-all shrink-0",
+                                        formData.orderIds.includes(order._id) ? "bg-white border-white text-black" : "bg-zinc-50 border-zinc-200 group-hover:border-zinc-300"
+                                    )}>
+                                        {formData.orderIds.includes(order._id) && <CheckCircle2 size={12} />}
+                                    </div>
+                                </div>
+                            ))}
+                            {orders?.length === 0 && (
+                                <div className="col-span-full py-8 text-center text-zinc-400 italic text-sm">No supplier orders found.</div>
+                            )}
                         </div>
                     </Card>
                 </div>
