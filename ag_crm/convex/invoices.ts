@@ -90,6 +90,7 @@ export const update = mutation({
             remark: v.string(),
             amount: v.number(),
             unitPrice: v.number(),
+            fromOrderId: v.optional(v.id("orders")),
         }))),
         credits: v.optional(v.array(v.object({
             description: v.string(),
