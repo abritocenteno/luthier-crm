@@ -219,6 +219,15 @@ export default defineSchema({
         reorderThreshold: v.optional(v.number()),
         supplier: v.optional(v.string()),
     }).index("by_user", ["userId"]),
+    assets: defineTable({
+        userId: v.string(),
+        name: v.string(),
+        category: v.string(), // 'checklist' | 'wiring' | 'reference' | 'other'
+        storageId: v.id("_storage"),
+        fileName: v.string(),
+        fileType: v.string(), // MIME type
+        fileSize: v.number(), // bytes
+    }).index("by_user", ["userId"]),
     contacts: defineTable({
         name: v.string(),
         email: v.optional(v.string()),

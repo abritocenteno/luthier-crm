@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { Save, Upload, Loader2, Building, Mail, MapPin, Phone, Globe, Hash, CreditCard, Languages, Coins, Wrench, Plus, Trash2, Pencil, Check, X, ChevronDown, Guitar, Link2, CheckCheck, Code2 } from "lucide-react";
+import { Save, Upload, Loader2, Building, Mail, MapPin, Phone, Globe, Hash, CreditCard, Languages, Coins, Wrench, Plus, Trash2, Pencil, Check, X, ChevronDown, Guitar, Link2, CheckCheck, Code2, FolderOpen, Download, FileText, Image, File, Zap } from "lucide-react";
 import { ThemeSelector } from "@/components/ThemeSelector";
 import { cn, formatCurrency, getCurrencySymbol } from "@/lib/utils";
 import { Id } from "../../../convex/_generated/dataModel";
@@ -323,7 +323,18 @@ export default function SettingsPage() {
         }
     };
 
-    const [activeTab, setActiveTab] = useState<"general" | "services" | "intake" | "appearance" | "email">("general");
+    const [activeTab, setActiveTab] = useState<"general" | "services" | "intake" | "appearance" | "email" | "assets">("general");
+
+    // Assets
+    const assets = useQuery(api.assets.list);
+    const addAsset = useMutation(api.assets.add);
+    const removeAsset = useMutation(api.assets.remove);
+    const [assetCategory, setAssetCategory] = useState<string>("all");
+    const [isUploadingAsset, setIsUploadingAsset] = useState(false);
+    const [assetDraft, setAssetDraft] = useState({ name: "", category: "checklist" });
+    const [showAssetForm, setShowAssetForm] = useState(false);
+    const assetFileRef = useRef<HTMLInputElement>(null);
+    const [pendingAssetFile, setPendingAssetFile] = useState<File | null>(null);
 
     if (settings === undefined) {
         return (
@@ -349,6 +360,7 @@ export default function SettingsPage() {
                     { id: "intake",     label: "Intake" },
                     { id: "appearance", label: "Appearance" },
                     { id: "email",      label: "Email" },
+                    { id: "assets",     label: "Assets" },
                 ] as const).map(tab => (
                     <button
                         key={tab.id}
@@ -1092,6 +1104,220 @@ export default function SettingsPage() {
                         >
                             {isSaving ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : <><Save className="h-4 w-4" /> Save Changes</>}
                         </button>
+                    </div>
+                </div>
+            )}
+            {/* ── Assets Tab ── */}
+            {activeTab === "assets" && (
+                <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
+                    <div className="p-6 sm:p-8 space-y-6">
+
+                        {/* Header */}
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h3 className="text-lg font-semibold flex items-center gap-2">
+                                    <FolderOpen className="h-4 w-4 text-zinc-400" />
+                                    Asset Library
+                                </h3>
+                                <p className="text-sm text-zinc-500 mt-0.5">Store reference documents, blank checklists, wiring diagrams and other files.</p>
+                            </div>
+                            <button
+                                onClick={() => { setShowAssetForm(true); setAssetDraft({ name: "", category: "checklist" }); setPendingAssetFile(null); }}
+                                className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-xl text-sm font-bold hover:bg-zinc-800 transition-all active:scale-95 shadow-lg shadow-black/10"
+                            >
+                                <Upload size={14} /> Upload Asset
+                            </button>
+                        </div>
+
+                        {/* Upload form */}
+                        {showAssetForm && (
+                            <div className="border border-zinc-200 rounded-xl p-4 space-y-4 bg-zinc-50/50">
+                                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">New Asset</p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <input
+                                        autoFocus
+                                        placeholder="Asset name (e.g. Strat Wiring Diagram)"
+                                        value={assetDraft.name}
+                                        onChange={(e) => setAssetDraft((p) => ({ ...p, name: e.target.value }))}
+                                        className="px-3 py-2 text-sm border border-zinc-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-black/5"
+                                    />
+                                    <div className="relative">
+                                        <select
+                                            value={assetDraft.category}
+                                            onChange={(e) => setAssetDraft((p) => ({ ...p, category: e.target.value }))}
+                                            className="w-full px-3 py-2 text-sm border border-zinc-200 rounded-lg bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-black/5"
+                                        >
+                                            <option value="checklist">Checklist</option>
+                                            <option value="wiring">Wiring Diagram</option>
+                                            <option value="reference">Reference</option>
+                                            <option value="other">Other</option>
+                                        </select>
+                                        <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+                                    </div>
+                                </div>
+
+                                {/* File picker */}
+                                <div
+                                    onClick={() => assetFileRef.current?.click()}
+                                    className="border-2 border-dashed border-zinc-200 rounded-xl p-6 text-center cursor-pointer hover:border-zinc-400 hover:bg-zinc-50 transition-all"
+                                >
+                                    {pendingAssetFile ? (
+                                        <div className="flex items-center justify-center gap-2 text-sm font-bold text-zinc-700">
+                                            <FileText size={16} className="text-zinc-400" />
+                                            {pendingAssetFile.name}
+                                            <span className="font-normal text-zinc-400">({(pendingAssetFile.size / 1024).toFixed(0)} KB)</span>
+                                        </div>
+                                    ) : (
+                                        <div className="text-sm text-zinc-400 space-y-1">
+                                            <Upload size={20} className="mx-auto text-zinc-300" />
+                                            <p>Click to select a file</p>
+                                            <p className="text-xs">PDF, PNG, JPG, SVG — up to 20 MB</p>
+                                        </div>
+                                    )}
+                                </div>
+                                <input
+                                    ref={assetFileRef}
+                                    type="file"
+                                    accept=".pdf,.png,.jpg,.jpeg,.svg,.gif,.webp"
+                                    className="hidden"
+                                    onChange={(e) => { const f = e.target.files?.[0]; if (f) { setPendingAssetFile(f); if (!assetDraft.name) setAssetDraft((p) => ({ ...p, name: f.name.replace(/\.[^.]+$/, "") })); } }}
+                                />
+
+                                <div className="flex items-center gap-2 justify-end">
+                                    <button type="button" onClick={() => { setShowAssetForm(false); setPendingAssetFile(null); }}
+                                        className="px-3 py-1.5 text-xs font-bold text-zinc-500 hover:text-black transition-colors">Cancel</button>
+                                    <button
+                                        type="button"
+                                        disabled={!assetDraft.name || !pendingAssetFile || isUploadingAsset}
+                                        onClick={async () => {
+                                            if (!assetDraft.name || !pendingAssetFile) return;
+                                            setIsUploadingAsset(true);
+                                            try {
+                                                const uploadUrl = await generateUploadUrl();
+                                                const res = await fetch(uploadUrl, {
+                                                    method: "POST",
+                                                    headers: { "Content-Type": pendingAssetFile.type },
+                                                    body: pendingAssetFile,
+                                                });
+                                                const { storageId } = await res.json();
+                                                await addAsset({
+                                                    name: assetDraft.name,
+                                                    category: assetDraft.category,
+                                                    storageId,
+                                                    fileName: pendingAssetFile.name,
+                                                    fileType: pendingAssetFile.type,
+                                                    fileSize: pendingAssetFile.size,
+                                                });
+                                                setShowAssetForm(false);
+                                                setPendingAssetFile(null);
+                                                setAssetDraft({ name: "", category: "checklist" });
+                                            } catch (err) {
+                                                console.error(err);
+                                            } finally {
+                                                setIsUploadingAsset(false);
+                                            }
+                                        }}
+                                        className="flex items-center gap-2 px-4 py-1.5 bg-black text-white rounded-lg text-xs font-bold hover:bg-zinc-800 transition-all active:scale-95 disabled:opacity-40"
+                                    >
+                                        {isUploadingAsset ? <><Loader2 size={12} className="animate-spin" /> Uploading…</> : <><Check size={12} /> Save Asset</>}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Category filter */}
+                        {assets && assets.length > 0 && (
+                            <div className="flex items-center gap-2 flex-wrap">
+                                {(["all", "checklist", "wiring", "reference", "other"] as const).map((cat) => {
+                                    const count = cat === "all" ? assets.length : assets.filter((a) => a.category === cat).length;
+                                    if (count === 0 && cat !== "all") return null;
+                                    return (
+                                        <button key={cat} type="button"
+                                            onClick={() => setAssetCategory(cat)}
+                                            className={cn(
+                                                "px-3 py-1 text-xs font-bold rounded-full border transition-all",
+                                                assetCategory === cat
+                                                    ? "bg-black text-white border-black"
+                                                    : "bg-white text-zinc-500 border-zinc-200 hover:border-zinc-400"
+                                            )}>
+                                            {cat === "all" ? "All" : cat === "wiring" ? "Wiring Diagrams" : cat.charAt(0).toUpperCase() + cat.slice(1) + "s"}
+                                            <span className={cn("ml-1.5 text-[10px]", assetCategory === cat ? "text-zinc-300" : "text-zinc-400")}>{count}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {/* Asset list */}
+                        {assets === undefined ? (
+                            <div className="py-10 text-center"><Loader2 className="animate-spin mx-auto text-zinc-300" size={20} /></div>
+                        ) : assets.length === 0 ? (
+                            <div className="py-12 text-center space-y-2">
+                                <FolderOpen size={32} className="mx-auto text-zinc-200" />
+                                <p className="text-sm text-zinc-400 italic">No assets yet. Upload your first file above.</p>
+                            </div>
+                        ) : (
+                            <div className="divide-y divide-zinc-100 border border-zinc-200 rounded-xl overflow-hidden">
+                                {assets
+                                    .filter((a) => assetCategory === "all" || a.category === assetCategory)
+                                    .map((asset) => {
+                                        const isImage = asset.fileType.startsWith("image/");
+                                        const isPdf = asset.fileType === "application/pdf";
+                                        const catMeta: Record<string, { label: string; cls: string; icon: React.ReactNode }> = {
+                                            checklist: { label: "Checklist",      cls: "bg-emerald-50 text-emerald-700 border-emerald-100", icon: <CheckCheck size={11} /> },
+                                            wiring:    { label: "Wiring Diagram", cls: "bg-blue-50 text-blue-700 border-blue-100",           icon: <Zap size={11} /> },
+                                            reference: { label: "Reference",      cls: "bg-amber-50 text-amber-700 border-amber-100",         icon: <FileText size={11} /> },
+                                            other:     { label: "Other",          cls: "bg-zinc-50 text-zinc-500 border-zinc-200",            icon: <File size={11} /> },
+                                        };
+                                        const meta = catMeta[asset.category] ?? catMeta.other;
+                                        return (
+                                            <div key={asset._id} className="flex items-center gap-4 px-4 py-3 hover:bg-zinc-50/50 transition-colors group">
+                                                {/* File icon / thumbnail */}
+                                                <div className="w-10 h-10 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center shrink-0 overflow-hidden">
+                                                    {isImage && asset.url ? (
+                                                        <img src={asset.url} alt={asset.name} className="w-full h-full object-cover" />
+                                                    ) : isPdf ? (
+                                                        <FileText size={18} className="text-red-400" />
+                                                    ) : (
+                                                        <File size={18} className="text-zinc-400" />
+                                                    )}
+                                                </div>
+
+                                                {/* Info */}
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-bold text-zinc-900 truncate">{asset.name}</p>
+                                                    <p className="text-xs text-zinc-400 truncate">{asset.fileName} · {(asset.fileSize / 1024).toFixed(0)} KB</p>
+                                                </div>
+
+                                                {/* Category badge */}
+                                                <span className={cn("hidden sm:flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-lg border shrink-0", meta.cls)}>
+                                                    {meta.icon} {meta.label}
+                                                </span>
+
+                                                {/* Actions */}
+                                                <div className="flex items-center gap-1 shrink-0">
+                                                    {asset.url && (
+                                                        <a href={asset.url} target="_blank" rel="noopener noreferrer" download={asset.fileName}
+                                                            className="p-1.5 text-zinc-400 hover:text-black hover:bg-zinc-100 rounded-lg transition-all"
+                                                            title="Download">
+                                                            <Download size={14} />
+                                                        </a>
+                                                    )}
+                                                    <button type="button"
+                                                        onClick={async () => {
+                                                            if (!confirm(`Delete "${asset.name}"?`)) return;
+                                                            await removeAsset({ id: asset._id });
+                                                        }}
+                                                        className="p-1.5 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                                        title="Delete">
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
