@@ -27,6 +27,7 @@ import type * as parts from "../parts.js";
 import type * as portal from "../portal.js";
 import type * as reports from "../reports.js";
 import type * as resend from "../resend.js";
+import type * as seed from "../seed.js";
 import type * as services from "../services.js";
 import type * as settings from "../settings.js";
 import type * as suppliers from "../suppliers.js";
@@ -58,6 +59,7 @@ declare const fullApi: ApiFromModules<{
   portal: typeof portal;
   reports: typeof reports;
   resend: typeof resend;
+  seed: typeof seed;
   services: typeof services;
   settings: typeof settings;
   suppliers: typeof suppliers;
