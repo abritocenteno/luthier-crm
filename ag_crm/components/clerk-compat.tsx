@@ -19,12 +19,12 @@ const DynamicUserButton = !isPreview
 
 export function SignInButton({ children, mode }: { children: React.ReactNode; mode?: "modal" | "redirect" }) {
   if (isPreview || !DynamicSignInButton) return <>{children}</>;
-  return <DynamicSignInButton mode={mode}>{children as any}</DynamicSignInButton>;
+  return <DynamicSignInButton mode={mode} forceRedirectUrl="/dashboard">{children as any}</DynamicSignInButton>;
 }
 
 export function SignUpButton({ children, mode }: { children: React.ReactNode; mode?: "modal" | "redirect" }) {
   if (isPreview || !DynamicSignUpButton) return <>{children}</>;
-  return <DynamicSignUpButton mode={mode}>{children as any}</DynamicSignUpButton>;
+  return <DynamicSignUpButton mode={mode} forceRedirectUrl="/dashboard">{children as any}</DynamicSignUpButton>;
 }
 
 export function UserButton(props: Record<string, unknown>) {

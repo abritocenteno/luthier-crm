@@ -3,6 +3,8 @@
 import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
 import { SignInButton, SignUpButton, UserButton } from "@/components/clerk-compat";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { motion } from "motion/react";
 import {
     Users, LayoutDashboard, ChevronRight,
@@ -17,8 +19,16 @@ const CREAM   = "#EDD9B4";
 const MUTED   = "#6E5438";
 const SUBTLE  = "#2A1D11";
 
+function RedirectToDashboard() {
+    const router = useRouter();
+    useEffect(() => { router.replace("/dashboard"); }, [router]);
+    return null;
+}
+
 export default function Home() {
     return (
+        <>
+        <Authenticated><RedirectToDashboard /></Authenticated>
         <main style={{ background: DARK_BG, color: CREAM, minHeight: "100vh" }}>
 
             {/* ── Font import + global styles ── */}
@@ -421,5 +431,6 @@ export default function Home() {
                 </div>
             </footer>
         </main>
+        </>
     );
 }
