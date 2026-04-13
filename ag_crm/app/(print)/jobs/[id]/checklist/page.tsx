@@ -144,18 +144,16 @@ function ChecklistPrint({ id }: { id: Id<"jobs"> }) {
                     <div style={{
                         position: "absolute",
                         top: "42%", left: "50%",
-                        transform: "translate(-50%, -50%) rotate(-28deg)",
-                        fontSize: 110,
-                        fontFamily: "Georgia, 'Times New Roman', serif",
-                        fontStyle: "italic",
-                        fontWeight: 700,
-                        color: "rgba(0,0,0,0.032)",
-                        whiteSpace: "nowrap",
+                        transform: "translate(-50%, -50%)",
+                        width: 340,
+                        height: 340,
                         pointerEvents: "none",
                         userSelect: "none",
                         zIndex: 0,
+                        opacity: 0.055,
                     }}>
-                        {company}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/thedot-logo.png" alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
                     </div>
 
                     <div style={{ position: "relative", zIndex: 1 }}>
@@ -187,16 +185,13 @@ function ChecklistPrint({ id }: { id: Id<"jobs"> }) {
                                 </div>
                             </div>
 
-                            {/* Right: larger logomark */}
-                            <svg width="52" height="52" viewBox="0 0 52 52" style={{ flexShrink: 0, marginTop: 2 }}>
-                                <circle cx="26" cy="26" r="24" fill="none" stroke="#111" strokeWidth="1.2" />
-                                <circle cx="26" cy="26" r="19" fill="none" stroke="#111" strokeWidth="0.4" strokeDasharray="2 2" />
-                                <text x="26" y="32" textAnchor="middle"
-                                    fontFamily="'Helvetica Neue', Helvetica, Arial, sans-serif"
-                                    fontWeight="800" fontSize="18" fill="#111">
-                                    {company[0].toUpperCase()}
-                                </text>
-                            </svg>
+                            {/* Right: TheDot logo */}
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                                src="/thedot-logo.png"
+                                alt="The Dot Guitars"
+                                style={{ width: 64, height: 64, objectFit: "contain", flexShrink: 0, marginTop: 2 }}
+                            />
                         </div>
 
                         {/* Thin rule */}
@@ -253,13 +248,20 @@ function ChecklistPrint({ id }: { id: Id<"jobs"> }) {
                         {hasIntake && (
                             <div style={{ marginBottom: 28 }}>
                                 <SectionRule text="Condition at Intake" />
-                                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 10px", marginBottom: checklist?.notes ? 12 : 0 }}>
+                                <div style={{ marginBottom: checklist?.notes ? 12 : 0 }}>
                                     {CHECKLIST_PARTS.map(({ key, label }) => {
                                         const val = checklist?.[key];
                                         if (!val) return null;
                                         return (
-                                            <div key={key} style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                                                <span style={{ fontSize: 9, color: "#888", fontWeight: 500 }}>{label}</span>
+                                            <div key={key} style={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "space-between",
+                                                paddingTop: 9,
+                                                paddingBottom: 9,
+                                                borderBottom: "0.4px solid #eee",
+                                            }}>
+                                                <span style={{ fontSize: 10, color: "#444" }}>{label}</span>
                                                 <span style={conditionBadgeStyle(val)}>{val}</span>
                                             </div>
                                         );
@@ -325,16 +327,19 @@ function ChecklistPrint({ id }: { id: Id<"jobs"> }) {
 
                         {/* ── Footer ── */}
                         <div style={{
-                            display: "flex",
-                            justifyContent: "space-between",
+                            display: "grid",
+                            gridTemplateColumns: "1fr 1fr 1fr",
                             alignItems: "center",
                             paddingTop: 14,
                             borderTop: "0.6px solid #e5e5e5",
                         }}>
                             <span style={{ fontSize: 7, color: "#bbb", letterSpacing: "0.06em" }}>
-                                {company.toLowerCase()}.com
+                                www.thedotguitars.com
                             </span>
-                            <span style={{ fontSize: 7, color: "#ddd", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                            <span style={{ fontSize: 7, color: "#bbb", letterSpacing: "0.06em", textAlign: "center" }}>
+                                {company} — {new Date().getFullYear()}
+                            </span>
+                            <span style={{ fontSize: 7, color: "#ddd", letterSpacing: "0.1em", textTransform: "uppercase", textAlign: "right" }}>
                                 Completion Record
                             </span>
                         </div>
