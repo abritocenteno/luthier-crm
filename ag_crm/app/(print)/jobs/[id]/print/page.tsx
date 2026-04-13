@@ -73,7 +73,25 @@ export default function JobPrintPage() {
             )}
 
             {/* Print sheet */}
-            <div className="max-w-3xl mx-auto p-8 print:p-0 print:max-w-none space-y-8 font-sans text-zinc-900">
+            <div className="max-w-3xl mx-auto p-8 print:p-0 print:max-w-none font-sans text-zinc-900" style={{ position: "relative", overflow: "hidden" }}>
+
+                {/* ── Watermark ── */}
+                <div className="checklist-watermark" style={{
+                    position: "absolute",
+                    top: "42%", left: "50%",
+                    transform: "translate(-50%, -50%)",
+                    width: 850, height: 850,
+                    pointerEvents: "none",
+                    userSelect: "none",
+                    zIndex: 0,
+                    opacity: 0.055,
+                }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/thedot-logo.png" alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                </div>
+
+                {/* All content above watermark */}
+                <div className="space-y-8" style={{ position: "relative", zIndex: 1 }}>
 
                 {/* Letterhead */}
                 <div className="flex items-start justify-between border-b-2 border-zinc-900 pb-6">
@@ -228,12 +246,20 @@ export default function JobPrintPage() {
                         {settings?.companyName ?? "Workshop"} · {settings?.contactEmail ?? ""} · Printed {new Date().toLocaleDateString("en-GB")}
                     </p>
                 </div>
+
+                </div> {/* end content z-index wrapper */}
             </div>
 
             <style>{`
                 @media print {
                     @page { margin: 16mm; size: A4; }
                     body { background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    .checklist-watermark {
+                        position: fixed !important;
+                        top: 50% !important;
+                        left: 50% !important;
+                        transform: translate(-50%, -50%) !important;
+                    }
                 }
             `}</style>
         </>
