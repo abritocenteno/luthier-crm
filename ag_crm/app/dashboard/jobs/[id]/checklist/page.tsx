@@ -16,19 +16,19 @@ const CHECKLIST_PARTS = [
     { key: "electronics", label: "Electronics / Pickups" },
 ] as const;
 
-const conditionLabel = (val: string | undefined) => {
-    if (val === "good") return { label: "Good", cls: "text-emerald-700 border-emerald-300 bg-emerald-50" };
-    if (val === "fair") return { label: "Fair", cls: "text-amber-700 border-amber-300 bg-amber-50" };
-    if (val === "poor") return { label: "Poor", cls: "text-red-700 border-red-300 bg-red-50" };
-    return null;
+const conditionColor = (val: string | undefined) => {
+    if (val === "good") return "#16a34a";
+    if (val === "fair") return "#d97706";
+    if (val === "poor") return "#dc2626";
+    return "#999";
 };
 
 const fmt = (ts: number | undefined) =>
     ts ? new Date(ts).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : "—";
 
 function ChecklistPrint({ id }: { id: Id<"jobs"> }) {
-    const job    = useQuery(api.jobs.get, { id });
-    const svcs   = useQuery(api.services.list);
+    const job      = useQuery(api.jobs.get, { id });
+    const svcs     = useQuery(api.services.list);
     const settings = useQuery(api.settings.get);
 
     if (job === undefined || svcs === undefined || settings === undefined) {
@@ -40,7 +40,7 @@ function ChecklistPrint({ id }: { id: Id<"jobs"> }) {
     }
     if (!job) return <div className="p-12 text-center text-zinc-400">Job not found.</div>;
 
-    // Aggregate checklist items from services matching the job's work items
+    // Aggregate checklist items from matching services
     const workNames = new Set((job.workItems ?? []).map((wi) => wi.name.toLowerCase()));
     const checklistItems: string[] = [];
     for (const svc of svcs) {
@@ -51,14 +51,20 @@ function ChecklistPrint({ id }: { id: Id<"jobs"> }) {
         }
     }
 
-    const checklist = job.intakeChecklist as Record<string, string> | undefined;
-    const hasIntake = checklist && CHECKLIST_PARTS.some((p) => checklist[p.key]);
-    const instrument = [job.instrumentBrand, job.instrumentModel].filter(Boolean).join(" ") || job.instrumentType;
-    const company = settings?.companyName || "FretOps";
+    const checklist   = job.intakeChecklist as Record<string, string> | undefined;
+    const hasIntake   = checklist && CHECKLIST_PARTS.some((p) => checklist[p.key]);
+    const instrument  = [job.instrumentBrand, job.instrumentModel].filter(Boolean).join(" ") || job.instrumentType;
+    const company     = settings?.companyName || "FretOps";
+    const services    = (job.workItems ?? []).map(w => w.name).join(", ") || "—";
+
+    const FONT  = "Helvetica, Arial, sans-serif";
+    const BLACK = "#111111";
+    const GRAY  = "#888888";
+    const PAGE  = { maxWidth: 680, margin: "0 auto", fontFamily: FONT, color: BLACK, position: "relative" as const, overflow: "hidden" };
 
     return (
         <>
-            {/* Print button — hidden in print */}
+            {/* Print / Close buttons — screen only */}
             <div className="print:hidden fixed top-4 right-4 z-50 flex gap-2">
                 <button
                     onClick={() => window.print()}
@@ -74,151 +80,165 @@ function ChecklistPrint({ id }: { id: Id<"jobs"> }) {
                 </button>
             </div>
 
-            {/* Page */}
-            <div
-                className="min-h-screen p-10 print:p-0"
-                style={{ background: "#FEE9D6", fontFamily: "Inter, system-ui, sans-serif" }}
-            >
-                <div
-                    className="max-w-[680px] mx-auto print:max-w-none"
-                    style={{ background: "#FEE9D6" }}
-                >
-                    {/* ── Top accent bar ── */}
-                    <div style={{ height: 10, background: "#402A1B", borderRadius: "4px 4px 0 0" }} />
-                    <div style={{ height: 4, background: "#C9914C" }} />
+            {/* Outer page */}
+            <div style={{ background: "#fff", minHeight: "100vh", padding: "40px 24px" }} className="print:p-0">
+                <div style={PAGE}>
 
-                    {/* ── Header ── */}
-                    <div style={{ padding: "28px 36px 20px", borderBottom: "1px solid #D4B896" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    {/* ── Watermark ── */}
+                    <div style={{
+                        position: "absolute",
+                        top: "38%", left: "50%",
+                        transform: "translate(-50%, -50%) rotate(-30deg)",
+                        fontSize: 96,
+                        fontFamily: "Georgia, serif",
+                        fontStyle: "italic",
+                        fontWeight: 700,
+                        color: "rgba(0,0,0,0.045)",
+                        whiteSpace: "nowrap",
+                        pointerEvents: "none",
+                        userSelect: "none",
+                        zIndex: 0,
+                    }}>
+                        {company}
+                    </div>
+
+                    {/* All content sits above watermark */}
+                    <div style={{ position: "relative", zIndex: 1 }}>
+
+                        {/* ── Header ── */}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: 14, borderBottom: "1px solid #111" }}>
                             <div>
-                                <h1 style={{ fontSize: 30, fontWeight: 800, color: "#402A1B", fontFamily: "Georgia, serif", margin: 0, lineHeight: 1.1 }}>
-                                    Completion Checklist
-                                </h1>
-                                <p style={{ fontSize: 9, color: "#C9914C", letterSpacing: "0.14em", textTransform: "uppercase", marginTop: 6, fontWeight: 600 }}>
-                                    {company} · CRM for Luthiers
-                                </p>
+                                <div style={{ fontWeight: 700, fontSize: 14, letterSpacing: "0.01em" }}>{company}</div>
+                                <div style={{ fontSize: 8, color: GRAY, letterSpacing: "0.18em", textTransform: "uppercase", marginTop: 3 }}>
+                                    Instrument Completion Checklist
+                                </div>
                             </div>
-                            <div style={{ textAlign: "right" }}>
-                                <p style={{ fontSize: 11, color: "#6B5744", fontWeight: 700, margin: 0 }}>
-                                    {fmt(job.completionDate ?? job.intakeDate)}
-                                </p>
-                                <p style={{ fontSize: 10, color: "#9A7F6A", marginTop: 2 }}>
-                                    Job #{id.slice(-6).toUpperCase()}
-                                </p>
+                            {/* Circular logomark */}
+                            <svg width="36" height="36" viewBox="0 0 36 36">
+                                <circle cx="18" cy="18" r="16" fill="none" stroke="#111" strokeWidth="1" />
+                                <text x="18" y="23" textAnchor="middle" fontFamily="Helvetica, Arial, sans-serif" fontWeight="700" fontSize="14" fill="#111">F</text>
+                            </svg>
+                        </div>
+
+                        {/* ── Job info row ── */}
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px 20px", padding: "16px 0 14px", borderBottom: "0.5px solid #ddd" }}>
+                            <InfoCell label="Client" value={(job as any).client?.name ?? "—"} />
+                            <InfoCell label="Instrument" value={instrument} />
+                            <InfoCell label="Service(s)" value={services} />
+                        </div>
+
+                        {/* ── Completion items ── */}
+                        <div style={{ paddingTop: 20 }}>
+                            <SectionHeader text="Completion Items" />
+                            <div style={{ marginTop: 14 }}>
+                                {checklistItems.length === 0 ? (
+                                    <p style={{ fontSize: 10, color: GRAY, fontStyle: "italic", margin: 0 }}>
+                                        No checklist items defined for this service. Add them in Settings → Services.
+                                    </p>
+                                ) : (
+                                    checklistItems.map((item, i) => (
+                                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                                            {/* Square checkbox */}
+                                            <svg width="10" height="10" viewBox="0 0 10 10" style={{ flexShrink: 0 }}>
+                                                <rect x="0.5" y="0.5" width="9" height="9" fill="none" stroke="#111" strokeWidth="0.8" />
+                                            </svg>
+                                            <span style={{ fontSize: 10.5 }}>{item}</span>
+                                        </div>
+                                    ))
+                                )}
                             </div>
                         </div>
-                    </div>
 
-                    {/* ── Job summary ── */}
-                    <div style={{ padding: "18px 36px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 24px", borderBottom: "1px solid #D4B896" }}>
-                        <InfoRow label="Client" value={(job as any).client?.name ?? "—"} />
-                        <InfoRow label="Instrument" value={instrument} />
-                        <InfoRow label="Service(s)" value={(job.workItems ?? []).map(w => w.name).join(", ") || "—"} />
-                        {job.instrumentSerial && <InfoRow label="Serial No." value={job.instrumentSerial} mono />}
-                        <InfoRow label="Intake date" value={fmt(job.intakeDate)} />
-                        {job.completionDate && <InfoRow label="Completed" value={fmt(job.completionDate)} />}
-                    </div>
+                        {/* ── Condition at intake ── */}
+                        {hasIntake && (
+                            <div style={{ paddingTop: 20 }}>
+                                <SectionHeader text="Condition at Intake" />
+                                <div style={{ marginTop: 14, display: "flex", flexWrap: "wrap" as const, gap: "8px 20px" }}>
+                                    {CHECKLIST_PARTS.map(({ key, label }) => {
+                                        const val = checklist?.[key];
+                                        if (!val) return null;
+                                        return (
+                                            <div key={key} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 10 }}>
+                                                <span style={{ color: GRAY }}>{label}:</span>
+                                                <span style={{ fontWeight: 700, color: conditionColor(val), textTransform: "capitalize" }}>{val}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                {checklist?.notes && (
+                                    <p style={{ fontSize: 9.5, color: "#555", marginTop: 10, fontStyle: "italic" }}>
+                                        Note: {checklist.notes}
+                                    </p>
+                                )}
+                            </div>
+                        )}
 
-                    {/* ── Completion checklist ── */}
-                    <div style={{ padding: "20px 36px", borderBottom: checklistItems.length ? "1px solid #D4B896" : undefined }}>
-                        <p style={{ fontSize: 9, fontWeight: 800, color: "#9A7F6A", textTransform: "uppercase", letterSpacing: "0.16em", marginBottom: 12 }}>
-                            Work Completed
-                        </p>
-                        {checklistItems.length === 0 ? (
-                            <p style={{ fontSize: 11, color: "#B08060", fontStyle: "italic" }}>
-                                No checklist items defined for this service. Add them in Settings → Services.
-                            </p>
-                        ) : (
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 20px" }}>
-                                {checklistItems.map((item, i) => (
-                                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                        <div style={{
-                                            width: 16, height: 16, borderRadius: 3, border: "1.5px solid #C9914C",
-                                            flexShrink: 0, background: "white",
-                                        }} />
-                                        <span style={{ fontSize: 12, color: "#23211E" }}>{item}</span>
+                        {/* ── Details ── */}
+                        <div style={{ paddingTop: 24 }}>
+                            <SectionHeader text="Details" />
+                            <div style={{ marginTop: 14 }}>
+                                {["Guitar", "Technician", "Date"].map((label) => (
+                                    <div key={label} style={{ display: "flex", alignItems: "flex-end", gap: 16, marginBottom: 18 }}>
+                                        <span style={{ fontSize: 10, width: 80, flexShrink: 0 }}>{label}</span>
+                                        <div style={{ flex: 1, borderBottom: "0.6px solid #111", height: 18 }} />
                                     </div>
                                 ))}
                             </div>
-                        )}
-                    </div>
-
-                    {/* ── Condition at intake ── */}
-                    {hasIntake && (
-                        <div style={{ padding: "20px 36px", borderBottom: "1px solid #D4B896" }}>
-                            <p style={{ fontSize: 9, fontWeight: 800, color: "#9A7F6A", textTransform: "uppercase", letterSpacing: "0.16em", marginBottom: 12 }}>
-                                Condition at Intake
-                            </p>
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
-                                {CHECKLIST_PARTS.map(({ key, label }) => {
-                                    const c = conditionLabel(checklist?.[key]);
-                                    if (!c) return null;
-                                    return (
-                                        <div key={key} style={{
-                                            background: "white", border: "1px solid #D4B896",
-                                            borderRadius: 8, padding: "8px 10px",
-                                        }}>
-                                            <p style={{ fontSize: 9, color: "#9A7F6A", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, margin: 0 }}>{label}</p>
-                                            <p style={{ fontSize: 11, fontWeight: 800, marginTop: 3, color: c.label === "Good" ? "#059669" : c.label === "Fair" ? "#D97706" : "#DC2626" }}>
-                                                {c.label}
-                                            </p>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                            {checklist?.notes && (
-                                <p style={{ fontSize: 11, color: "#6B5744", marginTop: 10, fontStyle: "italic" }}>
-                                    Note: {checklist.notes}
-                                </p>
-                            )}
                         </div>
-                    )}
 
-                    {/* ── Sign-off ── */}
-                    <div style={{ padding: "24px 36px 20px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px 40px" }}>
-                        <SignLine label="Technician" />
-                        <SignLine label="Date" />
-                        <SignLine label="Customer signature" />
-                        <SignLine label="Guitar collected" />
-                    </div>
+                        {/* ── Notes / Remarks ── */}
+                        <div style={{ paddingTop: 20 }}>
+                            <SectionHeader text="Notes / Remarks" />
+                            <div style={{
+                                marginTop: 12,
+                                border: "0.6px solid #111",
+                                height: 100,
+                                width: "100%",
+                            }} />
+                        </div>
 
-                    {/* ── Footer ── */}
-                    <div style={{ height: 4, background: "#C9914C" }} />
-                    <div style={{ background: "#402A1B", padding: "10px 36px", display: "flex", justifyContent: "space-between", alignItems: "center", borderRadius: "0 0 4px 4px" }}>
-                        <span style={{ fontSize: 16, fontWeight: 700, color: "#FEE9D6", fontFamily: "Georgia, serif", fontStyle: "italic" }}>
-                            {company}
-                        </span>
-                        <span style={{ fontSize: 9, color: "#C9914C", letterSpacing: "0.12em", textTransform: "uppercase" }}>
-                            Thank you for trusting us with your instrument.
-                        </span>
+                        {/* ── Footer ── */}
+                        <div style={{ paddingTop: 28, paddingBottom: 8 }}>
+                            <p style={{ fontSize: 7, color: GRAY, margin: 0 }}>fretops.com</p>
+                        </div>
+
                     </div>
                 </div>
             </div>
 
             <style>{`
                 @media print {
-                    @page { margin: 15mm; size: A4; }
-                    body { background: #FEE9D6 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    @page { margin: 18mm; size: A4; }
+                    body { background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                 }
             `}</style>
         </>
     );
 }
 
-function InfoRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+function SectionHeader({ text }: { text: string }) {
     return (
-        <div>
-            <p style={{ fontSize: 9, fontWeight: 700, color: "#9A7F6A", textTransform: "uppercase", letterSpacing: "0.12em", margin: 0 }}>{label}</p>
-            <p style={{ fontSize: 12, fontWeight: 700, color: "#23211E", marginTop: 2, fontFamily: mono ? "monospace" : undefined }}>{value}</p>
+        <div style={{ display: "inline-block" }}>
+            <span style={{
+                fontFamily: "Helvetica, Arial, sans-serif",
+                fontWeight: 700,
+                fontSize: 9,
+                textTransform: "uppercase" as const,
+                letterSpacing: "0.06em",
+                textDecoration: "underline",
+                textUnderlineOffset: 3,
+            }}>
+                {text}
+            </span>
         </div>
     );
 }
 
-function SignLine({ label }: { label: string }) {
+function InfoCell({ label, value }: { label: string; value: string }) {
     return (
         <div>
-            <div style={{ borderBottom: "1px solid #C9914C", height: 28 }} />
-            <p style={{ fontSize: 9, color: "#9A7F6A", marginTop: 4, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600 }}>{label}</p>
+            <div style={{ fontSize: 7.5, color: "#888", textTransform: "uppercase" as const, letterSpacing: "0.12em", marginBottom: 3 }}>{label}</div>
+            <div style={{ fontSize: 10, fontWeight: 600 }}>{value}</div>
         </div>
     );
 }
