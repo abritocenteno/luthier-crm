@@ -64,7 +64,7 @@ function ChecklistPrint({ id }: { id: Id<"jobs"> }) {
 
     return (
         <>
-            {/* Print / Close buttons — shown only when opened as a standalone page, not in iframe */}
+            {/* Print / Close buttons — shown only when NOT inside an iframe */}
             {typeof window !== "undefined" && window.self === window.top && (
                 <div className="print:hidden fixed top-4 right-4 z-50 flex gap-2">
                     <button

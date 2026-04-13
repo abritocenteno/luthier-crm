@@ -622,7 +622,7 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
                         </div>
                         <div className="flex items-center gap-2">
                             <a
-                                href={`/dashboard/jobs/${id}/checklist`}
+                                href={`/jobs/${id}/checklist`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 text-white rounded-xl text-xs font-bold hover:bg-black transition-all"
@@ -639,7 +639,7 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
                     </div>
                     {/* iframe */}
                     <iframe
-                        src={`/dashboard/jobs/${id}/checklist`}
+                        src={`/jobs/${id}/checklist`}
                         className="flex-1 w-full border-0"
                         style={{ minHeight: 600 }}
                         title="Completion Checklist"
