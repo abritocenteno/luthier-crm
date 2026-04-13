@@ -1,6 +1,6 @@
 "use client";
 
-import { use, Suspense, useState, useRef } from "react";
+import { use, Suspense, useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -63,6 +63,13 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
     const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [showChecklist, setShowChecklist] = useState(false);
+    const checklistIframeRef = useRef<HTMLIFrameElement>(null);
+
+    // Lock body scroll while checklist modal is open
+    useEffect(() => {
+        document.body.style.overflow = showChecklist ? "hidden" : "";
+        return () => { document.body.style.overflow = ""; };
+    }, [showChecklist]);
     const photoInputRef = useRef<HTMLInputElement>(null);
 
     if (job === undefined) {
@@ -621,14 +628,12 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
                             <span className="text-sm font-bold text-zinc-900">Completion Checklist</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <a
-                                href={`/jobs/${id}/checklist`}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                            <button
+                                onClick={() => checklistIframeRef.current?.contentWindow?.print()}
                                 className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 text-white rounded-xl text-xs font-bold hover:bg-black transition-all"
                             >
                                 <Printer size={12} /> Print / Save PDF
-                            </a>
+                            </button>
                             <button
                                 onClick={() => setShowChecklist(false)}
                                 className="p-1.5 text-zinc-400 hover:text-black hover:bg-zinc-100 rounded-xl transition-colors"
@@ -639,6 +644,7 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
                     </div>
                     {/* iframe */}
                     <iframe
+                        ref={checklistIframeRef}
                         src={`/jobs/${id}/checklist`}
                         className="flex-1 w-full border-0"
                         style={{ minHeight: 600 }}
