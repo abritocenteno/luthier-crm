@@ -7,24 +7,70 @@ import { Id } from "../../../../../convex/_generated/dataModel";
 import { Loader2, Printer } from "lucide-react";
 
 const CHECKLIST_PARTS = [
-    { key: "tuners",      label: "Tuners / Tuning Machines" },
+    { key: "tuners",      label: "Tuners" },
     { key: "frets",       label: "Frets" },
     { key: "nut",         label: "Nut" },
     { key: "bridge",      label: "Bridge / Saddle" },
     { key: "neck",        label: "Neck / Truss Rod" },
     { key: "body",        label: "Body / Finish" },
-    { key: "electronics", label: "Electronics / Pickups" },
+    { key: "electronics", label: "Electronics" },
 ] as const;
 
-const conditionColor = (val: string | undefined) => {
-    if (val === "good") return "#16a34a";
-    if (val === "fair") return "#d97706";
-    if (val === "poor") return "#dc2626";
-    return "#999";
+const conditionBadgeStyle = (val: string | undefined): React.CSSProperties => {
+    const base: React.CSSProperties = {
+        display: "inline-block",
+        fontSize: 8,
+        fontWeight: 700,
+        letterSpacing: "0.1em",
+        textTransform: "uppercase",
+        padding: "2px 7px",
+        borderRadius: 2,
+        border: "0.6px solid",
+    };
+    if (val === "good") return { ...base, color: "#166534", borderColor: "#166534", background: "#f0fdf4" };
+    if (val === "fair") return { ...base, color: "#92400e", borderColor: "#92400e", background: "#fffbeb" };
+    if (val === "poor") return { ...base, color: "#991b1b", borderColor: "#991b1b", background: "#fef2f2" };
+    return { ...base, color: "#888", borderColor: "#ccc" };
 };
 
-const fmt = (ts: number | undefined) =>
-    ts ? new Date(ts).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : "—";
+// ── Section header with extending rule ──────────────────────────────────────
+function SectionRule({ text }: { text: string }) {
+    return (
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+            <span style={{
+                fontFamily: "Helvetica, Arial, sans-serif",
+                fontWeight: 700,
+                fontSize: 8,
+                textTransform: "uppercase",
+                letterSpacing: "0.2em",
+                color: "#111",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+            }}>
+                {text}
+            </span>
+            <div style={{ flex: 1, height: "0.6px", background: "#111" }} />
+        </div>
+    );
+}
+
+function InfoCell({ label, value }: { label: string; value: string }) {
+    return (
+        <div>
+            <div style={{
+                fontSize: 7,
+                color: "#aaa",
+                textTransform: "uppercase",
+                letterSpacing: "0.16em",
+                marginBottom: 4,
+                fontWeight: 600,
+            }}>
+                {label}
+            </div>
+            <div style={{ fontSize: 10.5, fontWeight: 600, color: "#111", lineHeight: 1.3 }}>{value}</div>
+        </div>
+    );
+}
 
 function ChecklistPrint({ id }: { id: Id<"jobs"> }) {
     const job      = useQuery(api.jobs.get, { id });
@@ -51,20 +97,22 @@ function ChecklistPrint({ id }: { id: Id<"jobs"> }) {
         }
     }
 
-    const checklist   = job.intakeChecklist as Record<string, string> | undefined;
-    const hasIntake   = checklist && CHECKLIST_PARTS.some((p) => checklist[p.key]);
-    const instrument  = [job.instrumentBrand, job.instrumentModel].filter(Boolean).join(" ") || job.instrumentType;
-    const company     = settings?.companyName || "FretOps";
-    const services    = (job.workItems ?? []).map(w => w.name).join(", ") || "—";
+    const checklist  = job.intakeChecklist as Record<string, string> | undefined;
+    const hasIntake  = checklist && CHECKLIST_PARTS.some((p) => checklist[p.key]);
+    const instrument = [job.instrumentBrand, job.instrumentModel].filter(Boolean).join(" ") || job.instrumentType;
+    const company    = settings?.companyName || "FretOps";
+    const services   = (job.workItems ?? []).map(w => w.name).join(", ") || "—";
 
-    const FONT  = "Helvetica, Arial, sans-serif";
-    const BLACK = "#111111";
-    const GRAY  = "#888888";
-    const PAGE  = { maxWidth: 680, margin: "0 auto", fontFamily: FONT, color: BLACK, position: "relative" as const, overflow: "hidden" };
+    const FONT = "'Helvetica Neue', Helvetica, Arial, sans-serif";
+
+    // Split checklist into two columns
+    const half = Math.ceil(checklistItems.length / 2);
+    const col1 = checklistItems.slice(0, half);
+    const col2 = checklistItems.slice(half);
 
     return (
         <>
-            {/* Print / Close buttons — shown only when NOT inside an iframe */}
+            {/* Print / Close buttons — standalone only */}
             {typeof window !== "undefined" && window.self === window.top && (
                 <div className="print:hidden fixed top-4 right-4 z-50 flex gap-2">
                     <button
@@ -82,20 +130,26 @@ function ChecklistPrint({ id }: { id: Id<"jobs"> }) {
                 </div>
             )}
 
-            {/* Outer page */}
-            <div style={{ background: "#fff", minHeight: "100vh", padding: "40px 24px" }} className="print:p-0">
-                <div style={PAGE}>
+            <div style={{ background: "#fff", minHeight: "100vh" }} className="print:p-0">
+                <div style={{
+                    maxWidth: 680,
+                    margin: "0 auto",
+                    fontFamily: FONT,
+                    color: "#111",
+                    position: "relative",
+                    padding: "48px 40px 40px",
+                }}>
 
                     {/* ── Watermark ── */}
                     <div style={{
                         position: "absolute",
-                        top: "38%", left: "50%",
-                        transform: "translate(-50%, -50%) rotate(-30deg)",
-                        fontSize: 96,
-                        fontFamily: "Georgia, serif",
+                        top: "42%", left: "50%",
+                        transform: "translate(-50%, -50%) rotate(-28deg)",
+                        fontSize: 110,
+                        fontFamily: "Georgia, 'Times New Roman', serif",
                         fontStyle: "italic",
                         fontWeight: 700,
-                        color: "rgba(0,0,0,0.045)",
+                        color: "rgba(0,0,0,0.032)",
                         whiteSpace: "nowrap",
                         pointerEvents: "none",
                         userSelect: "none",
@@ -104,104 +158,185 @@ function ChecklistPrint({ id }: { id: Id<"jobs"> }) {
                         {company}
                     </div>
 
-                    {/* All content sits above watermark */}
                     <div style={{ position: "relative", zIndex: 1 }}>
 
                         {/* ── Header ── */}
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: 14, borderBottom: "1px solid #111" }}>
+                        {/* Thick top rule */}
+                        <div style={{ height: 3, background: "#111", marginBottom: 20 }} />
+
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+                            {/* Left: brand + doc type */}
                             <div>
-                                <div style={{ fontWeight: 700, fontSize: 14, letterSpacing: "0.01em" }}>{company}</div>
-                                <div style={{ fontSize: 8, color: GRAY, letterSpacing: "0.18em", textTransform: "uppercase", marginTop: 3 }}>
+                                <div style={{
+                                    fontWeight: 800,
+                                    fontSize: 28,
+                                    letterSpacing: "-0.02em",
+                                    lineHeight: 1,
+                                    marginBottom: 8,
+                                }}>
+                                    {company.toUpperCase()}
+                                </div>
+                                <div style={{
+                                    fontSize: 7.5,
+                                    color: "#888",
+                                    letterSpacing: "0.28em",
+                                    textTransform: "uppercase",
+                                    fontWeight: 500,
+                                }}>
                                     Instrument Completion Checklist
                                 </div>
                             </div>
-                            {/* Circular logomark */}
-                            <svg width="36" height="36" viewBox="0 0 36 36">
-                                <circle cx="18" cy="18" r="16" fill="none" stroke="#111" strokeWidth="1" />
-                                <text x="18" y="23" textAnchor="middle" fontFamily="Helvetica, Arial, sans-serif" fontWeight="700" fontSize="14" fill="#111">F</text>
+
+                            {/* Right: larger logomark */}
+                            <svg width="52" height="52" viewBox="0 0 52 52" style={{ flexShrink: 0, marginTop: 2 }}>
+                                <circle cx="26" cy="26" r="24" fill="none" stroke="#111" strokeWidth="1.2" />
+                                <circle cx="26" cy="26" r="19" fill="none" stroke="#111" strokeWidth="0.4" strokeDasharray="2 2" />
+                                <text x="26" y="32" textAnchor="middle"
+                                    fontFamily="'Helvetica Neue', Helvetica, Arial, sans-serif"
+                                    fontWeight="800" fontSize="18" fill="#111">
+                                    {company[0].toUpperCase()}
+                                </text>
                             </svg>
                         </div>
 
-                        {/* ── Job info row ── */}
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px 20px", padding: "16px 0 14px", borderBottom: "0.5px solid #ddd" }}>
-                            <InfoCell label="Client" value={(job as any).client?.name ?? "—"} />
-                            <InfoCell label="Instrument" value={instrument} />
-                            <InfoCell label="Service(s)" value={services} />
+                        {/* Thin rule */}
+                        <div style={{ height: "0.6px", background: "#ddd", marginBottom: 18 }} />
+
+                        {/* ── Job info ── */}
+                        <div style={{
+                            display: "grid",
+                            gridTemplateColumns: "1fr 1fr 1fr",
+                            gap: "0 24px",
+                            padding: "14px 0 16px",
+                            borderBottom: "0.6px solid #ddd",
+                            marginBottom: 28,
+                        }}>
+                            <InfoCell label="Client"       value={(job as any).client?.name ?? "—"} />
+                            <InfoCell label="Instrument"   value={instrument} />
+                            <InfoCell label="Service(s)"   value={services} />
                         </div>
 
                         {/* ── Completion items ── */}
-                        <div style={{ paddingTop: 20 }}>
-                            <SectionHeader text="Completion Items" />
-                            <div style={{ marginTop: 14 }}>
-                                {checklistItems.length === 0 ? (
-                                    <p style={{ fontSize: 10, color: GRAY, fontStyle: "italic", margin: 0 }}>
-                                        No checklist items defined for this service. Add them in Settings → Services.
-                                    </p>
-                                ) : (
-                                    checklistItems.map((item, i) => (
-                                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-                                            {/* Square checkbox */}
-                                            <svg width="10" height="10" viewBox="0 0 10 10" style={{ flexShrink: 0 }}>
-                                                <rect x="0.5" y="0.5" width="9" height="9" fill="none" stroke="#111" strokeWidth="0.8" />
-                                            </svg>
-                                            <span style={{ fontSize: 10.5 }}>{item}</span>
+                        <div style={{ marginBottom: 28 }}>
+                            <SectionRule text="Completion Items" />
+                            {checklistItems.length === 0 ? (
+                                <p style={{ fontSize: 10, color: "#aaa", fontStyle: "italic", margin: 0 }}>
+                                    No checklist items defined for this service. Add them in Settings → Services.
+                                </p>
+                            ) : (
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 32px" }}>
+                                    {[col1, col2].map((col, ci) => (
+                                        <div key={ci}>
+                                            {col.map((item, i) => (
+                                                <div key={i} style={{
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: 11,
+                                                    paddingBottom: 13,
+                                                    borderBottom: "0.4px solid #eee",
+                                                    marginBottom: 13,
+                                                }}>
+                                                    {/* Square checkbox */}
+                                                    <svg width="11" height="11" viewBox="0 0 11 11" style={{ flexShrink: 0 }}>
+                                                        <rect x="0.6" y="0.6" width="9.8" height="9.8" fill="none" stroke="#111" strokeWidth="0.8" />
+                                                    </svg>
+                                                    <span style={{ fontSize: 10, lineHeight: 1.4, color: "#222" }}>{item}</span>
+                                                </div>
+                                            ))}
                                         </div>
-                                    ))
-                                )}
-                            </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         {/* ── Condition at intake ── */}
                         {hasIntake && (
-                            <div style={{ paddingTop: 20 }}>
-                                <SectionHeader text="Condition at Intake" />
-                                <div style={{ marginTop: 14, display: "flex", flexWrap: "wrap" as const, gap: "8px 20px" }}>
+                            <div style={{ marginBottom: 28 }}>
+                                <SectionRule text="Condition at Intake" />
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 10px", marginBottom: checklist?.notes ? 12 : 0 }}>
                                     {CHECKLIST_PARTS.map(({ key, label }) => {
                                         const val = checklist?.[key];
                                         if (!val) return null;
                                         return (
-                                            <div key={key} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 10 }}>
-                                                <span style={{ color: GRAY }}>{label}:</span>
-                                                <span style={{ fontWeight: 700, color: conditionColor(val), textTransform: "capitalize" }}>{val}</span>
+                                            <div key={key} style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                                                <span style={{ fontSize: 9, color: "#888", fontWeight: 500 }}>{label}</span>
+                                                <span style={conditionBadgeStyle(val)}>{val}</span>
                                             </div>
                                         );
                                     })}
                                 </div>
                                 {checklist?.notes && (
-                                    <p style={{ fontSize: 9.5, color: "#555", marginTop: 10, fontStyle: "italic" }}>
-                                        Note: {checklist.notes}
+                                    <p style={{
+                                        fontSize: 9,
+                                        color: "#666",
+                                        fontStyle: "italic",
+                                        margin: 0,
+                                        paddingTop: 10,
+                                        borderTop: "0.4px solid #eee",
+                                        lineHeight: 1.5,
+                                    }}>
+                                        {checklist.notes}
                                     </p>
                                 )}
                             </div>
                         )}
 
-                        {/* ── Details ── */}
-                        <div style={{ paddingTop: 24 }}>
-                            <SectionHeader text="Details" />
-                            <div style={{ marginTop: 14 }}>
+                        {/* ── Sign-off ── */}
+                        <div style={{ marginBottom: 28 }}>
+                            <SectionRule text="Sign-off" />
+                            <div style={{ display: "grid", gridTemplateColumns: "80px 1fr", rowGap: 18, alignItems: "end" }}>
                                 {["Guitar", "Technician", "Date"].map((label) => (
-                                    <div key={label} style={{ display: "flex", alignItems: "flex-end", gap: 16, marginBottom: 18 }}>
-                                        <span style={{ fontSize: 10, width: 80, flexShrink: 0 }}>{label}</span>
-                                        <div style={{ flex: 1, borderBottom: "0.6px solid #111", height: 18 }} />
-                                    </div>
+                                    <>
+                                        <span key={label + "-label"} style={{ fontSize: 9.5, color: "#555", paddingBottom: 4 }}>{label}</span>
+                                        <div key={label + "-line"} style={{
+                                            borderBottom: "0.6px solid #bbb",
+                                            height: 20,
+                                            backgroundImage: "none",
+                                        }} />
+                                    </>
                                 ))}
                             </div>
                         </div>
 
                         {/* ── Notes / Remarks ── */}
-                        <div style={{ paddingTop: 20 }}>
-                            <SectionHeader text="Notes / Remarks" />
-                            <div style={{
-                                marginTop: 12,
-                                border: "0.6px solid #111",
-                                height: 100,
-                                width: "100%",
-                            }} />
+                        <div style={{ marginBottom: 32 }}>
+                            <SectionRule text="Notes / Remarks" />
+                            {/* Box with corner marks */}
+                            <div style={{ position: "relative", height: 110 }}>
+                                <div style={{
+                                    position: "absolute", inset: 0,
+                                    border: "0.6px solid #ccc",
+                                }} />
+                                {/* Corner ticks */}
+                                {[
+                                    { top: -1, left: -1, borderTop: "1.5px solid #111", borderLeft: "1.5px solid #111", borderRight: "none", borderBottom: "none" },
+                                    { top: -1, right: -1, borderTop: "1.5px solid #111", borderRight: "1.5px solid #111", borderLeft: "none", borderBottom: "none" },
+                                    { bottom: -1, left: -1, borderBottom: "1.5px solid #111", borderLeft: "1.5px solid #111", borderTop: "none", borderRight: "none" },
+                                    { bottom: -1, right: -1, borderBottom: "1.5px solid #111", borderRight: "1.5px solid #111", borderTop: "none", borderLeft: "none" },
+                                ].map((s, i) => (
+                                    <div key={i} style={{
+                                        position: "absolute",
+                                        width: 12, height: 12,
+                                        ...s,
+                                    }} />
+                                ))}
+                            </div>
                         </div>
 
                         {/* ── Footer ── */}
-                        <div style={{ paddingTop: 28, paddingBottom: 8 }}>
-                            <p style={{ fontSize: 7, color: GRAY, margin: 0 }}>fretops.com</p>
+                        <div style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            paddingTop: 14,
+                            borderTop: "0.6px solid #e5e5e5",
+                        }}>
+                            <span style={{ fontSize: 7, color: "#bbb", letterSpacing: "0.06em" }}>
+                                {company.toLowerCase()}.com
+                            </span>
+                            <span style={{ fontSize: 7, color: "#ddd", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                                Completion Record
+                            </span>
                         </div>
 
                     </div>
@@ -210,7 +345,7 @@ function ChecklistPrint({ id }: { id: Id<"jobs"> }) {
 
             <style>{`
                 @media print {
-                    @page { margin: 18mm; size: A4; }
+                    @page { margin: 16mm; size: A4; }
                     body { background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                 }
             `}</style>
@@ -218,37 +353,14 @@ function ChecklistPrint({ id }: { id: Id<"jobs"> }) {
     );
 }
 
-function SectionHeader({ text }: { text: string }) {
-    return (
-        <div style={{ display: "inline-block" }}>
-            <span style={{
-                fontFamily: "Helvetica, Arial, sans-serif",
-                fontWeight: 700,
-                fontSize: 9,
-                textTransform: "uppercase" as const,
-                letterSpacing: "0.06em",
-                textDecoration: "underline",
-                textUnderlineOffset: 3,
-            }}>
-                {text}
-            </span>
-        </div>
-    );
-}
-
-function InfoCell({ label, value }: { label: string; value: string }) {
-    return (
-        <div>
-            <div style={{ fontSize: 7.5, color: "#888", textTransform: "uppercase" as const, letterSpacing: "0.12em", marginBottom: 3 }}>{label}</div>
-            <div style={{ fontSize: 10, fontWeight: 600 }}>{value}</div>
-        </div>
-    );
-}
-
 export default function ChecklistPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
     return (
-        <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="animate-spin text-zinc-300" /></div>}>
+        <Suspense fallback={
+            <div className="flex items-center justify-center min-h-screen">
+                <Loader2 className="animate-spin text-zinc-300" />
+            </div>
+        }>
             <ChecklistPrint id={id as Id<"jobs">} />
         </Suspense>
     );
