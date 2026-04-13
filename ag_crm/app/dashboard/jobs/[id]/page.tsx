@@ -63,13 +63,15 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
     const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [showChecklist, setShowChecklist] = useState(false);
+    const [showWorkOrder, setShowWorkOrder] = useState(false);
     const checklistIframeRef = useRef<HTMLIFrameElement>(null);
+    const workOrderIframeRef = useRef<HTMLIFrameElement>(null);
 
-    // Lock body scroll while checklist modal is open
+    // Lock body scroll while any modal is open
     useEffect(() => {
-        document.body.style.overflow = showChecklist ? "hidden" : "";
+        document.body.style.overflow = (showChecklist || showWorkOrder) ? "hidden" : "";
         return () => { document.body.style.overflow = ""; };
-    }, [showChecklist]);
+    }, [showChecklist, showWorkOrder]);
     const photoInputRef = useRef<HTMLInputElement>(null);
 
     if (job === undefined) {
@@ -225,14 +227,13 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
                         <ClipboardList size={16} />
                         Checklist
                     </button>
-                    <Link
-                        href={`/dashboard/jobs/${id}/print`}
-                        target="_blank"
+                    <button
+                        onClick={() => setShowWorkOrder(true)}
                         className="flex items-center gap-2 px-5 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-bold hover:bg-zinc-50 transition-all active:scale-95 shadow-sm"
                     >
                         <Printer size={16} />
                         Print
-                    </Link>
+                    </button>
                     {job.status !== "closed" && (
                         <Link
                             href={`/dashboard/jobs/${id}/edit`}
@@ -615,6 +616,42 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
                 </div>
             </div>
         </div>
+
+        {/* ── Work Order Modal ── */}
+        {showWorkOrder && (
+            <div className="modal-overlay flex items-center justify-center p-4">
+                <div className="absolute inset-0 modal-backdrop" onClick={() => setShowWorkOrder(false)} />
+                <div className="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col" style={{ maxHeight: "90vh" }}>
+                    <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100 shrink-0">
+                        <div className="flex items-center gap-2">
+                            <Printer size={16} className="text-zinc-400" />
+                            <span className="text-sm font-bold text-zinc-900">Work Order</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => workOrderIframeRef.current?.contentWindow?.print()}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 text-white rounded-xl text-xs font-bold hover:bg-black transition-all"
+                            >
+                                <Printer size={12} /> Print / Save PDF
+                            </button>
+                            <button
+                                onClick={() => setShowWorkOrder(false)}
+                                className="p-1.5 text-zinc-400 hover:text-black hover:bg-zinc-100 rounded-xl transition-colors"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+                    </div>
+                    <iframe
+                        ref={workOrderIframeRef}
+                        src={`/jobs/${id}/print`}
+                        className="flex-1 w-full border-0"
+                        style={{ minHeight: 600 }}
+                        title="Work Order"
+                    />
+                </div>
+            </div>
+        )}
 
         {/* ── Checklist Modal ── */}
         {showChecklist && (

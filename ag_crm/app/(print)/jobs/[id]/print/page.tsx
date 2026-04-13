@@ -1,10 +1,10 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { api } from "../../../../../convex/_generated/api";
 import { Id } from "../../../../../convex/_generated/dataModel";
-import { Printer, ArrowLeft, Loader2 } from "lucide-react";
+import { Printer, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const CHECKLIST_PARTS = [
@@ -37,7 +37,6 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function JobPrintPage() {
     const { id } = useParams();
-    const router = useRouter();
     const job = useQuery(api.jobs.get, { id: id as Id<"jobs"> });
     const settings = useQuery(api.settings.get);
 
@@ -55,27 +54,23 @@ export default function JobPrintPage() {
         sum + (wi.type === "hourly" ? wi.unitPrice * (wi.hours ?? 1) : wi.unitPrice), 0);
 
     const instrumentLabel = [job.instrumentBrand, job.instrumentModel, job.instrumentType].filter(Boolean).join(" ");
+    const isStandalone = typeof window !== "undefined" && window.self === window.top;
 
     return (
         <>
-            {/* Screen toolbar — hidden on print */}
-            <div className="print:hidden sticky top-0 z-10 bg-white border-b border-zinc-200 px-6 py-3 flex items-center gap-4">
-                <button
-                    onClick={() => router.back()}
-                    className="flex items-center gap-2 text-sm font-bold text-zinc-500 hover:text-black transition-colors group"
-                >
-                    <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-                    Back
-                </button>
-                <div className="flex-1" />
-                <button
-                    onClick={() => window.print()}
-                    className="flex items-center gap-2 px-5 py-2 bg-black text-white rounded-xl text-sm font-bold hover:bg-zinc-800 transition-all active:scale-95 shadow-lg shadow-black/10"
-                >
-                    <Printer size={16} />
-                    Print / Save PDF
-                </button>
-            </div>
+            {/* Toolbar — only shown when opened standalone (not in iframe) */}
+            {isStandalone && (
+                <div className="print:hidden sticky top-0 z-10 bg-white border-b border-zinc-200 px-6 py-3 flex items-center gap-4">
+                    <div className="flex-1" />
+                    <button
+                        onClick={() => window.print()}
+                        className="flex items-center gap-2 px-5 py-2 bg-black text-white rounded-xl text-sm font-bold hover:bg-zinc-800 transition-all active:scale-95 shadow-lg shadow-black/10"
+                    >
+                        <Printer size={16} />
+                        Print / Save PDF
+                    </button>
+                </div>
+            )}
 
             {/* Print sheet */}
             <div className="max-w-3xl mx-auto p-8 print:p-0 print:max-w-none space-y-8 font-sans text-zinc-900">
@@ -100,7 +95,6 @@ export default function JobPrintPage() {
 
                 {/* Two-column: client + instrument */}
                 <div className="grid grid-cols-2 gap-8">
-                    {/* Client */}
                     <div className="space-y-3">
                         <h2 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Client</h2>
                         <div className="space-y-1 text-sm">
@@ -110,7 +104,6 @@ export default function JobPrintPage() {
                         </div>
                     </div>
 
-                    {/* Instrument */}
                     <div className="space-y-3">
                         <h2 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Instrument</h2>
                         <div className="space-y-1 text-sm">
@@ -120,7 +113,6 @@ export default function JobPrintPage() {
                         </div>
                     </div>
 
-                    {/* Dates */}
                     <div className="space-y-3">
                         <h2 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Dates</h2>
                         <div className="space-y-1 text-sm">
@@ -129,7 +121,6 @@ export default function JobPrintPage() {
                         </div>
                     </div>
 
-                    {/* Description */}
                     {job.description && (
                         <div className="space-y-3">
                             <h2 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Description</h2>
@@ -238,6 +229,13 @@ export default function JobPrintPage() {
                     </p>
                 </div>
             </div>
+
+            <style>{`
+                @media print {
+                    @page { margin: 16mm; size: A4; }
+                    body { background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                }
+            `}</style>
         </>
     );
 }
