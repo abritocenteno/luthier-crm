@@ -62,6 +62,7 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
     const [quoteSent, setQuoteSent] = useState(false);
     const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [showChecklist, setShowChecklist] = useState(false);
     const photoInputRef = useRef<HTMLInputElement>(null);
 
     if (job === undefined) {
@@ -209,14 +210,13 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
                         {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
                         Delete
                     </button>
-                    <Link
-                        href={`/dashboard/jobs/${id}/checklist`}
-                        target="_blank"
+                    <button
+                        onClick={() => setShowChecklist(true)}
                         className="flex items-center gap-2 px-5 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-bold hover:bg-zinc-50 transition-all active:scale-95 shadow-sm"
                     >
                         <ClipboardList size={16} />
                         Checklist
-                    </Link>
+                    </button>
                     <Link
                         href={`/dashboard/jobs/${id}/print`}
                         target="_blank"
@@ -607,6 +607,45 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
                 </div>
             </div>
         </div>
+
+        {/* ── Checklist Modal ── */}
+        {showChecklist && (
+            <div className="modal-overlay flex items-center justify-center p-4">
+                <div className="absolute inset-0 modal-backdrop" onClick={() => setShowChecklist(false)} />
+                <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col" style={{ maxHeight: "90vh" }}>
+                    {/* Modal header */}
+                    <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100 shrink-0">
+                        <div className="flex items-center gap-2">
+                            <ClipboardList size={16} className="text-zinc-400" />
+                            <span className="text-sm font-bold text-zinc-900">Completion Checklist</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <a
+                                href={`/dashboard/jobs/${id}/checklist`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 text-white rounded-xl text-xs font-bold hover:bg-black transition-all"
+                            >
+                                <Printer size={12} /> Print / Save PDF
+                            </a>
+                            <button
+                                onClick={() => setShowChecklist(false)}
+                                className="p-1.5 text-zinc-400 hover:text-black hover:bg-zinc-100 rounded-xl transition-colors"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+                    </div>
+                    {/* iframe */}
+                    <iframe
+                        src={`/dashboard/jobs/${id}/checklist`}
+                        className="flex-1 w-full border-0"
+                        style={{ minHeight: 600 }}
+                        title="Completion Checklist"
+                    />
+                </div>
+            </div>
+        )}
     );
 }
 

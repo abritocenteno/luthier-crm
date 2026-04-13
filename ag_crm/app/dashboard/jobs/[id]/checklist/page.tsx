@@ -64,21 +64,23 @@ function ChecklistPrint({ id }: { id: Id<"jobs"> }) {
 
     return (
         <>
-            {/* Print / Close buttons — screen only */}
-            <div className="print:hidden fixed top-4 right-4 z-50 flex gap-2">
-                <button
-                    onClick={() => window.print()}
-                    className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-xl text-sm font-bold hover:bg-zinc-800 transition-all shadow-lg"
-                >
-                    <Printer size={15} /> Print / Save PDF
-                </button>
-                <button
-                    onClick={() => window.close()}
-                    className="px-4 py-2 bg-white border border-zinc-200 rounded-xl text-sm font-bold hover:bg-zinc-50 transition-all shadow-sm"
-                >
-                    Close
-                </button>
-            </div>
+            {/* Print / Close buttons — shown only when opened as a standalone page, not in iframe */}
+            {typeof window !== "undefined" && window.self === window.top && (
+                <div className="print:hidden fixed top-4 right-4 z-50 flex gap-2">
+                    <button
+                        onClick={() => window.print()}
+                        className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-xl text-sm font-bold hover:bg-zinc-800 transition-all shadow-lg"
+                    >
+                        <Printer size={15} /> Print / Save PDF
+                    </button>
+                    <button
+                        onClick={() => window.close()}
+                        className="px-4 py-2 bg-white border border-zinc-200 rounded-xl text-sm font-bold hover:bg-zinc-50 transition-all shadow-sm"
+                    >
+                        Close
+                    </button>
+                </div>
+            )}
 
             {/* Outer page */}
             <div style={{ background: "#fff", minHeight: "100vh", padding: "40px 24px" }} className="print:p-0">
