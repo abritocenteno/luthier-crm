@@ -130,7 +130,7 @@ function ChecklistPrint({ id }: { id: Id<"jobs"> }) {
                 </div>
             )}
 
-            <div style={{ background: "#fff", minHeight: "100vh" }} className="print:p-0">
+            <div style={{ background: "#fff" }} className="print:p-0">
                 <div style={{
                     maxWidth: 680,
                     margin: "0 auto",
@@ -138,10 +138,11 @@ function ChecklistPrint({ id }: { id: Id<"jobs"> }) {
                     color: "#111",
                     position: "relative",
                     padding: "48px 40px 40px",
+                    overflow: "hidden",
                 }}>
 
                     {/* ── Watermark ── */}
-                    <div style={{
+                    <div className="checklist-watermark" style={{
                         position: "absolute",
                         top: "42%", left: "50%",
                         transform: "translate(-50%, -50%)",
@@ -352,6 +353,13 @@ function ChecklistPrint({ id }: { id: Id<"jobs"> }) {
                 @media print {
                     @page { margin: 16mm; size: A4; }
                     body { background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    /* Fix watermark: pin it to the printed page so it never triggers a page break */
+                    .checklist-watermark {
+                        position: fixed !important;
+                        top: 50% !important;
+                        left: 50% !important;
+                        transform: translate(-50%, -50%) !important;
+                    }
                 }
             `}</style>
         </>
