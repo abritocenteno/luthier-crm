@@ -1,7 +1,7 @@
 "use client";
 
 import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
-import { SignInButton, SignUpButton, UserButton } from "@/components/clerk-compat";
+import { SignInButton, UserButton } from "@/components/clerk-compat";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -131,15 +131,10 @@ export default function Home() {
                         </AuthLoading>
                         <Unauthenticated>
                             <SignInButton mode="modal">
-                                <button className="fo-nav-link fo-ui" style={{ fontSize: "13px", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", background: "none", border: "none", cursor: "pointer", padding: "6px 4px" }}>
+                                <button className="fo-cta fo-ui" style={{ fontSize: "12px", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", padding: "9px 22px", borderRadius: "3px", background: AMBER, color: DARK_BG, border: "none", cursor: "pointer" }}>
                                     Sign In
                                 </button>
                             </SignInButton>
-                            <SignUpButton mode="modal">
-                                <button className="fo-cta fo-ui" style={{ fontSize: "12px", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", padding: "9px 22px", borderRadius: "3px", background: AMBER, color: DARK_BG, border: "none", cursor: "pointer" }}>
-                                    Get Started
-                                </button>
-                            </SignUpButton>
                         </Unauthenticated>
                         <Authenticated>
                             <Link href="/dashboard" className="fo-nav-link fo-ui" style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "13px", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase" }}>
@@ -200,14 +195,9 @@ export default function Home() {
                         {/* CTAs */}
                         <div style={{ display: "flex", gap: "14px", alignItems: "center", flexWrap: "wrap" }}>
                             <Unauthenticated>
-                                <SignUpButton mode="modal">
-                                    <button className="fo-cta fo-ui" style={{ fontSize: "13px", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", padding: "16px 36px", background: AMBER, color: DARK_BG, border: "none", cursor: "pointer", borderRadius: "2px", display: "inline-flex", alignItems: "center", gap: "10px" }}>
-                                        Start Free <ArrowRight size={14} />
-                                    </button>
-                                </SignUpButton>
                                 <SignInButton mode="modal">
-                                    <button className="fo-outline fo-ui" style={{ fontSize: "13px", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", padding: "16px 36px", background: "transparent", cursor: "pointer", borderRadius: "2px" }}>
-                                        Sign In
+                                    <button className="fo-cta fo-ui" style={{ fontSize: "13px", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", padding: "16px 36px", background: AMBER, color: DARK_BG, border: "none", cursor: "pointer", borderRadius: "2px", display: "inline-flex", alignItems: "center", gap: "10px" }}>
+                                        Sign In <ArrowRight size={14} />
                                     </button>
                                 </SignInButton>
                             </Unauthenticated>
@@ -379,15 +369,15 @@ export default function Home() {
                             Ready to take your shop to the next level?
                         </h2>
                         <p className="fo-ui" style={{ fontSize: "16px", fontWeight: 300, color: MUTED, margin: 0, lineHeight: "1.65", letterSpacing: "0.03em" }}>
-                            Join luthiers and repair technicians who use FretOps to run a tighter, more professional shop.
+                            Access is by invitation only. If you&apos;ve been invited, sign in below.
                         </p>
                         <div style={{ display: "flex", gap: "14px", alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
                             <Unauthenticated>
-                                <SignUpButton mode="modal">
+                                <SignInButton mode="modal">
                                     <button className="fo-cta fo-ui" style={{ fontSize: "13px", fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", padding: "18px 48px", background: AMBER, color: DARK_BG, border: "none", cursor: "pointer", borderRadius: "2px", display: "inline-flex", alignItems: "center", gap: "12px" }}>
-                                        Get Started — It&apos;s Free <ArrowRight size={14} />
+                                        Sign In <ArrowRight size={14} />
                                     </button>
-                                </SignUpButton>
+                                </SignInButton>
                             </Unauthenticated>
                             <Authenticated>
                                 <Link href="/dashboard">
