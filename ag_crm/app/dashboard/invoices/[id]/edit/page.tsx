@@ -67,17 +67,23 @@ function EditInvoiceForm({ id }: { id: Id<"invoices"> }) {
     // Pre-fill form data when invoice is loaded
     useEffect(() => {
         if (invoice) {
+            const items = (invoice.items || []) as any[];
+            const credits = (invoice as any).credits || [];
+            const taxRate = (invoice as any).taxRate ?? (settings as any)?.defaultTaxRate ?? 21;
+            const subtotal = items.reduce((acc: number, item: any) => acc + (item.amount * item.unitPrice), 0);
+            const taxAmount = subtotal * (taxRate / 100);
+            const creditsTotal = credits.reduce((acc: number, c: any) => acc + c.amount, 0);
             setFormData({
                 clientId: invoice.clientId,
                 invoiceNumber: invoice.invoiceNumber,
                 date: invoice.date,
-                amount: invoice.amount,
+                amount: subtotal + taxAmount - creditsTotal,
                 status: invoice.status,
                 paymentMethod: invoice.paymentMethod || "",
-                items: (invoice.items || []) as any,
-                credits: (invoice as any).credits || [],
+                items,
+                credits,
                 orderIds: (invoice as any).orderIds || [],
-                taxRate: (invoice as any).taxRate ?? (settings as any)?.defaultTaxRate ?? 21,
+                taxRate,
             });
         }
     }, [invoice, settings]);

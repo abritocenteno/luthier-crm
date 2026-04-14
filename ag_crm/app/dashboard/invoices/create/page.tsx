@@ -79,10 +79,15 @@ function CreateInvoiceForm() {
         }
     }, [initialClientId, formData.clientId]);
 
-    // Pre-fill tax rate from settings once loaded
+    // Pre-fill tax rate from settings once loaded, and recalculate total
     useEffect(() => {
-        if (settings?.defaultTaxRate !== undefined && formData.taxRate === 21) {
-            setFormData(prev => ({ ...prev, taxRate: (settings as any).defaultTaxRate ?? 21 }));
+        if (settings?.defaultTaxRate !== undefined) {
+            const rate = (settings as any).defaultTaxRate ?? 21;
+            setFormData(prev => ({
+                ...prev,
+                taxRate: rate,
+                amount: calculateTotal(prev.items, prev.credits, rate),
+            }));
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [settings]);
