@@ -42,6 +42,7 @@ export default defineSchema({
         }))),
         invoiceStorageId: v.optional(v.id("_storage")),
         orderIds: v.optional(v.array(v.id("orders"))),
+        taxRate: v.optional(v.number()), // VAT percentage, e.g. 21
         paidAt: v.optional(v.number()),
         userId: v.string(),
     })
@@ -70,6 +71,7 @@ export default defineSchema({
         website: v.optional(v.string()),
         kvkNumber: v.optional(v.string()),
         btwNumber: v.optional(v.string()),
+        defaultTaxRate: v.optional(v.number()), // default VAT % pre-filled on new invoices
         bankAccounts: v.optional(v.string()),
         logoStorageId: v.optional(v.id("_storage")),
         language: v.optional(v.string()),

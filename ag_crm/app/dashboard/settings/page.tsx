@@ -210,6 +210,7 @@ export default function SettingsPage() {
     const [website, setWebsite] = useState("");
     const [kvkNumber, setKvkNumber] = useState("");
     const [btwNumber, setBtwNumber] = useState("");
+    const [defaultTaxRate, setDefaultTaxRate] = useState<number | "">(0);
     const [bankAccounts, setBankAccounts] = useState("");
     const [addressLine1, setAddressLine1] = useState("");
     const [addressLine2, setAddressLine2] = useState("");
@@ -238,6 +239,7 @@ export default function SettingsPage() {
             setWebsite(settings.website || "");
             setKvkNumber(settings.kvkNumber || "");
             setBtwNumber((settings as any).btwNumber || "");
+            setDefaultTaxRate((settings as any).defaultTaxRate ?? 0);
             setBankAccounts(settings.bankAccounts || "");
             setAddressLine1(settings.addressLine1);
             setAddressLine2(settings.addressLine2);
@@ -298,6 +300,7 @@ export default function SettingsPage() {
                 website,
                 kvkNumber,
                 btwNumber,
+                defaultTaxRate: defaultTaxRate === "" ? 0 : Number(defaultTaxRate),
                 bankAccounts,
                 addressLine1,
                 addressLine2,
@@ -512,6 +515,24 @@ export default function SettingsPage() {
                                         className="w-full px-4 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
                                         placeholder="e.g. NL123456789B01"
                                     />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-zinc-700 flex items-center gap-2">
+                                        <Hash className="h-4 w-4 text-zinc-400" />
+                                        Default Tax Rate (%)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        max={100}
+                                        step={0.1}
+                                        value={defaultTaxRate}
+                                        onChange={(e) => setDefaultTaxRate(e.target.value === "" ? "" : parseFloat(e.target.value))}
+                                        className="w-full px-4 py-2 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                                        placeholder="e.g. 21"
+                                    />
+                                    <p className="text-xs text-zinc-400">Pre-filled on new invoices. Can be overridden per invoice.</p>
                                 </div>
 
                                 <div className="space-y-2 md:col-span-2">

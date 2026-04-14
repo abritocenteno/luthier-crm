@@ -778,9 +778,12 @@ function InvoiceDetail({ id }: { id: Id<"invoices"> }) {
                 {(() => {
                     const credits = (invoice as any).credits as { description: string; amount: number }[] | undefined;
                     const creditsTotal = credits?.reduce((a, c) => a + c.amount, 0) ?? 0;
-                    // invoice.amount is already the net total (items − credits).
-                    // Back-calculate the items subtotal for display.
-                    const itemsSubtotal = creditsTotal > 0 ? invoice.amount + creditsTotal : invoice.amount;
+                    const taxRate: number = (invoice as any).taxRate ?? 0;
+                    // Compute subtotal directly from items for accuracy
+                    const itemsSubtotal = (invoice.items ?? []).reduce(
+                        (acc, item) => acc + (item.amount * item.unitPrice), 0
+                    );
+                    const taxAmount = itemsSubtotal * (taxRate / 100);
 
                     return (
                         <div className="flex justify-end pt-6 border-t-2 border-zinc-100">
@@ -791,6 +794,16 @@ function InvoiceDetail({ id }: { id: Id<"invoices"> }) {
                                     <span className="text-zinc-500 font-bold uppercase tracking-widest text-[10px]">Subtotal</span>
                                     <span className="text-sm font-bold text-zinc-900">{formatCurrency(itemsSubtotal, settings?.currency)}</span>
                                 </div>
+
+                                {/* VAT row */}
+                                {taxRate > 0 && (
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-zinc-500 font-bold uppercase tracking-widest text-[10px]">
+                                            VAT ({taxRate}%)
+                                        </span>
+                                        <span className="text-sm font-bold text-zinc-900">{formatCurrency(taxAmount, settings?.currency)}</span>
+                                    </div>
+                                )}
 
                                 {/* Credit deduction rows */}
                                 {creditsTotal > 0 && credits?.map((credit, idx) => (

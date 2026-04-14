@@ -61,6 +61,7 @@ function EditInvoiceForm({ id }: { id: Id<"invoices"> }) {
         items: [] as { name: string; description: string; remark: string; amount: number; unitPrice: number; fromOrderId?: Id<"orders"> }[],
         credits: [] as { description: string; amount: number }[],
         orderIds: [] as Id<"orders">[],
+        taxRate: 0,
     });
 
     // Pre-fill form data when invoice is loaded
@@ -76,14 +77,20 @@ function EditInvoiceForm({ id }: { id: Id<"invoices"> }) {
                 items: (invoice.items || []) as any,
                 credits: (invoice as any).credits || [],
                 orderIds: (invoice as any).orderIds || [],
+                taxRate: (invoice as any).taxRate ?? (settings as any)?.defaultTaxRate ?? 0,
             });
         }
-    }, [invoice]);
+    }, [invoice, settings]);
 
-    const calculateTotal = (items: typeof formData.items, credits: typeof formData.credits = formData.credits) => {
+    const calculateTotal = (
+        items: typeof formData.items,
+        credits: typeof formData.credits = formData.credits,
+        taxRate: number = formData.taxRate,
+    ) => {
         const subtotal = items.reduce((acc, item) => acc + (item.amount * item.unitPrice), 0);
+        const taxAmount = subtotal * (taxRate / 100);
         const creditsTotal = credits.reduce((acc, c) => acc + c.amount, 0);
-        return subtotal - creditsTotal;
+        return subtotal + taxAmount - creditsTotal;
     };
 
     const handleAddItem = () => {
@@ -560,6 +567,54 @@ function EditInvoiceForm({ id }: { id: Id<"invoices"> }) {
                                     )}
                                 </tbody>
                                 <tfoot>
+                                    {/* Subtotal row */}
+                                    <tr className="border-t border-zinc-100">
+                                        <td colSpan={4} className="px-6 pt-4 pb-1 text-right">
+                                            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Subtotal</span>
+                                        </td>
+                                        <td colSpan={2} className="px-6 pt-4 pb-1 text-right text-sm font-bold text-zinc-700">
+                                            {formatCurrency(
+                                                formData.items.reduce((acc, item) => acc + item.amount * item.unitPrice, 0),
+                                                settings?.currency
+                                            )}
+                                        </td>
+                                        <td />
+                                    </tr>
+                                    {/* VAT row */}
+                                    <tr>
+                                        <td colSpan={4} className="px-6 py-1 text-right">
+                                            <div className="flex items-center justify-end gap-2">
+                                                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">VAT</span>
+                                                <div className="flex items-center gap-1">
+                                                    <input
+                                                        type="number"
+                                                        min={0}
+                                                        max={100}
+                                                        step={0.1}
+                                                        value={formData.taxRate}
+                                                        onChange={(e) => {
+                                                            const rate = parseFloat(e.target.value) || 0;
+                                                            setFormData(prev => ({
+                                                                ...prev,
+                                                                taxRate: rate,
+                                                                amount: calculateTotal(prev.items, prev.credits, rate),
+                                                            }));
+                                                        }}
+                                                        className="w-16 px-2 py-1 text-xs border border-zinc-200 rounded-lg text-right focus:outline-none focus:ring-2 focus:ring-black"
+                                                    />
+                                                    <span className="text-[10px] text-zinc-400 font-bold">%</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td colSpan={2} className="px-6 py-1 text-right text-sm font-bold text-zinc-700">
+                                            {formatCurrency(
+                                                formData.items.reduce((acc, item) => acc + item.amount * item.unitPrice, 0) * (formData.taxRate / 100),
+                                                settings?.currency
+                                            )}
+                                        </td>
+                                        <td />
+                                    </tr>
+                                    {/* Grand total row */}
                                     <tr className="bg-zinc-50/80 border-t border-zinc-100">
                                         <td colSpan={4} className="px-6 py-4 text-right">
                                             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Grand Total</span>

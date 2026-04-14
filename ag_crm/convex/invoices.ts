@@ -37,6 +37,7 @@ export const add = mutation({
         }))),
         invoiceStorageId: v.optional(v.id("_storage")),
         orderIds: v.optional(v.array(v.id("orders"))),
+        taxRate: v.optional(v.number()),
     },
     handler: async (ctx, args) => {
         const identity = await ctx.auth.getUserIdentity();
@@ -97,6 +98,7 @@ export const update = mutation({
             amount: v.number(),
         }))),
         orderIds: v.optional(v.array(v.id("orders"))),
+        taxRate: v.optional(v.number()),
     },
     handler: async (ctx, args) => {
         const { id, ...data } = args;
