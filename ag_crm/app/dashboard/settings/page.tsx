@@ -210,7 +210,7 @@ export default function SettingsPage() {
     const [website, setWebsite] = useState("");
     const [kvkNumber, setKvkNumber] = useState("");
     const [btwNumber, setBtwNumber] = useState("");
-    const [defaultTaxRate, setDefaultTaxRate] = useState<number | "">(0);
+    const [defaultTaxRate, setDefaultTaxRate] = useState<number | "">(21);
     const [bankAccounts, setBankAccounts] = useState("");
     const [addressLine1, setAddressLine1] = useState("");
     const [addressLine2, setAddressLine2] = useState("");
@@ -239,7 +239,7 @@ export default function SettingsPage() {
             setWebsite(settings.website || "");
             setKvkNumber(settings.kvkNumber || "");
             setBtwNumber((settings as any).btwNumber || "");
-            setDefaultTaxRate((settings as any).defaultTaxRate ?? 0);
+            setDefaultTaxRate((settings as any).defaultTaxRate ?? 21);
             setBankAccounts(settings.bankAccounts || "");
             setAddressLine1(settings.addressLine1);
             setAddressLine2(settings.addressLine2);

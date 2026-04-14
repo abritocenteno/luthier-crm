@@ -61,7 +61,7 @@ function EditInvoiceForm({ id }: { id: Id<"invoices"> }) {
         items: [] as { name: string; description: string; remark: string; amount: number; unitPrice: number; fromOrderId?: Id<"orders"> }[],
         credits: [] as { description: string; amount: number }[],
         orderIds: [] as Id<"orders">[],
-        taxRate: 0,
+        taxRate: 21,
     });
 
     // Pre-fill form data when invoice is loaded
@@ -77,7 +77,7 @@ function EditInvoiceForm({ id }: { id: Id<"invoices"> }) {
                 items: (invoice.items || []) as any,
                 credits: (invoice as any).credits || [],
                 orderIds: (invoice as any).orderIds || [],
-                taxRate: (invoice as any).taxRate ?? (settings as any)?.defaultTaxRate ?? 0,
+                taxRate: (invoice as any).taxRate ?? (settings as any)?.defaultTaxRate ?? 21,
             });
         }
     }, [invoice, settings]);

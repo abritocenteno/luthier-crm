@@ -69,7 +69,7 @@ function CreateInvoiceForm() {
         credits: [] as { description: string; amount: number }[],
         invoiceStorageId: undefined as Id<"_storage"> | undefined,
         orderIds: [] as Id<"orders">[],
-        taxRate: 0,
+        taxRate: 21,
     });
 
     // Sync clientId if it changes in URL or if it was initially null but now provided
@@ -81,8 +81,8 @@ function CreateInvoiceForm() {
 
     // Pre-fill tax rate from settings once loaded
     useEffect(() => {
-        if (settings?.defaultTaxRate !== undefined && formData.taxRate === 0) {
-            setFormData(prev => ({ ...prev, taxRate: (settings as any).defaultTaxRate ?? 0 }));
+        if (settings?.defaultTaxRate !== undefined && formData.taxRate === 21) {
+            setFormData(prev => ({ ...prev, taxRate: (settings as any).defaultTaxRate ?? 21 }));
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [settings]);
