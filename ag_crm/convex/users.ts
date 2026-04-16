@@ -1,11 +1,16 @@
 import { mutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 
 /**
  * Insert or update the user information from the client's session token.
  *
  * This is meant to be called on every page load to keep the user profile
  * in the database in sync with Clerk.
+ *
+ * Access is restricted to emails listed in the ALLOWED_EMAILS environment
+ * variable (comma-separated). Existing users are always allowed through so
+ * that a missing/misconfigured env var never locks out someone already in
+ * the database.
  */
 export const store = mutation({
     args: {},
@@ -24,7 +29,7 @@ export const store = mutation({
             .unique();
 
         if (user !== null) {
-            // If we've seen this user before but their name or picture has changed, patch them.
+            // Existing user — always allowed through. Update profile if changed.
             if (
                 user.name !== identity.name ||
                 user.email !== identity.email ||
@@ -39,7 +44,15 @@ export const store = mutation({
             return user._id;
         }
 
-        // If it's a new identity, create a new `User`.
+        // New identity — check the allowlist before creating a record.
+        const allowedEmails = process.env.ALLOWED_EMAILS;
+        if (allowedEmails) {
+            const list = allowedEmails.split(",").map((e) => e.trim().toLowerCase());
+            if (!list.includes((identity.email ?? "").toLowerCase())) {
+                throw new ConvexError("unauthorized");
+            }
+        }
+
         return await ctx.db.insert("users", {
             name: identity.name,
             email: identity.email,
