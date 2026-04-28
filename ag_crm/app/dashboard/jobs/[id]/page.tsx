@@ -79,7 +79,7 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
 
     const totalLoggedMinutes = (timeEntries ?? []).reduce((sum: number, e: { durationMinutes: number }) => sum + e.durationMinutes, 0);
 
-    const handleOpenTimeForm = (entry?: typeof timeEntries extends (infer T)[] ? T : never) => {
+    const handleOpenTimeForm = (entry?: any) => {
         if (entry) {
             const d = new Date(entry.date);
             setTimeForm({
