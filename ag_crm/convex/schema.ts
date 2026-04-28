@@ -243,4 +243,17 @@ export default defineSchema({
         .index("by_user", ["userId"])
         .index("by_client", ["clientId"])
         .index("by_supplier", ["supplierId"]),
+    timeEntries: defineTable({
+        userId: v.string(),
+        jobId: v.id("jobs"),
+        date: v.number(), // timestamp (start of day)
+        durationMinutes: v.number(),
+        description: v.optional(v.string()),
+        billable: v.boolean(),
+        invoiced: v.optional(v.boolean()),
+        hourlyRate: v.optional(v.number()),
+    })
+        .index("by_user", ["userId"])
+        .index("by_job", ["jobId"])
+        .index("by_user_date", ["userId", "date"]),
 });

@@ -9,7 +9,7 @@ import { Id } from "../../../../convex/_generated/dataModel";
 import {
     ArrowLeft, Wrench, Edit2, FileText, Guitar, Calendar, Clock,
     CheckCircle2, AlertCircle, Loader2, ExternalLink, StickyNote,
-    ChevronRight, Package, User, Inbox, Bell, Send, ImagePlus, X, Trash2, Printer, ClipboardList,
+    ChevronRight, Package, User, Inbox, Bell, Send, ImagePlus, X, Trash2, Printer, ClipboardList, Timer, Plus, Pencil,
 } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 
@@ -53,6 +53,10 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
     const addJobPhoto = useMutation(api.jobs.addJobPhoto);
     const removeJobPhoto = useMutation(api.jobs.removeJobPhoto);
     const deleteJob = useMutation(api.jobs.remove);
+    const timeEntries = useQuery(api.timeEntries.listByJob, { jobId: id });
+    const addTimeEntry = useMutation(api.timeEntries.add);
+    const updateTimeEntry = useMutation(api.timeEntries.update);
+    const removeTimeEntry = useMutation(api.timeEntries.remove);
 
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -64,6 +68,64 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
     const [isDeleting, setIsDeleting] = useState(false);
     const [showChecklist, setShowChecklist] = useState(false);
     const [showWorkOrder, setShowWorkOrder] = useState(false);
+
+    // Time tracking
+    type TimeFormState = { date: string; hours: string; minutes: string; description: string; billable: boolean; hourlyRate: string };
+    const emptyTimeForm: TimeFormState = { date: new Date().toISOString().slice(0, 10), hours: "0", minutes: "0", description: "", billable: false, hourlyRate: "" };
+    const [showTimeForm, setShowTimeForm] = useState(false);
+    const [editingTimeId, setEditingTimeId] = useState<string | null>(null);
+    const [timeForm, setTimeForm] = useState<TimeFormState>(emptyTimeForm);
+    const [isSavingTime, setIsSavingTime] = useState(false);
+
+    const totalLoggedMinutes = (timeEntries ?? []).reduce((sum: number, e: { durationMinutes: number }) => sum + e.durationMinutes, 0);
+
+    const handleOpenTimeForm = (entry?: typeof timeEntries extends (infer T)[] ? T : never) => {
+        if (entry) {
+            const d = new Date(entry.date);
+            setTimeForm({
+                date: d.toISOString().slice(0, 10),
+                hours: String(Math.floor(entry.durationMinutes / 60)),
+                minutes: String(entry.durationMinutes % 60),
+                description: entry.description ?? "",
+                billable: entry.billable,
+                hourlyRate: entry.hourlyRate != null ? String(entry.hourlyRate) : "",
+            });
+            setEditingTimeId(entry._id);
+        } else {
+            setTimeForm(emptyTimeForm);
+            setEditingTimeId(null);
+        }
+        setShowTimeForm(true);
+    };
+
+    const handleSaveTimeEntry = async () => {
+        const mins = parseInt(timeForm.hours || "0") * 60 + parseInt(timeForm.minutes || "0");
+        if (mins <= 0) return;
+        setIsSavingTime(true);
+        try {
+            const payload = {
+                jobId: id,
+                date: new Date(timeForm.date).getTime(),
+                durationMinutes: mins,
+                description: timeForm.description || undefined,
+                billable: timeForm.billable,
+                hourlyRate: timeForm.billable && timeForm.hourlyRate ? parseFloat(timeForm.hourlyRate) : undefined,
+            };
+            if (editingTimeId) {
+                await updateTimeEntry({ id: editingTimeId as any, ...payload });
+            } else {
+                await addTimeEntry(payload);
+            }
+            setShowTimeForm(false);
+        } finally {
+            setIsSavingTime(false);
+        }
+    };
+
+    const handleRemoveTimeEntry = async (entryId: string) => {
+        if (!confirm("Delete this time entry?")) return;
+        await removeTimeEntry({ id: entryId as any });
+    };
     const checklistIframeRef = useRef<HTMLIFrameElement>(null);
     const workOrderIframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -613,6 +675,155 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
                             </div>
                         </Card>
                     )}
+                    {/* Time Tracking */}
+                    <Card>
+                        <div className="px-6 pt-6 pb-4 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Timer size={12} className="text-zinc-400" />
+                                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Time Log</p>
+                                {totalLoggedMinutes > 0 && (
+                                    <span className="ml-1 text-[10px] font-bold text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-lg">
+                                        {Math.floor(totalLoggedMinutes / 60)}h {totalLoggedMinutes % 60}m total
+                                    </span>
+                                )}
+                            </div>
+                            <button
+                                onClick={() => handleOpenTimeForm()}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 text-white rounded-xl text-xs font-bold hover:bg-black transition-all active:scale-95"
+                            >
+                                <Plus size={12} /> Log Time
+                            </button>
+                        </div>
+
+                        {/* Inline add/edit form */}
+                        {showTimeForm && (
+                            <div className="mx-6 mb-4 p-4 bg-zinc-50 border border-zinc-200 rounded-xl space-y-3">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Date</label>
+                                        <input
+                                            type="date"
+                                            value={timeForm.date}
+                                            onChange={(e) => setTimeForm((f) => ({ ...f, date: e.target.value }))}
+                                            className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Duration</label>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="number" min="0" max="23"
+                                                value={timeForm.hours}
+                                                onChange={(e) => setTimeForm((f) => ({ ...f, hours: e.target.value }))}
+                                                className="w-16 px-3 py-2 bg-white border border-zinc-200 rounded-xl text-sm text-center focus:outline-none focus:ring-2 focus:ring-black"
+                                                placeholder="0"
+                                            />
+                                            <span className="text-xs text-zinc-400 font-bold">h</span>
+                                            <input
+                                                type="number" min="0" max="59"
+                                                value={timeForm.minutes}
+                                                onChange={(e) => setTimeForm((f) => ({ ...f, minutes: e.target.value }))}
+                                                className="w-16 px-3 py-2 bg-white border border-zinc-200 rounded-xl text-sm text-center focus:outline-none focus:ring-2 focus:ring-black"
+                                                placeholder="0"
+                                            />
+                                            <span className="text-xs text-zinc-400 font-bold">m</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Description</label>
+                                    <input
+                                        type="text"
+                                        value={timeForm.description}
+                                        onChange={(e) => setTimeForm((f) => ({ ...f, description: e.target.value }))}
+                                        placeholder="What did you work on?"
+                                        className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                                    />
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                                        <input
+                                            type="checkbox"
+                                            checked={timeForm.billable}
+                                            onChange={(e) => setTimeForm((f) => ({ ...f, billable: e.target.checked }))}
+                                            className="rounded border-zinc-300"
+                                        />
+                                        <span className="text-xs font-bold text-zinc-600">Billable</span>
+                                    </label>
+                                    {timeForm.billable && (
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs text-zinc-400">Rate €</span>
+                                            <input
+                                                type="number" min="0" step="0.01"
+                                                value={timeForm.hourlyRate}
+                                                onChange={(e) => setTimeForm((f) => ({ ...f, hourlyRate: e.target.value }))}
+                                                placeholder="0.00"
+                                                className="w-24 px-3 py-1.5 bg-white border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                                            />
+                                            <span className="text-xs text-zinc-400">/hr</span>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-2 pt-1">
+                                    <button
+                                        onClick={handleSaveTimeEntry}
+                                        disabled={isSavingTime}
+                                        className="px-4 py-2 bg-black text-white rounded-xl text-xs font-bold hover:bg-zinc-800 transition-all active:scale-95 disabled:opacity-50"
+                                    >
+                                        {isSavingTime ? <Loader2 size={12} className="animate-spin" /> : editingTimeId ? "Update" : "Save"}
+                                    </button>
+                                    <button
+                                        onClick={() => setShowTimeForm(false)}
+                                        className="px-4 py-2 bg-zinc-100 text-zinc-600 rounded-xl text-xs font-bold hover:bg-zinc-200 transition-all"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {(timeEntries ?? []).length === 0 && !showTimeForm ? (
+                            <div className="px-6 pb-8 text-center text-zinc-400 italic text-sm">No time logged yet.</div>
+                        ) : (
+                            <div className="divide-y divide-zinc-50">
+                                {(timeEntries ?? []).map((entry: any) => {
+                                    const hrs = Math.floor(entry.durationMinutes / 60);
+                                    const mins = entry.durationMinutes % 60;
+                                    const dateStr = new Date(entry.date).toLocaleDateString("nl-NL", { day: "2-digit", month: "short", year: "numeric" });
+                                    return (
+                                        <div key={entry._id} className="flex items-center justify-between px-6 py-3 group">
+                                            <div className="space-y-0.5 min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm font-bold text-zinc-900">{hrs}h {mins}m</span>
+                                                    <span className="text-[10px] text-zinc-400">{dateStr}</span>
+                                                    {entry.billable && (
+                                                        <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded-md">
+                                                            {entry.invoiced ? "Invoiced" : "Billable"}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {entry.description && <p className="text-xs text-zinc-500 truncate">{entry.description}</p>}
+                                            </div>
+                                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                                <button
+                                                    onClick={() => handleOpenTimeForm(entry)}
+                                                    className="p-1.5 text-zinc-400 hover:text-black hover:bg-zinc-100 rounded-lg transition-colors"
+                                                >
+                                                    <Pencil size={12} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleRemoveTimeEntry(entry._id)}
+                                                    className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                >
+                                                    <X size={12} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </Card>
                 </div>
             </div>
         </div>

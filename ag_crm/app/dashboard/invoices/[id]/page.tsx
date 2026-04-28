@@ -21,6 +21,7 @@ import {
     Banknote,
     ChevronDown,
     RotateCcw,
+    Timer,
 } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { Id } from "../../../../convex/_generated/dataModel";
@@ -182,6 +183,13 @@ function InvoiceDetail({ id }: { id: Id<"invoices"> }) {
     const markAsPaid = useMutation(api.invoices.markAsPaid);
     const markAsUnpaid = useMutation(api.invoices.markAsUnpaid);
     const sendReminderAction = useAction(api.resend.sendOverdueReminderEmail);
+    const importTimeEntries = useMutation(api.timeEntries.importToInvoice);
+
+    const linkedJob = useQuery(api.jobs.getByInvoiceId, invoice ? { invoiceId: invoice._id } : "skip");
+    const unbilledEntries = useQuery(
+        api.timeEntries.listUnbilledByJob,
+        linkedJob ? { jobId: linkedJob._id } : "skip"
+    );
 
     const [isDownloading, setIsDownloading] = useState(false);
     const [isSending, setIsSending] = useState(false);
@@ -192,6 +200,7 @@ function InvoiceDetail({ id }: { id: Id<"invoices"> }) {
     const [isSendingReminder, setIsSendingReminder] = useState(false);
     const [reminderSent, setReminderSent] = useState(false);
 
+    const [isImportingTime, setIsImportingTime] = useState(false);
     const [errorDetails, setErrorDetails] = useState<string | null>(null);
 
     const PAYMENT_METHODS = ["Cash", "iDeal / Wero", "Bank Transfer", "Card", "Other"];
@@ -220,6 +229,21 @@ function InvoiceDetail({ id }: { id: Id<"invoices"> }) {
             alert(`Failed to send reminder: ${err.message}`);
         } finally {
             setIsSendingReminder(false);
+        }
+    };
+
+    const handleImportTimeEntries = async () => {
+        if (!invoice || !unbilledEntries?.length) return;
+        const totalMins = unbilledEntries.reduce((sum: number, e: any) => sum + e.durationMinutes, 0);
+        const h = Math.floor(totalMins / 60), m = totalMins % 60;
+        if (!confirm(`Import ${unbilledEntries.length} billable time entr${unbilledEntries.length === 1 ? "y" : "ies"} (${h}h ${m}m) as line items on this invoice?`)) return;
+        setIsImportingTime(true);
+        try {
+            await importTimeEntries({ invoiceId: invoice._id, entryIds: unbilledEntries.map((e: any) => e._id) });
+        } catch (err: any) {
+            alert(`Failed to import time entries: ${err.message}`);
+        } finally {
+            setIsImportingTime(false);
         }
     };
 
@@ -735,7 +759,19 @@ function InvoiceDetail({ id }: { id: Id<"invoices"> }) {
 
                 {/* Items Table */}
                 <div className="space-y-6">
-                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Line Items</p>
+                    <div className="flex items-center justify-between">
+                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Line Items</p>
+                        {invoice.status !== "paid" && unbilledEntries && unbilledEntries.length > 0 && (
+                            <button
+                                onClick={handleImportTimeEntries}
+                                disabled={isImportingTime}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-xl text-xs font-bold hover:bg-blue-100 transition-all active:scale-95 disabled:opacity-50"
+                            >
+                                {isImportingTime ? <Loader2 size={12} className="animate-spin" /> : <Timer size={12} />}
+                                Import {unbilledEntries.length} time entr{unbilledEntries.length === 1 ? "y" : "ies"}
+                            </button>
+                        )}
+                    </div>
                     <table className="w-full text-left">
                         <thead>
                             <tr className="border-b-2 border-zinc-100">

@@ -93,6 +93,19 @@ export const get = query({
     },
 });
 
+export const getByInvoiceId = query({
+    args: { invoiceId: v.id("invoices") },
+    handler: async (ctx, { invoiceId }) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) return null;
+        const jobs = await ctx.db
+            .query("jobs")
+            .withIndex("by_user", (q) => q.eq("userId", identity.tokenIdentifier))
+            .collect();
+        return jobs.find((j) => j.invoiceId === invoiceId) ?? null;
+    },
+});
+
 // Create a new job
 export const add = mutation({
     args: {

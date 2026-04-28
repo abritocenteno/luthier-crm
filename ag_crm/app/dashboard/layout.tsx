@@ -18,6 +18,7 @@ import {
     BarChart2,
     Package,
     Search,
+    Clock,
 } from "lucide-react";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -107,6 +108,7 @@ export default function DashboardLayout({
         { label: "Orders", icon: ShoppingBag, href: "/dashboard/orders" },
         { label: "Parts", icon: Package, href: "/dashboard/parts" },
         { label: "Calendar", icon: Calendar, href: "/dashboard/schedule" },
+        { label: "Timesheet", icon: Clock, href: "/dashboard/timesheet" },
         { label: "Reports", icon: BarChart2, href: "/dashboard/reports" },
         { label: "Settings", icon: Settings, href: "/dashboard/settings" },
     ];

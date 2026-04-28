@@ -31,6 +31,7 @@ import type * as seed from "../seed.js";
 import type * as services from "../services.js";
 import type * as settings from "../settings.js";
 import type * as suppliers from "../suppliers.js";
+import type * as timeEntries from "../timeEntries.js";
 import type * as users from "../users.js";
 
 import type {
@@ -63,6 +64,7 @@ declare const fullApi: ApiFromModules<{
   services: typeof services;
   settings: typeof settings;
   suppliers: typeof suppliers;
+  timeEntries: typeof timeEntries;
   users: typeof users;
 }>;
 
