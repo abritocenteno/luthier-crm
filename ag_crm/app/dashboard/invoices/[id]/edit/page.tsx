@@ -590,26 +590,43 @@ function EditInvoiceForm({ id }: { id: Id<"invoices"> }) {
                                     <tr>
                                         <td colSpan={4} className="px-6 py-1 text-right">
                                             <div className="flex items-center justify-end gap-2">
-                                                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">VAT</span>
-                                                <div className="flex items-center gap-1">
+                                                <label className="flex items-center gap-1.5 cursor-pointer select-none">
                                                     <input
-                                                        type="number"
-                                                        min={0}
-                                                        max={100}
-                                                        step={0.1}
-                                                        value={formData.taxRate}
+                                                        type="checkbox"
+                                                        checked={formData.taxRate > 0}
                                                         onChange={(e) => {
-                                                            const rate = parseFloat(e.target.value) || 0;
+                                                            const rate = e.target.checked ? ((settings as any)?.defaultTaxRate ?? 21) : 0;
                                                             setFormData(prev => ({
                                                                 ...prev,
                                                                 taxRate: rate,
                                                                 amount: calculateTotal(prev.items, prev.credits, rate),
                                                             }));
                                                         }}
-                                                        className="w-16 px-2 py-1 text-xs border border-zinc-200 rounded-lg text-right focus:outline-none focus:ring-2 focus:ring-black"
+                                                        className="rounded border-zinc-300"
                                                     />
-                                                    <span className="text-[10px] text-zinc-400 font-bold">%</span>
-                                                </div>
+                                                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">VAT</span>
+                                                </label>
+                                                {formData.taxRate > 0 && (
+                                                    <div className="flex items-center gap-1">
+                                                        <input
+                                                            type="number"
+                                                            min={0}
+                                                            max={100}
+                                                            step={0.1}
+                                                            value={formData.taxRate}
+                                                            onChange={(e) => {
+                                                                const rate = parseFloat(e.target.value) || 0;
+                                                                setFormData(prev => ({
+                                                                    ...prev,
+                                                                    taxRate: rate,
+                                                                    amount: calculateTotal(prev.items, prev.credits, rate),
+                                                                }));
+                                                            }}
+                                                            className="w-16 px-2 py-1 text-xs border border-zinc-200 rounded-lg text-right focus:outline-none focus:ring-2 focus:ring-black"
+                                                        />
+                                                        <span className="text-[10px] text-zinc-400 font-bold">%</span>
+                                                    </div>
+                                                )}
                                             </div>
                                         </td>
                                         <td colSpan={2} className="px-6 py-1 text-right text-sm font-bold text-zinc-700">
