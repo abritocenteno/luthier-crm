@@ -404,6 +404,7 @@ function InvoiceDetail({ id }: { id: Id<"invoices"> }) {
                 clientEmail: invoice.client.email || "",
                 replyToEmail: settings?.contactEmail || "billing@thedotguitars.com",
                 companyName: settings?.companyName,
+                amount: invoice.amount,
                 pdfBase64: base64Data,
                 extraAttachments: extraAttachments,
             });

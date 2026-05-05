@@ -70,6 +70,7 @@ export const sendInvoiceEmail = action({
         replyToEmail: v.string(),
         pdfBase64: v.string(),
         companyName: v.optional(v.string()),
+        amount: v.optional(v.number()),
         extraAttachments: v.optional(v.array(v.object({
             filename: v.string(),
             content: v.string(),
@@ -86,11 +87,28 @@ export const sendInvoiceEmail = action({
 
         const settings = await ctx.runQuery(api.settings.get);
         const senderName = settings?.emailSenderName || args.companyName || "Your repair shop";
+        const currency = settings?.currency ?? "EUR";
+        const bankAccounts = settings?.bankAccounts ?? "";
+        const formatAmt = (n: number) => new Intl.NumberFormat("nl-NL", { style: "currency", currency }).format(n);
 
         const invoiceIntro = replaceVars(
             settings?.invoiceEmailIntro || "Please find your invoice attached to this email. If you have any questions, feel free to reply directly to this message.",
             { clientName: args.clientName, companyName: args.companyName || "Your repair shop", invoiceNumber: args.invoiceNumber }
         );
+
+        const amountLine = args.amount != null
+            ? `<tr><td style="padding:8px 0;color:#71717a;font-size:14px;">Amount due</td><td style="padding:8px 0;text-align:right;font-size:20px;font-weight:900;color:#18181b;">${formatAmt(args.amount)}</td></tr>`
+            : "";
+
+        const bankBlock = bankAccounts
+            ? `<div style="margin:24px 0;padding:16px;background:#f4f4f5;border-radius:8px;">
+                <p style="margin:0 0 6px;font-size:11px;font-weight:900;color:#71717a;text-transform:uppercase;letter-spacing:0.1em;">Payment details</p>
+                <pre style="margin:0;font-family:sans-serif;font-size:13px;color:#18181b;white-space:pre-wrap;">${bankAccounts}</pre>
+               </div>`
+            : "";
+
+        const amountText = args.amount != null ? `Amount due: ${formatAmt(args.amount)}\n\n` : "";
+        const bankText = bankAccounts ? `Payment details:\n${bankAccounts}\n\n` : "";
 
         try {
             const data = await resend.emails.send({
@@ -101,7 +119,7 @@ export const sendInvoiceEmail = action({
                     settings?.invoiceEmailSubject || "Invoice {{invoiceNumber}} — {{companyName}}",
                     { invoiceNumber: args.invoiceNumber, companyName: args.companyName || "Your repair shop", clientName: args.clientName }
                 ),
-                text: `Dear ${args.clientName},\n\nPlease find attached invoice ${args.invoiceNumber} from ${company}.\n\nThank you for your business!\n\nBest regards,\n${company}`,
+                text: `Dear ${args.clientName},\n\nPlease find attached invoice ${args.invoiceNumber} from ${company}.\n\n${amountText}${bankText}${invoiceIntro}\n\nThank you for your business!\n\nBest regards,\n${company}`,
                 html: `
                     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 24px; color: #18181b;">
                         <h2 style="font-size: 22px; font-weight: 900; margin: 0 0 4px;">Invoice ${args.invoiceNumber}</h2>
@@ -111,6 +129,9 @@ export const sendInvoiceEmail = action({
                         <p style="margin: 0 0 24px; line-height: 1.6;">
                             ${invoiceIntro}
                         </p>
+
+                        ${amountLine ? `<table style="width:100%;border-top:1px solid #e4e4e7;margin:0 0 8px;">${amountLine}</table>` : ""}
+                        ${bankBlock}
 
                         <hr style="border: none; border-top: 1px solid #e4e4e7; margin: 32px 0;" />
                         <p style="margin: 0; font-size: 12px; color: #a1a1aa;">
