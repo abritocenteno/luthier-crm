@@ -30,23 +30,27 @@ import { cn } from "@/lib/utils";
 import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
 
 /**
- * Smart recovery button shown when Convex reports Unauthenticated.
+ * Recovery button shown when Convex reports Unauthenticated.
  *
- * Two cases:
- *  1. Clerk session is still alive but Convex lost the token (most common after
- *     a tab sits idle). A simple page reload re-fetches a fresh JWT and Convex
- *     reconnects automatically.
- *  2. The user is genuinely signed out. After reload the landing page / Clerk
- *     middleware will handle redirecting them to sign in.
+ * Sends the user to the landing page ("/") — which is the app's auth entry
+ * point — rather than reloading /dashboard. The landing page resolves both
+ * cases on a fresh load:
+ *  1. Clerk session still alive but Convex lost the token (common after a tab
+ *     sits idle): "/" re-auths with a fresh JWT and <Authenticated> redirects
+ *     straight back to /dashboard.
+ *  2. Genuinely signed out: "/" shows <Unauthenticated> with the Sign In login
+ *     modal.
  *
- * Using a modal SignInButton here causes the Clerk error
- * "cannot_render_single_session_enabled" because Clerk still considers the
- * user signed-in even though Convex has lost the token.
+ * Note: reloading /dashboard here did nothing — with no Clerk middleware,
+ * /dashboard just re-renders the same Unauthenticated state. A modal
+ * SignInButton can't be used in-place either, as Clerk throws
+ * "cannot_render_single_session_enabled" while it still considers the user
+ * signed-in.
  */
 function SessionRecoveryButton() {
     const handleRecover = () => {
-        // Hard reload — forces Clerk to re-issue a fresh JWT, Convex re-auths.
-        window.location.reload();
+        // Full navigation to the auth entry point (not a same-page reload).
+        window.location.href = "/";
     };
 
     return (
@@ -55,7 +59,7 @@ function SessionRecoveryButton() {
             className="flex items-center gap-2 bg-black text-white px-8 py-3 rounded-xl font-bold hover:bg-zinc-800 transition-all active:scale-95 shadow-lg shadow-black/10"
         >
             <RefreshCw size={18} />
-            Reconnect Session
+            Sign In Again
         </button>
     );
 }
