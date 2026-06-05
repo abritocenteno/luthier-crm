@@ -71,13 +71,12 @@ function EditInvoiceForm({ id }: { id: Id<"invoices"> }) {
             const credits = (invoice as any).credits || [];
             const taxRate = (invoice as any).taxRate ?? (settings as any)?.defaultTaxRate ?? 21;
             const subtotal = items.reduce((acc: number, item: any) => acc + (item.amount * item.unitPrice), 0);
-            const taxAmount = subtotal * (taxRate / 100);
             const creditsTotal = credits.reduce((acc: number, c: any) => acc + c.amount, 0);
             setFormData({
                 clientId: invoice.clientId,
                 invoiceNumber: invoice.invoiceNumber,
                 date: invoice.date,
-                amount: subtotal + taxAmount - creditsTotal,
+                amount: subtotal - creditsTotal,
                 status: invoice.status,
                 paymentMethod: invoice.paymentMethod || "",
                 items,
@@ -91,13 +90,17 @@ function EditInvoiceForm({ id }: { id: Id<"invoices"> }) {
     const calculateTotal = (
         items: typeof formData.items,
         credits: typeof formData.credits = formData.credits,
-        taxRate: number = formData.taxRate,
+        _taxRate: number = formData.taxRate,
     ) => {
+        // Line-item prices are VAT-inclusive, so VAT is not added to the total.
         const subtotal = items.reduce((acc, item) => acc + (item.amount * item.unitPrice), 0);
-        const taxAmount = subtotal * (taxRate / 100);
         const creditsTotal = credits.reduce((acc, c) => acc + c.amount, 0);
-        return subtotal + taxAmount - creditsTotal;
+        return subtotal - creditsTotal;
     };
+
+    // VAT contained within a VAT-inclusive amount (informational only).
+    const includedVat = (gross: number, taxRate: number) =>
+        taxRate > 0 ? gross * (taxRate / (100 + taxRate)) : 0;
 
     const handleAddItem = () => {
         setFormData(prev => ({
@@ -586,57 +589,26 @@ function EditInvoiceForm({ id }: { id: Id<"invoices"> }) {
                                         </td>
                                         <td />
                                     </tr>
-                                    {/* VAT row */}
-                                    <tr>
-                                        <td colSpan={4} className="px-6 py-1 text-right">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <label className="flex items-center gap-1.5 cursor-pointer select-none">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={formData.taxRate > 0}
-                                                        onChange={(e) => {
-                                                            const rate = e.target.checked ? ((settings as any)?.defaultTaxRate ?? 21) : 0;
-                                                            setFormData(prev => ({
-                                                                ...prev,
-                                                                taxRate: rate,
-                                                                amount: calculateTotal(prev.items, prev.credits, rate),
-                                                            }));
-                                                        }}
-                                                        className="rounded border-zinc-300"
-                                                    />
-                                                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">VAT</span>
-                                                </label>
-                                                {formData.taxRate > 0 && (
-                                                    <div className="flex items-center gap-1">
-                                                        <input
-                                                            type="number"
-                                                            min={0}
-                                                            max={100}
-                                                            step={0.1}
-                                                            value={formData.taxRate}
-                                                            onChange={(e) => {
-                                                                const rate = parseFloat(e.target.value) || 0;
-                                                                setFormData(prev => ({
-                                                                    ...prev,
-                                                                    taxRate: rate,
-                                                                    amount: calculateTotal(prev.items, prev.credits, rate),
-                                                                }));
-                                                            }}
-                                                            className="w-16 px-2 py-1 text-xs border border-zinc-200 rounded-lg text-right focus:outline-none focus:ring-2 focus:ring-black"
-                                                        />
-                                                        <span className="text-[10px] text-zinc-400 font-bold">%</span>
-                                                    </div>
+                                    {/* VAT row (informational — included in prices) */}
+                                    {formData.taxRate > 0 && (
+                                        <tr>
+                                            <td colSpan={4} className="px-6 py-1 text-right">
+                                                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+                                                    Incl. VAT ({formData.taxRate}%)
+                                                </span>
+                                            </td>
+                                            <td colSpan={2} className="px-6 py-1 text-right text-sm font-bold text-zinc-700">
+                                                {formatCurrency(
+                                                    includedVat(
+                                                        formData.items.reduce((acc, item) => acc + item.amount * item.unitPrice, 0),
+                                                        formData.taxRate
+                                                    ),
+                                                    settings?.currency
                                                 )}
-                                            </div>
-                                        </td>
-                                        <td colSpan={2} className="px-6 py-1 text-right text-sm font-bold text-zinc-700">
-                                            {formatCurrency(
-                                                formData.items.reduce((acc, item) => acc + item.amount * item.unitPrice, 0) * (formData.taxRate / 100),
-                                                settings?.currency
-                                            )}
-                                        </td>
-                                        <td />
-                                    </tr>
+                                            </td>
+                                            <td />
+                                        </tr>
+                                    )}
                                     {/* Grand total row */}
                                     <tr className="bg-zinc-50/80 border-t border-zinc-100">
                                         <td colSpan={4} className="px-6 py-4 text-right">

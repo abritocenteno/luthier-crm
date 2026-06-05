@@ -34,47 +34,36 @@ export default function SettingsPage() {
     const [isImporting, setIsImporting] = useState(false);
 
     const PRICING_GUIDE_SERVICES = [
-        // Setups
-        { name: "Basic Setup", description: "Adjustment of neck, string height and intonation. Light clean.", type: "fixed", defaultPrice: 70 },
-        { name: "Full Setup", description: "Full adjustment + fretboard clean, light fret polish and hardware check.", type: "fixed", defaultPrice: 85 },
-        { name: "Premium Setup", description: "Full setup + deep clean, full fret polish and detailed finishing.", type: "fixed", defaultPrice: 110 },
-        { name: "String Installation", description: "Labour only, strings not included.", type: "fixed", defaultPrice: 10 },
-        { name: "Floyd Rose / Floating Trem Setup", description: "Additional charge on top of setup.", type: "fixed", defaultPrice: 20 },
-        { name: "5/6-String Bass Surcharge", description: "Additional charge for 5 or 6 string bass setups.", type: "fixed", defaultPrice: 10 },
-        { name: "12-String Surcharge", description: "Additional charge for 12-string setups.", type: "fixed", defaultPrice: 20 },
-        // Nut & Saddle
-        { name: "Nut Adjustment", description: "Adjustment of existing nut.", type: "fixed", defaultPrice: 30 },
-        { name: "New Synthetic Nut", description: "Supply and fit new synthetic nut.", type: "fixed", defaultPrice: 70 },
-        { name: "New Bone Nut", description: "Supply and fit new bone nut.", type: "fixed", defaultPrice: 100 },
-        { name: "Saddle Adjustment", description: "Adjustment of existing saddle.", type: "fixed", defaultPrice: 30 },
-        { name: "New Saddle (Acoustic)", description: "Supply and fit new acoustic saddle.", type: "fixed", defaultPrice: 75 },
-        // Fretwork
-        { name: "Fret Polish", description: "Full fret polish and cleaning.", type: "fixed", defaultPrice: 45 },
-        { name: "Fret Level & Crown", description: "Full fret level, recrown and polish.", type: "fixed", defaultPrice: 130 },
-        { name: "Partial Refret", description: "Partial refret (price varies by scope).", type: "fixed", defaultPrice: 90 },
-        { name: "Full Refret", description: "Complete refret with fret level and setup.", type: "fixed", defaultPrice: 280 },
-        // Electronics
-        { name: "Pickup Installation", description: "Per pickup, labour only.", type: "fixed", defaultPrice: 40 },
-        { name: "Complete Wiring", description: "Full wiring harness installation.", type: "fixed", defaultPrice: 90 },
-        { name: "Output Jack Replacement", description: "Replace output jack.", type: "fixed", defaultPrice: 30 },
-        { name: "Potmeter Replacement", description: "Replace volume or tone potmeter.", type: "fixed", defaultPrice: 35 },
-        { name: "Shielding", description: "Cavity shielding to reduce noise.", type: "fixed", defaultPrice: 70 },
-        // Repairs
-        { name: "Crack Repair", description: "Structural crack repair (price varies by severity).", type: "fixed", defaultPrice: 80 },
-        { name: "Headstock Repair", description: "Headstock break or crack repair.", type: "fixed", defaultPrice: 120 },
-        { name: "Bridge Reglue (Acoustic)", description: "Reglue lifting acoustic bridge.", type: "fixed", defaultPrice: 120 },
-        { name: "Hardware Installation", description: "Tuners, strap buttons, guards, etc.", type: "fixed", defaultPrice: 40 },
-        // Advanced
-        { name: "Neck Reset (Acoustic)", description: "Acoustic neck reset (price varies by instrument).", type: "fixed", defaultPrice: 300 },
-        { name: "Restoration Work", description: "Instrument restoration, from quoted price.", type: "fixed", defaultPrice: 300 },
-        { name: "Custom Modifications", description: "Custom mods and non-standard work.", type: "fixed", defaultPrice: 100 },
-        // Hourly
-        { name: "Hourly Rate", description: "For complex or undefined repairs.", type: "hourly", defaultPrice: 65 },
-        // Bundles
-        { name: "Bundle: Full Setup + Strings", description: "Full setup + string installation (strings excl.).", type: "fixed", defaultPrice: 95 },
-        { name: "Bundle: Fret Polish + Setup", description: "Fret polish combined with full setup.", type: "fixed", defaultPrice: 110 },
-        { name: "Bundle: Revive Package", description: "Full setup + fret polish + deep clean.", type: "fixed", defaultPrice: 125 },
-        { name: "Bundle: Pickup Install (2x) + Setup", description: "Install 2 pickups plus full setup.", type: "fixed", defaultPrice: 150 },
+        // Complete setup
+        { name: "Complete Guitar Setup", description: "String change, action, truss rod, pickup height and intonation, electronics check, pot cleaning, fretboard clean & condition, fret polish and body polish.", type: "fixed", defaultPrice: 75 },
+        // Setup surcharges
+        { name: "12-String / Floyd Rose Surcharge", description: "Additional charge for 12-string or Floyd Rose-style tremolo setups.", type: "fixed", defaultPrice: 10 },
+        { name: "Standard Gauge Strings (Acoustic/Electric)", description: "Surcharge for supplied standard gauge acoustic or electric strings.", type: "fixed", defaultPrice: 10 },
+        { name: "12-String Strings", description: "Surcharge for a supplied set of 12-string strings.", type: "fixed", defaultPrice: 15 },
+        { name: "Bass Strings", description: "Surcharge for a supplied set of bass strings.", type: "fixed", defaultPrice: 20 },
+        // Custom maintenance — à la carte
+        { name: "Strap Lock Installation", description: "Fit a pair of strap locks.", type: "fixed", defaultPrice: 15 },
+        { name: "Output Jack Replacement", description: "Replace the output jack.", type: "fixed", defaultPrice: 25 },
+        { name: "Pickup Switch Replacement", description: "Replace the pickup selector switch.", type: "fixed", defaultPrice: 35 },
+        { name: "Pickup Replacement (1)", description: "Replace one pickup, labour only.", type: "fixed", defaultPrice: 30 },
+        { name: "Pickup Replacement (2)", description: "Replace two pickups, labour only.", type: "fixed", defaultPrice: 55 },
+        { name: "Pickup Replacement (3)", description: "Replace three pickups, labour only.", type: "fixed", defaultPrice: 75 },
+        { name: "Potentiometer Replacement (1)", description: "Replace one potentiometer.", type: "fixed", defaultPrice: 25 },
+        { name: "Potentiometer Replacement (2)", description: "Replace two potentiometers.", type: "fixed", defaultPrice: 45 },
+        { name: "Potentiometer Replacement (3)", description: "Replace three potentiometers.", type: "fixed", defaultPrice: 60 },
+        { name: "Acoustic Pickup Installation", description: "Install a pickup in an acoustic guitar. From this price.", type: "fixed", defaultPrice: 50 },
+        { name: "New Nut (Pre-made)", description: "Supply and fit a pre-made nut.", type: "fixed", defaultPrice: 35 },
+        { name: "Custom Bone Nut", description: "Hand-cut and fit a custom bone nut.", type: "fixed", defaultPrice: 55 },
+        { name: "Acoustic Bridge Replacement", description: "Replace an acoustic bridge saddle.", type: "fixed", defaultPrice: 25 },
+        { name: "Neck Shim Installation", description: "Fit a neck shim to correct neck angle.", type: "fixed", defaultPrice: 25 },
+        { name: "Bigsby Tremolo Installation", description: "Install a Bigsby-style tremolo.", type: "fixed", defaultPrice: 45 },
+        { name: "Tuning Machine Replacement", description: "Replace a set of tuning machines.", type: "fixed", defaultPrice: 45 },
+        { name: "Electronics Shielding (Copper Foil)", description: "Shield the control and pickup cavities with copper foil.", type: "fixed", defaultPrice: 50 },
+        { name: "Complete Fret Dressing", description: "Full fret level, crown and polish.", type: "fixed", defaultPrice: 150 },
+        { name: "Passive Component Diagnostics", description: "Diagnose passive electronics (pickups, pots, wiring).", type: "fixed", defaultPrice: 25 },
+        { name: "General Diagnostics", description: "General fault diagnosis, charged per 15 minutes.", type: "fixed", defaultPrice: 15 },
+        { name: "Same-Day Expedited Service", description: "Surcharge for same-day expedited turnaround.", type: "fixed", defaultPrice: 25 },
+        { name: "String Replacement (Labour)", description: "String change as a standalone job. Strings not included.", type: "fixed", defaultPrice: 20 },
     ] as const;
 
     const handleImportPricing = async () => {

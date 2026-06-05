@@ -820,7 +820,8 @@ function InvoiceDetail({ id }: { id: Id<"invoices"> }) {
                     const itemsSubtotal = (invoice.items ?? []).reduce(
                         (acc, item) => acc + (item.amount * item.unitPrice), 0
                     );
-                    const taxAmount = itemsSubtotal * (taxRate / 100);
+                    // Prices are VAT-inclusive: extract the VAT contained in the total.
+                    const taxAmount = taxRate > 0 ? itemsSubtotal * (taxRate / (100 + taxRate)) : 0;
 
                     return (
                         <div className="flex justify-end pt-6 border-t-2 border-zinc-100">
@@ -836,7 +837,7 @@ function InvoiceDetail({ id }: { id: Id<"invoices"> }) {
                                 {taxRate > 0 && (
                                     <div className="flex justify-between items-center">
                                         <span className="text-zinc-500 font-bold uppercase tracking-widest text-[10px]">
-                                            VAT ({taxRate}%)
+                                            Incl. VAT ({taxRate}%)
                                         </span>
                                         <span className="text-sm font-bold text-zinc-900">{formatCurrency(taxAmount, settings?.currency)}</span>
                                     </div>
