@@ -19,6 +19,7 @@ import {
     Package,
     Search,
     Clock,
+    Library,
 } from "lucide-react";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -141,6 +142,7 @@ export default function DashboardLayout({
         { label: "Invoices", icon: FileText, href: "/dashboard/invoices" },
         { label: "Orders", icon: ShoppingBag, href: "/dashboard/orders" },
         { label: "Parts", icon: Package, href: "/dashboard/parts" },
+        { label: "Library", icon: Library, href: "/dashboard/library" },
         { label: "Calendar", icon: Calendar, href: "/dashboard/schedule" },
         { label: "Timesheet", icon: Clock, href: "/dashboard/timesheet" },
         { label: "Reports", icon: BarChart2, href: "/dashboard/reports" },
