@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { exportInvoices } from "@/lib/exportCsv";
 import { cn, formatCurrency } from "@/lib/utils";
+import { LEAD_SOURCES, DEFAULT_SOURCE, sourceMeta } from "@/lib/sources";
 import { Id } from "../../../convex/_generated/dataModel";
 
 const Card = ({ children, className }: { children: React.ReactNode; className?: string }) => (
@@ -51,6 +52,7 @@ export default function InvoicesPage() {
 
     const [search, setSearch]           = useState("");
     const [dateFilter, setDateFilter]   = useState<DateFilter>("all");
+    const [sourceFilter, setSourceFilter] = useState<string>("all");
     const [sortField, setSortField]     = useState<SortField>("date");
     const [sortDir, setSortDir]         = useState<SortDir>("desc");
 
@@ -69,7 +71,8 @@ export default function InvoicesPage() {
         ?.filter(inv =>
             (inv.invoiceNumber.toLowerCase().includes(search.toLowerCase()) ||
              inv.clientName.toLowerCase().includes(search.toLowerCase())) &&
-            (dateFilter === "all" || inv.date >= now - MS[dateFilter])
+            (dateFilter === "all" || inv.date >= now - MS[dateFilter]) &&
+            (sourceFilter === "all" || ((inv as any).source || DEFAULT_SOURCE) === sourceFilter)
         )
         .sort((a, b) => {
             let cmp = 0;
@@ -157,6 +160,23 @@ export default function InvoicesPage() {
                             </button>
                         ))}
                     </div>
+                    {/* Source filter pills */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        {[{ value: "all", label: "All sources" }, ...LEAD_SOURCES].map(s => (
+                            <button
+                                key={s.value}
+                                onClick={() => setSourceFilter(s.value)}
+                                className={cn(
+                                    "px-3 py-2 rounded-xl text-xs font-semibold transition-all",
+                                    sourceFilter === s.value
+                                        ? "bg-black text-white shadow-sm"
+                                        : "bg-white border border-zinc-200 text-zinc-500 hover:bg-zinc-50"
+                                )}
+                            >
+                                {s.label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 {/* Mobile card list */}
@@ -188,7 +208,14 @@ export default function InvoicesPage() {
                                         {invoice.status}
                                     </Badge>
                                 </div>
-                                <p className="text-xs text-zinc-500 truncate">{invoice.clientName}</p>
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                    <p className="text-xs text-zinc-500 truncate">{invoice.clientName}</p>
+                                    {((invoice as any).source || DEFAULT_SOURCE) !== DEFAULT_SOURCE && (
+                                        <span className={cn("shrink-0 px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border", sourceMeta((invoice as any).source).badgeClass)}>
+                                            {sourceMeta((invoice as any).source).short}
+                                        </span>
+                                    )}
+                                </div>
                                 <p className="text-xs text-zinc-400 mt-0.5">
                                     {formatCurrency(invoice.amount, settings?.currency)} · {new Date(invoice.date).toLocaleDateString()}
                                 </p>
@@ -256,6 +283,11 @@ export default function InvoicesPage() {
                                                 <span className="text-sm font-semibold text-zinc-900 group-hover/link:underline underline-offset-4 decoration-zinc-300">
                                                     {invoice.clientName}
                                                 </span>
+                                                {((invoice as any).source || DEFAULT_SOURCE) !== DEFAULT_SOURCE && (
+                                                    <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border", sourceMeta((invoice as any).source).badgeClass)}>
+                                                        {sourceMeta((invoice as any).source).short}
+                                                    </span>
+                                                )}
                                             </Link>
                                         </td>
                                         <td className="px-6 py-4 text-right">

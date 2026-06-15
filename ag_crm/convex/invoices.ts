@@ -61,6 +61,16 @@ export const list = query({
             .withIndex("by_user", (q) => q.eq("userId", identity.tokenIdentifier))
             .collect();
 
+        // Map each invoice to its linked job's source (job = financial source of truth)
+        const jobs = await ctx.db
+            .query("jobs")
+            .withIndex("by_user", (q) => q.eq("userId", identity.tokenIdentifier))
+            .collect();
+        const sourceByInvoice = new Map<string, string>();
+        for (const job of jobs) {
+            if (job.invoiceId && job.source) sourceByInvoice.set(job.invoiceId, job.source);
+        }
+
         return Promise.all(
             invoices.map(async (invoice) => {
                 const client = await ctx.db.get(invoice.clientId);
@@ -70,6 +80,7 @@ export const list = query({
                     clientImageUrl: client?.imageStorageId
                         ? await ctx.storage.getUrl(client.imageStorageId)
                         : client?.imageUrl,
+                    source: sourceByInvoice.get(invoice._id) ?? client?.source ?? null,
                 };
             })
         );
