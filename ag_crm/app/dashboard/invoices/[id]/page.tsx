@@ -24,6 +24,7 @@ import {
     Timer,
 } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
+import { DEFAULT_SOURCE, sourceMeta } from "@/lib/sources";
 import { Id } from "../../../../convex/_generated/dataModel";
 import jsPDF from "jspdf";
 import { toPng } from "html-to-image";
@@ -438,6 +439,10 @@ function InvoiceDetail({ id }: { id: Id<"invoices"> }) {
         );
     }
 
+    // Job is the financial source of truth; fall back to the client's source.
+    const invoiceSource = (linkedJob?.source) ?? (invoice as any).client?.source ?? DEFAULT_SOURCE;
+    const showSourceTag = invoiceSource !== DEFAULT_SOURCE;
+
     return (
         <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
             {/* Header / Actions */}
@@ -694,6 +699,11 @@ function InvoiceDetail({ id }: { id: Id<"invoices"> }) {
                             )}
                             {!(invoice as any).client?.street && !(invoice as any).client?.city && (
                                 <p className="text-sm text-zinc-400 italic">No address on file.</p>
+                            )}
+                            {showSourceTag && (
+                                <p className="text-xs font-bold text-orange-600 pt-2">
+                                    via {sourceMeta(invoiceSource).label}
+                                </p>
                             )}
                         </div>
                     </div>
