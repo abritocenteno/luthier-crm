@@ -6,6 +6,7 @@ import { api } from "../../../../../convex/_generated/api";
 import { Id } from "../../../../../convex/_generated/dataModel";
 import { Printer, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { MEASUREMENT_FIELDS, categoryForInstrument, TUNINGS, GAUGE_SETS, estimateTension } from "@/lib/setupSpecs";
 
 const CHECKLIST_PARTS = [
     { key: "tuners",      label: "Tuners / Tuning Machines" },
@@ -55,6 +56,30 @@ export default function JobPrintPage() {
 
     const instrumentLabel = [job.instrumentBrand, job.instrumentModel, job.instrumentType].filter(Boolean).join(" ");
     const isStandalone = typeof window !== "undefined" && window.self === window.top;
+
+    // Setup sheet (target vs. actual measurements)
+    const setup = (job as any).setupSpec as
+        | { tuning?: string; gaugeSet?: string; scaleLength?: number; measurements?: Record<string, { target?: number; actual?: number }>; notes?: string }
+        | undefined;
+    const setupCategory = categoryForInstrument(job.instrumentType);
+    const setupFields = MEASUREMENT_FIELDS.filter((f) => f.appliesTo.includes(setupCategory));
+    const setupRows = setup
+        ? setupFields.filter((f) => {
+            const p = setup.measurements?.[f.key];
+            return p && (p.target !== undefined || p.actual !== undefined);
+        })
+        : [];
+    const setupTuning = TUNINGS.find((t) => t.name === setup?.tuning);
+    const setupGauge = GAUGE_SETS.find((s) => s.name === setup?.gaugeSet);
+    const setupTension = setupTuning && setupGauge && setup?.scaleLength
+        ? estimateTension(setupTuning.notes, setupGauge, setup.scaleLength)
+        : null;
+    const setupChips = [
+        setup?.tuning && `Tuning: ${setup.tuning}`,
+        setup?.gaugeSet && `Gauge: ${setup.gaugeSet}`,
+        setup?.scaleLength && `Scale: ${setup.scaleLength}"`,
+    ].filter(Boolean) as string[];
+    const hasSetup = setupChips.length > 0 || setupRows.length > 0 || !!setup?.notes;
 
     return (
         <>
@@ -173,6 +198,51 @@ export default function JobPrintPage() {
                         {job.intakeChecklist?.notes && (
                             <p className="text-sm text-zinc-600 bg-zinc-50 rounded-xl p-4 mt-2">
                                 <span className="font-bold text-zinc-800">Notes: </span>{job.intakeChecklist.notes}
+                            </p>
+                        )}
+                    </div>
+                )}
+
+                {/* Setup Specifications */}
+                {hasSetup && (
+                    <div className="space-y-4">
+                        <h2 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] border-t border-zinc-200 pt-6">
+                            Setup Specifications
+                        </h2>
+                        {(setupChips.length > 0 || setupTension) && (
+                            <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-zinc-700">
+                                {setupChips.map((c) => <span key={c}>{c}</span>)}
+                                {setupTension && (
+                                    <span>Est. tension: <span className="font-bold">{setupTension.totalKg.toFixed(1)} kg</span> ({setupTension.totalLb.toFixed(0)} lb)</span>
+                                )}
+                            </div>
+                        )}
+                        {setupRows.length > 0 && (
+                            <table className="w-full border-collapse text-sm">
+                                <thead>
+                                    <tr className="border-b-2 border-zinc-200">
+                                        <th className="text-left py-2 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Measurement</th>
+                                        <th className="text-right py-2 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Target (mm)</th>
+                                        <th className="text-right py-2 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Actual (mm)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {setupRows.map((f) => {
+                                        const p = setup!.measurements![f.key]!;
+                                        return (
+                                            <tr key={f.key} className="border-b border-zinc-100">
+                                                <td className="py-2.5 text-zinc-700">{f.label}</td>
+                                                <td className="py-2.5 text-right text-zinc-500 tabular-nums">{p.target !== undefined ? p.target : "—"}</td>
+                                                <td className="py-2.5 text-right font-bold tabular-nums">{p.actual !== undefined ? p.actual : "—"}</td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        )}
+                        {setup?.notes && (
+                            <p className="text-sm text-zinc-600 bg-zinc-50 rounded-xl p-4">
+                                <span className="font-bold text-zinc-800">Notes: </span>{setup.notes}
                             </p>
                         )}
                     </div>

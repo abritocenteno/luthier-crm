@@ -100,6 +100,7 @@ export const getByToken = query({
                     workItems: j.workItems,
                     description: j.description,
                     sentQuoteAt: j.sentQuoteAt,
+                    setupSpec: j.setupSpec,
                 })),
             invoices: invoices
                 .filter((i) => i.status !== "paid")

@@ -148,6 +148,23 @@ export default defineSchema({
             electronics: v.optional(v.string()),
             notes: v.optional(v.string()),
         })),
+        // Setup sheet: target vs actual measurements, tuning & string gauge.
+        setupSpec: v.optional(v.object({
+            tuning: v.optional(v.string()),       // tuning name, e.g. "E Standard"
+            gaugeSet: v.optional(v.string()),     // gauge-set name, e.g. "Light (10–46)"
+            scaleLength: v.optional(v.number()),  // inches
+            // Each metric stores an optional target and actual (mm).
+            measurements: v.optional(v.object({
+                actionTreble: v.optional(v.object({ target: v.optional(v.number()), actual: v.optional(v.number()) })),
+                actionBass: v.optional(v.object({ target: v.optional(v.number()), actual: v.optional(v.number()) })),
+                relief: v.optional(v.object({ target: v.optional(v.number()), actual: v.optional(v.number()) })),
+                nutTreble: v.optional(v.object({ target: v.optional(v.number()), actual: v.optional(v.number()) })),
+                nutBass: v.optional(v.object({ target: v.optional(v.number()), actual: v.optional(v.number()) })),
+                pickupTreble: v.optional(v.object({ target: v.optional(v.number()), actual: v.optional(v.number()) })),
+                pickupBass: v.optional(v.object({ target: v.optional(v.number()), actual: v.optional(v.number()) })),
+            })),
+            notes: v.optional(v.string()),
+        })),
         // Work items (services to be performed)
         workItems: v.optional(v.array(v.object({
             name: v.string(),

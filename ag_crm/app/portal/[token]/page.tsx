@@ -10,6 +10,7 @@ import {
     Guitar, Calendar, ChevronRight, Loader2, Check, ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { MEASUREMENT_FIELDS, categoryForInstrument } from "@/lib/setupSpecs";
 
 const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(amount);
@@ -40,6 +41,13 @@ function JobCard({ job, token }: {
         workItems?: Array<{ name: string; description?: string; type: string; unitPrice: number; hours?: number }>;
         description?: string;
         sentQuoteAt?: number;
+        setupSpec?: {
+            tuning?: string;
+            gaugeSet?: string;
+            scaleLength?: number;
+            measurements?: Record<string, { target?: number; actual?: number }>;
+            notes?: string;
+        };
     };
     token: string;
 }) {
@@ -54,6 +62,18 @@ function JobCard({ job, token }: {
     const workItems = job.workItems ?? [];
     const workTotal = workItems.reduce((sum, wi) =>
         sum + (wi.type === "hourly" ? wi.unitPrice * (wi.hours ?? 1) : wi.unitPrice), 0);
+
+    // Setup specs — only surfaced to the customer once actual measurements exist.
+    const setup = job.setupSpec;
+    const setupCategory = categoryForInstrument(job.instrumentType);
+    const setupRows = setup
+        ? MEASUREMENT_FIELDS.filter((f) => f.appliesTo.includes(setupCategory) && setup.measurements?.[f.key]?.actual !== undefined)
+        : [];
+    const setupChips = [
+        setup?.tuning && `Tuning: ${setup.tuning}`,
+        setup?.gaugeSet && `Strings: ${setup.gaugeSet}`,
+    ].filter(Boolean) as string[];
+    const showSetup = setupRows.length > 0 || setupChips.length > 0;
 
     const handleAccept = async () => {
         setAccepting(true);
@@ -145,6 +165,30 @@ function JobCard({ job, token }: {
                     </div>
                 )}
             </div>
+
+            {/* Setup specifications (shown once the setup has been measured) */}
+            {showSetup && (
+                <div className="border-t border-zinc-100 px-6 py-4">
+                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-3">Setup Specifications</p>
+                    {setupChips.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-3">
+                            {setupChips.map((c) => (
+                                <span key={c} className="text-xs bg-zinc-50 border border-zinc-200 rounded-lg px-2.5 py-1 text-zinc-600 font-medium">{c}</span>
+                            ))}
+                        </div>
+                    )}
+                    {setupRows.length > 0 && (
+                        <div className="space-y-1.5">
+                            {setupRows.map((f) => (
+                                <div key={f.key} className="flex items-center justify-between gap-4 py-1 border-b border-zinc-50 last:border-0">
+                                    <span className="text-sm text-zinc-600">{f.label}</span>
+                                    <span className="text-sm font-semibold text-zinc-900 shrink-0 tabular-nums">{setup!.measurements![f.key]!.actual} mm</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Work items (shown for quotes) */}
             {(job.status === "quoted" || workItems.length > 0) && workItems.length > 0 && (

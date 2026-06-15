@@ -12,6 +12,7 @@ import {
     ChevronRight, Package, User, Inbox, Bell, Send, ImagePlus, X, Trash2, Printer, ClipboardList, Timer, Plus, Pencil,
 } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
+import { SetupSheetCard } from "@/components/SetupSheetCard";
 
 const STATUS_STEPS = [
     { key: "quoted",        label: "Quote",             desc: "Awaiting approval" },
@@ -602,6 +603,14 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
                             </div>
                         </Card>
                     )}
+
+                    {/* Setup Sheet */}
+                    <SetupSheetCard
+                        jobId={job._id}
+                        instrumentType={job.instrumentType}
+                        setupSpec={(job as any).setupSpec}
+                        readOnly={job.status === "closed"}
+                    />
 
                     {/* Photos */}
                     <Card>

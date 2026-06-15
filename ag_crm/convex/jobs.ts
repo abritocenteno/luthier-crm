@@ -20,6 +20,27 @@ const intakeChecklistSchema = v.object({
     notes: v.optional(v.string()),
 });
 
+const measurementSchema = v.object({
+    target: v.optional(v.number()),
+    actual: v.optional(v.number()),
+});
+
+const setupSpecSchema = v.object({
+    tuning: v.optional(v.string()),
+    gaugeSet: v.optional(v.string()),
+    scaleLength: v.optional(v.number()),
+    measurements: v.optional(v.object({
+        actionTreble: v.optional(measurementSchema),
+        actionBass: v.optional(measurementSchema),
+        relief: v.optional(measurementSchema),
+        nutTreble: v.optional(measurementSchema),
+        nutBass: v.optional(measurementSchema),
+        pickupTreble: v.optional(measurementSchema),
+        pickupBass: v.optional(measurementSchema),
+    })),
+    notes: v.optional(v.string()),
+});
+
 // List all jobs for the current user, with client name joined
 export const list = query({
     args: {},
@@ -119,6 +140,7 @@ export const add = mutation({
         instrumentSerial: v.optional(v.string()),
         instrumentColor: v.optional(v.string()),
         intakeChecklist: v.optional(intakeChecklistSchema),
+        setupSpec: v.optional(setupSpecSchema),
         workItems: v.optional(v.array(workItemSchema)),
         intakeDate: v.number(),
         estimatedCompletionDate: v.optional(v.number()),
@@ -151,6 +173,7 @@ export const update = mutation({
         instrumentSerial: v.optional(v.string()),
         instrumentColor: v.optional(v.string()),
         intakeChecklist: v.optional(intakeChecklistSchema),
+        setupSpec: v.optional(setupSpecSchema),
         workItems: v.optional(v.array(workItemSchema)),
         intakeDate: v.number(),
         estimatedCompletionDate: v.optional(v.number()),
@@ -310,5 +333,18 @@ export const markQuoteSent = mutation({
         const job = await ctx.db.get(id);
         if (!job || job.userId !== identity.tokenIdentifier) throw new Error("Not found");
         await ctx.db.patch(id, { sentQuoteAt: Date.now() });
+    },
+});
+
+// Save the Setup Sheet (tuning, gauge, measurements) inline from the job page
+export const updateSetupSpec = mutation({
+    args: { id: v.id("jobs"), setupSpec: setupSpecSchema },
+    handler: async (ctx, { id, setupSpec }) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) throw new Error("Unauthorized");
+        const job = await ctx.db.get(id);
+        if (!job || job.userId !== identity.tokenIdentifier) throw new Error("Not found");
+        if (job.status === "closed") throw new Error("Closed jobs cannot be edited.");
+        await ctx.db.patch(id, { setupSpec });
     },
 });
