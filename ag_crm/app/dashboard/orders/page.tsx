@@ -6,7 +6,7 @@ import { api } from "../../../convex/_generated/api";
 import Link from "next/link";
 import {
     ShoppingBag, Plus, Search, Trash2, Edit2, ChevronRight,
-    Calendar, Building2, ChevronUp, ChevronDown, ChevronsUpDown,
+    Calendar, Building2, ChevronUp, ChevronDown, ChevronsUpDown, Download,
 } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { Id } from "../../../convex/_generated/dataModel";
@@ -61,6 +61,36 @@ export default function OrdersPage() {
     const handleDelete = async (id: Id<"orders">) => {
         if (!confirm("Are you sure you want to delete this order?")) return;
         try { await removeOrder({ id }); } catch (e) { console.error(e); }
+    };
+
+    const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+    // Convex storage URLs are cross-origin, so the anchor `download` attribute is
+    // ignored — fetch the file as a blob and save it with a sensible filename.
+    const handleDownload = async (url: string, orderNumber: string, id: string) => {
+        setDownloadingId(id);
+        try {
+            const res = await fetch(url);
+            const blob = await res.blob();
+            const ext = ({
+                "application/pdf": "pdf",
+                "image/png": "png",
+                "image/jpeg": "jpg",
+                "image/webp": "webp",
+            } as Record<string, string>)[blob.type] || "pdf";
+            const objectUrl = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = objectUrl;
+            a.download = `invoice-${orderNumber}.${ext}`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(objectUrl);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setDownloadingId(null);
+        }
     };
 
     const now = Date.now();
@@ -211,6 +241,16 @@ export default function OrdersPage() {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2 text-zinc-400">
+                                                {(order as any).invoiceUrl && (
+                                                    <button
+                                                        onClick={() => handleDownload((order as any).invoiceUrl, order.orderNumber, order._id)}
+                                                        disabled={downloadingId === order._id}
+                                                        className="p-2 hover:text-black hover:bg-zinc-100 rounded-lg transition-all disabled:opacity-50"
+                                                        title="Download invoice"
+                                                    >
+                                                        <Download size={16} className={cn(downloadingId === order._id && "animate-pulse")} />
+                                                    </button>
+                                                )}
                                                 {order.status !== "paid" && (
                                                     <Link href={`/dashboard/suppliers/${order.supplierId}/orders/${order._id}/edit`} className="p-2 hover:text-black hover:bg-zinc-100 rounded-lg transition-all" title="Edit">
                                                         <Edit2 size={16} />

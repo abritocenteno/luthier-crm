@@ -62,6 +62,9 @@ export const list = query({
                     supplierImageUrl: supplier?.imageStorageId
                         ? await ctx.storage.getUrl(supplier.imageStorageId)
                         : supplier?.imageUrl,
+                    invoiceUrl: order.invoiceStorageId
+                        ? await ctx.storage.getUrl(order.invoiceStorageId)
+                        : null,
                 };
             })
         );
