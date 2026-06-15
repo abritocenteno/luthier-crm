@@ -2,10 +2,10 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import type { NextRequest, NextFetchEvent } from "next/server";
 
-// Only the dashboard is gated. Public routes — the landing page ("/"), the
-// client intake form ("/request"), the client portal ("/portal/*") and the
-// print/checklist views ("/jobs/*") — pass straight through.
-const isProtectedRoute = createRouteMatcher(["/dashboard(.*)"]);
+// The dashboard and onboarding wizard are gated. Public routes — the landing
+// page ("/"), the client intake form ("/request"), the client portal
+// ("/portal/*") and the print/checklist views ("/jobs/*") — pass straight through.
+const isProtectedRoute = createRouteMatcher(["/dashboard(.*)", "/onboarding(.*)"]);
 
 const clerk = clerkMiddleware(async (auth, req) => {
     if (!isProtectedRoute(req)) return;

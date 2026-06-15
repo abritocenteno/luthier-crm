@@ -24,10 +24,11 @@ import { GlobalSearch } from "@/components/GlobalSearch";
 import { NotificationBell } from "@/components/NotificationBell";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import React, { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import React, { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
-import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
+import { Authenticated, Unauthenticated, AuthLoading, useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
 
 /**
  * Recovery button shown when Convex reports Unauthenticated.
@@ -65,6 +66,32 @@ function SessionRecoveryButton() {
             Sign In Again
         </button>
     );
+}
+
+/**
+ * Routes a not-yet-onboarded user (authenticated, but no settings record) to the
+ * onboarding wizard before they can use the dashboard. Existing users have a
+ * settings row and pass straight through. Renders inside <Authenticated>, so the
+ * Convex auth token is always present when this query runs.
+ */
+function OnboardingGate({ children }: { children: React.ReactNode }) {
+    const settings = useQuery(api.settings.get);
+    const router = useRouter();
+
+    useEffect(() => {
+        if (settings === null) router.replace("/onboarding");
+    }, [settings, router]);
+
+    // `undefined` = still loading; `null` = loaded but absent (redirecting).
+    if (settings === undefined || settings === null) {
+        return (
+            <div className="h-full flex items-center justify-center">
+                <div className="w-8 h-8 border-4 border-zinc-200 border-t-black rounded-full animate-spin" />
+            </div>
+        );
+    }
+
+    return <>{children}</>;
 }
 
 const SidebarItem = ({
@@ -252,7 +279,7 @@ export default function DashboardLayout({
                 {/* Content */}
                 <div className="flex-1 p-6 lg:p-8">
                     <Authenticated>
-                        {children}
+                        <OnboardingGate>{children}</OnboardingGate>
                     </Authenticated>
                     <Unauthenticated>
                         <div className="h-full flex flex-col items-center justify-center space-y-6">
