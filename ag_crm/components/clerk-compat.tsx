@@ -17,6 +17,10 @@ const DynamicUserButton = !isPreview
   ? dynamic(() => import("@clerk/nextjs").then((m) => ({ default: m.UserButton })))
   : null;
 
+const DynamicAutoOpenSignIn = !isPreview
+  ? dynamic(() => import("./AutoOpenSignIn").then((m) => ({ default: m.AutoOpenSignIn })), { ssr: false })
+  : null;
+
 export function SignInButton({ children, mode }: { children: React.ReactNode; mode?: "modal" | "redirect" }) {
   if (isPreview || !DynamicSignInButton) return <>{children}</>;
   return <DynamicSignInButton mode={mode} forceRedirectUrl="/dashboard">{children as any}</DynamicSignInButton>;
@@ -30,4 +34,9 @@ export function SignUpButton({ children, mode }: { children: React.ReactNode; mo
 export function UserButton(props: Record<string, unknown>) {
   if (isPreview || !DynamicUserButton) return null;
   return <DynamicUserButton {...props} />;
+}
+
+export function AutoOpenSignIn() {
+  if (isPreview || !DynamicAutoOpenSignIn) return null;
+  return <DynamicAutoOpenSignIn />;
 }

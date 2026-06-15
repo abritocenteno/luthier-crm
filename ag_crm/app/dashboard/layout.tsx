@@ -49,8 +49,11 @@ import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
  */
 function SessionRecoveryButton() {
     const handleRecover = () => {
-        // Full navigation to the auth entry point (not a same-page reload).
-        window.location.href = "/";
+        // Full navigation to the auth entry point (not a same-page reload). The
+        // ?signin=1 flag tells the landing page to auto-open the sign-in modal
+        // when the user is genuinely signed out; if the Clerk session is still
+        // alive it's ignored and <Authenticated> redirects back to /dashboard.
+        window.location.href = "/?signin=1";
     };
 
     return (

@@ -1,7 +1,7 @@
 "use client";
 
 import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
-import { SignInButton, UserButton } from "@/components/clerk-compat";
+import { SignInButton, UserButton, AutoOpenSignIn } from "@/components/clerk-compat";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -29,6 +29,7 @@ export default function Home() {
     return (
         <>
         <Authenticated><RedirectToDashboard /></Authenticated>
+        <AutoOpenSignIn />
         <main style={{ background: DARK_BG, color: CREAM, minHeight: "100vh" }}>
 
             {/* ── Font import + global styles ── */}
