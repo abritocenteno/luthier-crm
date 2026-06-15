@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { exportJobs } from "@/lib/exportCsv";
+import { LEAD_SOURCES, DEFAULT_SOURCE, sourceMeta } from "@/lib/sources";
 
 const STATUS_CONFIG = {
     intake:        { label: "Intake",             color: "bg-blue-50 text-blue-700 border-blue-100",   dot: "bg-blue-500" },
@@ -55,8 +56,12 @@ export default function JobsPage() {
     ];
 
     const [activeTab, setActiveTab] = useState("all");
+    const [sourceFilter, setSourceFilter] = useState<string>("all");
 
-    const filtered = jobs?.filter((j) => activeTab === "all" || j.status === activeTab) ?? [];
+    const filtered = jobs?.filter((j) =>
+        (activeTab === "all" || j.status === activeTab) &&
+        (sourceFilter === "all" || ((j as any).source || DEFAULT_SOURCE) === sourceFilter)
+    ) ?? [];
 
     // Counts per status for badges
     const counts = jobs?.reduce<Record<string, number>>((acc, j) => {
@@ -119,6 +124,24 @@ export default function JobsPage() {
                 ))}
             </div>
 
+            {/* Source Filter */}
+            <div className="flex items-center gap-1.5 flex-wrap -mt-4">
+                {[{ value: "all", label: "All sources" }, ...LEAD_SOURCES].map((s) => (
+                    <button
+                        key={s.value}
+                        onClick={() => setSourceFilter(s.value)}
+                        className={cn(
+                            "px-3 py-1.5 rounded-lg text-xs font-bold transition-all border",
+                            sourceFilter === s.value
+                                ? "border-black bg-black text-white"
+                                : "border-zinc-200 bg-white text-zinc-500 hover:border-zinc-300"
+                        )}
+                    >
+                        {s.label}
+                    </button>
+                ))}
+            </div>
+
             {/* Job Cards */}
             {jobs === undefined ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -154,7 +177,14 @@ export default function JobsPage() {
                             <div className="flex items-start justify-between gap-3">
                                 <div className="space-y-1 min-w-0">
                                     <p className="font-black text-zinc-900 truncate">{job.title}</p>
-                                    <p className="text-sm text-zinc-500 font-medium truncate">{job.clientName}</p>
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                        <p className="text-sm text-zinc-500 font-medium truncate">{job.clientName}</p>
+                                        {((job as any).source || DEFAULT_SOURCE) !== DEFAULT_SOURCE && (
+                                            <span className={cn("shrink-0 px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border", sourceMeta((job as any).source).badgeClass)}>
+                                                {sourceMeta((job as any).source).short}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                                 <StatusBadge status={job.status} />
                             </div>

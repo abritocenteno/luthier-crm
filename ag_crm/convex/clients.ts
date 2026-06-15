@@ -44,6 +44,7 @@ export const add = mutation({
         street: v.optional(v.string()),
         postcode: v.optional(v.string()),
         city: v.optional(v.string()),
+        source: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
         const identity = await ctx.auth.getUserIdentity();
@@ -69,6 +70,7 @@ export const update = mutation({
         street: v.optional(v.string()),
         postcode: v.optional(v.string()),
         city: v.optional(v.string()),
+        source: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
         const { id, ...data } = args;

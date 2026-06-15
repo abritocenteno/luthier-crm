@@ -6,6 +6,7 @@ import Link from "next/link";
 import { TrendingUp, TrendingDown, Minus, ArrowRight, Download, Users, Wrench, FileText } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { exportJobs, exportInvoices, exportClients } from "@/lib/exportCsv";
+import { LEAD_SOURCES, DEFAULT_SOURCE } from "@/lib/sources";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -123,6 +124,29 @@ export default function ReportsPage() {
 
     const fmt = (n: number) => formatCurrency(n, currency);
 
+    // Revenue + job counts grouped by lead source (job = financial source of truth)
+    const sourceBreakdown = (() => {
+        if (!allJobs || !allInvoices) return undefined;
+        const sourceByInvoice = new Map<string, string>();
+        allJobs.forEach((j: any) => {
+            if (j.invoiceId) sourceByInvoice.set(j.invoiceId, j.source || DEFAULT_SOURCE);
+        });
+        const revenue: Record<string, number> = {};
+        allInvoices
+            .filter((inv: any) => inv.status === "paid")
+            .forEach((inv: any) => {
+                const src = sourceByInvoice.get(inv._id) || DEFAULT_SOURCE;
+                revenue[src] = (revenue[src] ?? 0) + inv.amount;
+            });
+        const jobs: Record<string, number> = {};
+        allJobs.forEach((j: any) => {
+            const src = j.source || DEFAULT_SOURCE;
+            jobs[src] = (jobs[src] ?? 0) + 1;
+        });
+        const totalRevenue = Object.values(revenue).reduce((a, b) => a + b, 0);
+        return { revenue, jobs, totalRevenue };
+    })();
+
     // Month-on-month revenue trend
     const revTrend = (() => {
         if (!data) return undefined;
@@ -209,6 +233,62 @@ export default function ReportsPage() {
                     color="bg-zinc-200"
                     height="h-44"
                 />
+            </Card>
+
+            {/* ── Revenue by Source ── */}
+            <Card className="p-6 space-y-5">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <SectionTitle>Revenue by Source</SectionTitle>
+                        <p className="text-xs text-zinc-400 mt-1">Where your paid work comes from — your own channels vs. Gitaarafstellen.nl</p>
+                    </div>
+                </div>
+                {!sourceBreakdown ? (
+                    <div className="h-20 bg-zinc-50 rounded-xl animate-pulse" />
+                ) : sourceBreakdown.totalRevenue === 0 ? (
+                    <p className="text-sm text-zinc-400 italic py-4 text-center">No paid revenue yet.</p>
+                ) : (
+                    <div className="space-y-4">
+                        {/* Stacked bar */}
+                        <div className="flex h-3 w-full rounded-full overflow-hidden bg-zinc-100">
+                            {LEAD_SOURCES.map((s) => {
+                                const rev = sourceBreakdown.revenue[s.value] ?? 0;
+                                const pct = (rev / sourceBreakdown.totalRevenue) * 100;
+                                if (pct === 0) return null;
+                                return (
+                                    <div
+                                        key={s.value}
+                                        className={s.value === DEFAULT_SOURCE ? "bg-zinc-800" : "bg-orange-400"}
+                                        style={{ width: `${pct}%` }}
+                                        title={`${s.label}: ${fmt(rev)}`}
+                                    />
+                                );
+                            })}
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {LEAD_SOURCES.map((s) => {
+                                const rev = sourceBreakdown.revenue[s.value] ?? 0;
+                                const jobCount = sourceBreakdown.jobs[s.value] ?? 0;
+                                const pct = sourceBreakdown.totalRevenue > 0 ? (rev / sourceBreakdown.totalRevenue) * 100 : 0;
+                                return (
+                                    <div key={s.value} className="flex items-center justify-between p-4 rounded-xl border border-zinc-100 bg-zinc-50/50">
+                                        <div className="flex items-center gap-2.5 min-w-0">
+                                            <span className={cn("w-2.5 h-2.5 rounded-full shrink-0", s.value === DEFAULT_SOURCE ? "bg-zinc-800" : "bg-orange-400")} />
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-bold text-zinc-900 truncate">{s.label}</p>
+                                                <p className="text-[11px] text-zinc-400 font-medium">{jobCount} job{jobCount !== 1 ? "s" : ""}</p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right shrink-0 ml-3">
+                                            <p className="text-sm font-black text-zinc-900">{fmt(rev)}</p>
+                                            <p className="text-[11px] text-zinc-400 font-medium">{pct.toFixed(0)}%</p>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
             </Card>
 
             {/* ── Jobs Chart + Status Breakdown ── */}

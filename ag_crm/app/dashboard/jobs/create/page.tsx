@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "../../../../convex/_generated/api";
@@ -10,6 +10,7 @@ import {
     ChevronDown, Guitar, Clock, StickyNote, CheckCircle2, Loader2, BookOpen, LayoutTemplate,
 } from "lucide-react";
 import { cn, formatCurrency, getCurrencySymbol } from "@/lib/utils";
+import { LEAD_SOURCES, DEFAULT_SOURCE } from "@/lib/sources";
 import { Suspense } from "react";
 
 const Card = ({ children, className }: { children: React.ReactNode; className?: string }) => (
@@ -57,7 +58,16 @@ function CreateJobForm() {
     const [clientId, setClientId] = useState<Id<"clients"> | "">(initialClientId ?? "");
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
+    const [source, setSource] = useState<string>(DEFAULT_SOURCE);
     const [startAsQuote, setStartAsQuote] = useState(false);
+
+    // Prefill the job's source from the selected client's acquisition channel,
+    // so a Gitaarafstellen client defaults to a Gitaarafstellen job.
+    useEffect(() => {
+        if (!clientId || !clients) return;
+        const client = clients.find((c) => c._id === clientId);
+        if (client?.source) setSource(client.source);
+    }, [clientId, clients]);
     const status = startAsQuote ? "quoted" : "intake";
 
     // Instrument
@@ -146,6 +156,7 @@ function CreateJobForm() {
                 title,
                 description: description || undefined,
                 status,
+                source,
                 instrumentType,
                 instrumentBrand: instrumentBrand || undefined,
                 instrumentModel: instrumentModel || undefined,
@@ -220,6 +231,29 @@ function CreateJobForm() {
                                 </select>
                                 <ChevronDown className="absolute right-4 text-zinc-400 pointer-events-none" size={18} />
                             </div>
+                        </div>
+
+                        {/* Source / acquisition channel */}
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block">Source</label>
+                            <div className="flex gap-2">
+                                {LEAD_SOURCES.map((s) => (
+                                    <button
+                                        key={s.value}
+                                        type="button"
+                                        onClick={() => setSource(s.value)}
+                                        className={cn(
+                                            "flex-1 px-4 py-2.5 rounded-xl text-sm font-bold border transition-all",
+                                            source === s.value
+                                                ? "bg-black text-white border-black"
+                                                : "bg-zinc-50 text-zinc-500 border-zinc-200 hover:border-zinc-300"
+                                        )}
+                                    >
+                                        {s.label}
+                                    </button>
+                                ))}
+                            </div>
+                            <p className="text-[11px] text-zinc-400">Where this job came from — your own channels or the Gitaarafstellen.nl platform.</p>
                         </div>
 
                         {/* Title */}

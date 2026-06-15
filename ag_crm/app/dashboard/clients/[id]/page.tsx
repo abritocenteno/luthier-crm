@@ -41,6 +41,7 @@ import { useMutation } from "convex/react";
 import { useState, useRef } from "react";
 import { motion } from "motion/react";
 import { cn, formatCurrency } from "@/lib/utils";
+import { LEAD_SOURCES, DEFAULT_SOURCE, sourceMeta } from "@/lib/sources";
 import Link from "next/link";
 
 const Card = ({ children, className }: { children: React.ReactNode, className?: string }) => (
@@ -90,7 +91,7 @@ export default function ClientDetailPage() {
 
     const editAvatarRef = useRef<HTMLInputElement>(null);
     const [isEditOpen, setIsEditOpen] = useState(false);
-    const [editDraft, setEditDraft] = useState({ name: "", email: "", phone: "", type: "regular", website: "", street: "", postcode: "", city: "" });
+    const [editDraft, setEditDraft] = useState({ name: "", email: "", phone: "", type: "regular", website: "", street: "", postcode: "", city: "", source: DEFAULT_SOURCE as string });
     const [editAvatarPreview, setEditAvatarPreview] = useState<string>("");
     const [editAvatarStorageId, setEditAvatarStorageId] = useState<Id<"_storage"> | undefined>(undefined);
     const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
@@ -317,6 +318,7 @@ export default function ClientDetailPage() {
                                     street: client.street ?? "",
                                     postcode: client.postcode ?? "",
                                     city: client.city ?? "",
+                                    source: client.source ?? DEFAULT_SOURCE,
                                 });
                                 setEditAvatarPreview(client.imageUrl ?? "");
                                 setEditAvatarStorageId(client.imageStorageId);
@@ -902,6 +904,17 @@ export default function ClientDetailPage() {
                                     <div className="space-y-1.5">
                                         <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">City</label>
                                         <input value={editDraft.city} onChange={e => setEditDraft({ ...editDraft, city: e.target.value })} placeholder="Amsterdam" className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-black/5 outline-none transition-all" />
+                                    </div>
+                                    <div className="col-span-2 space-y-1.5">
+                                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Source</label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {LEAD_SOURCES.map((s) => (
+                                                <button key={s.value} type="button" onClick={() => setEditDraft({ ...editDraft, source: s.value })}
+                                                    className={cn("py-2.5 rounded-xl text-sm font-bold border transition-all", editDraft.source === s.value ? "bg-black text-white border-black" : "bg-zinc-50 text-zinc-500 border-zinc-200 hover:border-zinc-300")}>
+                                                    {s.label}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="flex gap-3 pt-1">

@@ -10,6 +10,7 @@ import {
     ChevronDown, Guitar, Clock, StickyNote, CheckCircle2, Loader2, AlertCircle, BookOpen,
 } from "lucide-react";
 import { cn, formatCurrency, getCurrencySymbol } from "@/lib/utils";
+import { LEAD_SOURCES, DEFAULT_SOURCE } from "@/lib/sources";
 
 const Card = ({ children, className }: { children: React.ReactNode; className?: string }) => (
     <div className={cn("bg-white border border-zinc-200 rounded-2xl shadow-sm overflow-hidden", className)}>
@@ -45,6 +46,7 @@ function EditJobForm({ id }: { id: Id<"jobs"> }) {
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [status, setStatus] = useState("intake");
+    const [source, setSource] = useState<string>(DEFAULT_SOURCE);
     const [instrumentType, setInstrumentType] = useState("Guitar");
     const [instrumentBrand, setInstrumentBrand] = useState("");
     const [instrumentModel, setInstrumentModel] = useState("");
@@ -67,6 +69,7 @@ function EditJobForm({ id }: { id: Id<"jobs"> }) {
         setTitle(job.title);
         setDescription(job.description ?? "");
         setStatus(job.status);
+        setSource((job as any).source ?? DEFAULT_SOURCE);
         setInstrumentType(job.instrumentType);
         setInstrumentBrand(job.instrumentBrand ?? "");
         setInstrumentModel(job.instrumentModel ?? "");
@@ -135,6 +138,7 @@ function EditJobForm({ id }: { id: Id<"jobs"> }) {
                 id,
                 clientId: clientId as Id<"clients">,
                 title, description: description || undefined, status,
+                source,
                 instrumentType,
                 instrumentBrand: instrumentBrand || undefined,
                 instrumentModel: instrumentModel || undefined,
@@ -203,6 +207,22 @@ function EditJobForm({ id }: { id: Id<"jobs"> }) {
                             <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block">Description</label>
                             <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)}
                                 className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black/5 resize-none" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block">Source</label>
+                            <div className="flex gap-2">
+                                {LEAD_SOURCES.map((s) => (
+                                    <button key={s.value} type="button" onClick={() => setSource(s.value)}
+                                        className={cn(
+                                            "flex-1 px-4 py-2.5 rounded-xl text-sm font-bold border transition-all",
+                                            source === s.value
+                                                ? "bg-black text-white border-black"
+                                                : "bg-zinc-50 text-zinc-500 border-zinc-200 hover:border-zinc-300"
+                                        )}>
+                                        {s.label}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-zinc-100">
                             <div className="space-y-2">

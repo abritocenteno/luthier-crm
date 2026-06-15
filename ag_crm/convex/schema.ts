@@ -19,6 +19,7 @@ export default defineSchema({
         street: v.optional(v.string()),
         postcode: v.optional(v.string()),
         city: v.optional(v.string()),
+        source: v.optional(v.string()), // 'direct' | 'gitaarafstellen' — acquisition channel
         userId: v.string(), // tokenIdentifier of the owner
     }).index("by_user", ["userId"]),
     invoices: defineTable({
@@ -131,6 +132,7 @@ export default defineSchema({
         title: v.string(),
         description: v.optional(v.string()),
         status: v.string(), // 'intake' | 'in_progress' | 'waiting_parts' | 'ready' | 'closed'
+        source: v.optional(v.string()), // 'direct' | 'gitaarafstellen' — acquisition channel
         // Instrument details
         instrumentType: v.string(),
         instrumentBrand: v.optional(v.string()),

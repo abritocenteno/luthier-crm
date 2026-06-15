@@ -23,6 +23,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 import { exportClients } from "@/lib/exportCsv";
+import { LEAD_SOURCES, DEFAULT_SOURCE, sourceMeta } from "@/lib/sources";
 import { Id } from "../../../convex/_generated/dataModel";
 import { useSortableData } from "@/lib/hooks/useSortableData";
 import { SortableHeader } from "@/components/SortableHeader";
@@ -60,6 +61,7 @@ export default function ClientsPage() {
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [search, setSearch] = useState("");
+    const [sourceFilter, setSourceFilter] = useState<string>("all");
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [editingClient, setEditingClient] = useState<any>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -75,13 +77,15 @@ export default function ClientsPage() {
         street: "",
         postcode: "",
         city: "",
+        source: DEFAULT_SOURCE as string,
         imageUrl: "",
         imageStorageId: undefined as Id<"_storage"> | undefined,
     });
 
     const filteredClients = clients ? clients.filter(c =>
-        c.name.toLowerCase().includes(search.toLowerCase()) ||
-        c.email.toLowerCase().includes(search.toLowerCase())
+        (c.name.toLowerCase().includes(search.toLowerCase()) ||
+        c.email.toLowerCase().includes(search.toLowerCase())) &&
+        (sourceFilter === "all" || (c.source || DEFAULT_SOURCE) === sourceFilter)
     ) : null;
 
     const { items: sortedClients, requestSort, sortConfig } = useSortableData(filteredClients || []);
@@ -98,6 +102,7 @@ export default function ClientsPage() {
                 street: client.street || "",
                 postcode: client.postcode || "",
                 city: client.city || "",
+                source: client.source || DEFAULT_SOURCE,
                 imageUrl: client.imageUrl || "",
                 imageStorageId: client.imageStorageId,
             });
@@ -112,6 +117,7 @@ export default function ClientsPage() {
                 street: "",
                 postcode: "",
                 city: "",
+                source: DEFAULT_SOURCE,
                 imageUrl: "",
                 imageStorageId: undefined,
             });
@@ -202,7 +208,7 @@ export default function ClientsPage() {
                 </header>
 
                 <Card>
-                    <div className="p-4 border-b border-zinc-100 bg-zinc-50/50">
+                    <div className="p-4 border-b border-zinc-100 bg-zinc-50/50 space-y-3">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
                             <input
@@ -212,6 +218,22 @@ export default function ClientsPage() {
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
                             />
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                            {[{ value: "all", label: "All sources" }, ...LEAD_SOURCES].map((s) => (
+                                <button
+                                    key={s.value}
+                                    onClick={() => setSourceFilter(s.value)}
+                                    className={cn(
+                                        "px-3 py-1.5 rounded-lg text-xs font-bold transition-all border",
+                                        sourceFilter === s.value
+                                            ? "border-black bg-black text-white"
+                                            : "border-zinc-200 bg-white text-zinc-500 hover:border-zinc-300"
+                                    )}
+                                >
+                                    {s.label}
+                                </button>
+                            ))}
                         </div>
                     </div>
 
@@ -325,11 +347,16 @@ export default function ClientsPage() {
                                                 </Link>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="flex items-center gap-1.5">
+                                                <div className="flex items-center gap-1.5 flex-wrap">
                                                     {client.type === 'store' ? <Store size={14} className="text-blue-500" /> : <User size={14} className="text-zinc-400" />}
                                                     <Badge variant={client.type === 'store' ? 'info' : 'neutral'}>
                                                         {client.type}
                                                     </Badge>
+                                                    {(client.source || DEFAULT_SOURCE) !== DEFAULT_SOURCE && (
+                                                        <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border", sourceMeta(client.source).badgeClass)}>
+                                                            {sourceMeta(client.source).short}
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
@@ -510,6 +537,28 @@ export default function ClientsPage() {
                                                 <span className="text-xs font-bold">Store</span>
                                             </button>
                                         </div>
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Source</label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {LEAD_SOURCES.map((s) => (
+                                                <button
+                                                    key={s.value}
+                                                    type="button"
+                                                    onClick={() => setFormData({ ...formData, source: s.value })}
+                                                    className={cn(
+                                                        "flex items-center justify-center gap-2 py-2.5 border rounded-xl transition-all text-xs font-bold",
+                                                        formData.source === s.value
+                                                            ? "border-black bg-black text-white shadow-lg"
+                                                            : "border-zinc-200 bg-white text-zinc-500 hover:border-zinc-300"
+                                                    )}
+                                                >
+                                                    {s.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <p className="text-[11px] text-zinc-400">How this client found you.</p>
                                     </div>
                                 </div>
 
