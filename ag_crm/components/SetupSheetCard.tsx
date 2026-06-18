@@ -250,7 +250,7 @@ export function SetupSheetCard({
                             type="number" step="0.01" inputMode="decimal"
                             value={draft.scaleLength ?? ""}
                             onChange={(e) => setDraft((p) => ({ ...p, scaleLength: numOrUndef(e.target.value) }))}
-                            placeholder="25.5"
+                            placeholder={String(SETUP_DEFAULTS[category].scaleLength)}
                             className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:border-black"
                         />
                     </div>
