@@ -1,12 +1,19 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useQuery, useConvex } from "convex/react";
+import { useMemo, useState } from "react";
+import { createElement } from "react";
+import { createRoot } from "react-dom/client";
 import { api } from "../../../convex/_generated/api";
+import { Id } from "../../../convex/_generated/dataModel";
 import Link from "next/link";
-import { TrendingUp, TrendingDown, Minus, ArrowRight, Download, Users, Wrench, FileText } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, ArrowRight, Download, Users, Wrench, FileText, Receipt, Package, FileArchive, Loader2 } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
-import { exportJobs, exportInvoices, exportClients } from "@/lib/exportCsv";
+import { exportJobs, exportInvoices, exportClients, exportOrders, invoiceRows, orderRows, toCSVString } from "@/lib/exportCsv";
 import { LEAD_SOURCES, DEFAULT_SOURCE } from "@/lib/sources";
+import { splitVat, quarterRange, QUARTER_LABELS, currentFilingPeriod, DEFAULT_VAT_RATE } from "@/lib/vat";
+import InvoiceDocument from "@/components/InvoiceDocument";
+import { splitIntoPages, captureInvoicePng, waitForImages } from "@/lib/invoicePdf";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -112,6 +119,312 @@ function StatCard({
     );
 }
 
+// ── VAT / Quarter panel ──────────────────────────────────────────────────────
+
+type AnyInvoice = {
+    _id: string; invoiceNumber: string; date: number; amount: number; status: string;
+    paymentMethod?: string; paidAt?: number; clientName?: string; taxRate?: number; source?: string;
+};
+type AnyOrder = {
+    _id: string; orderNumber: string; date: number; amount: number; status: string;
+    taxRate?: number; supplierName?: string; invoiceUrl?: string | null;
+};
+
+function sanitizeFilename(s: string) {
+    return s.replace(/[^a-z0-9\-_. ]/gi, "_").replace(/\s+/g, " ").trim().slice(0, 80) || "file";
+}
+
+function VatQuarterPanel({
+    invoices,
+    orders,
+    currency,
+    defaultRate,
+    companyName,
+    settings,
+}: {
+    invoices: AnyInvoice[];
+    orders: AnyOrder[];
+    currency?: string;
+    defaultRate: number;
+    companyName: string;
+    settings: any;
+}) {
+    const convex = useConvex();
+    const fmt = (n: number) => formatCurrency(n, currency);
+    const filing = currentFilingPeriod();
+    const [year, setYear] = useState(filing.year);
+    const [quarter, setQuarter] = useState(filing.quarter);
+    // 'invoice' = factuurstelsel (all invoices by issue date) · 'payment' = kasstelsel (paid only, by payment date)
+    const [basis, setBasis] = useState<"invoice" | "payment">("invoice");
+    const [zipping, setZipping] = useState(false);
+
+    const years = useMemo(() => {
+        const ys = new Set<number>([filing.year, new Date().getFullYear()]);
+        [...invoices.map((i) => i.date), ...orders.map((o) => o.date)].forEach((ts) => ys.add(new Date(ts).getFullYear()));
+        return Array.from(ys).sort((a, b) => b - a);
+    }, [invoices, orders, filing.year]);
+
+    const period = useMemo(() => {
+        const { start, end } = quarterRange(year, quarter);
+
+        const salesInvoices = invoices.filter((inv) =>
+            basis === "payment"
+                ? inv.status === "paid" && inv.paidAt != null && inv.paidAt >= start && inv.paidAt < end
+                : inv.date >= start && inv.date < end
+        );
+        const purchaseOrders = orders.filter((o) => {
+            if (o.status === "cancelled") return false;
+            if (basis === "payment") return o.status === "paid" && o.date >= start && o.date < end;
+            return o.date >= start && o.date < end;
+        });
+
+        let salesGross = 0, salesVat = 0, salesMissingRate = 0;
+        for (const inv of salesInvoices) {
+            const b = splitVat(inv.amount, inv.taxRate ?? 0);
+            salesGross += b.gross; salesVat += b.vat;
+            if (inv.taxRate == null) salesMissingRate++;
+        }
+        let purchaseGross = 0, purchaseVat = 0, purchaseNoFile = 0;
+        for (const o of purchaseOrders) {
+            const b = splitVat(o.amount, o.taxRate ?? defaultRate);
+            purchaseGross += b.gross; purchaseVat += b.vat;
+            if (!o.invoiceUrl) purchaseNoFile++;
+        }
+
+        return {
+            start, end, salesInvoices, purchaseOrders,
+            salesGross, salesNet: salesGross - salesVat, salesVat, salesMissingRate,
+            purchaseGross, purchaseNet: purchaseGross - purchaseVat, purchaseVat, purchaseNoFile,
+            netVat: salesVat - purchaseVat,
+        };
+    }, [invoices, orders, year, quarter, basis, defaultRate]);
+
+    const label = `${year}-Q${quarter}`;
+
+    const handleDownloadZip = async () => {
+        setZipping(true);
+        try {
+            const { default: JSZip } = await import("jszip");
+            const zip = new JSZip();
+
+            zip.file(`sales-invoices-${label}.csv`, toCSVString(invoiceRows(period.salesInvoices as never)));
+            zip.file(`purchases-${label}.csv`, toCSVString(orderRows(period.purchaseOrders as never, defaultRate)));
+
+            const summary = [
+                `${companyName} — VAT summary ${QUARTER_LABELS[quarter]} ${year}`,
+                `Basis: ${basis === "invoice" ? "Invoice date (factuurstelsel) — all issued invoices" : "Payment date (kasstelsel) — paid only"}`,
+                ``,
+                `SALES (output VAT)`,
+                `  Invoices:        ${period.salesInvoices.length}`,
+                `  Net:             ${period.salesNet.toFixed(2)}`,
+                `  VAT collected:   ${period.salesVat.toFixed(2)}`,
+                `  Gross:           ${period.salesGross.toFixed(2)}`,
+                ``,
+                `PURCHASES (input VAT)`,
+                `  Orders:          ${period.purchaseOrders.length}`,
+                `  Net:             ${period.purchaseNet.toFixed(2)}`,
+                `  VAT paid:        ${period.purchaseVat.toFixed(2)}`,
+                `  Gross:           ${period.purchaseGross.toFixed(2)}`,
+                ``,
+                `NET VAT (${period.netVat >= 0 ? "to remit" : "to reclaim"}): ${Math.abs(period.netVat).toFixed(2)}`,
+                ``,
+                `Included: /sales-invoices (your invoice PDFs) · /purchase-invoices (supplier files) · CSV exports`,
+                period.salesMissingRate > 0 ? `Note: ${period.salesMissingRate} sales invoice(s) have no VAT rate set and were treated as 0%.` : ``,
+                period.purchaseNoFile > 0 ? `Note: ${period.purchaseNoFile} purchase(s) have no uploaded invoice file.` : ``,
+                `Generated ${new Date().toLocaleString("en-GB")}`,
+            ].filter(Boolean).join("\n");
+            zip.file(`summary-${label}.txt`, summary);
+
+            const folder = zip.folder("purchase-invoices");
+            for (const o of period.purchaseOrders) {
+                if (!o.invoiceUrl) continue;
+                try {
+                    const res = await fetch(o.invoiceUrl);
+                    if (!res.ok) continue;
+                    const blob = await res.blob();
+                    const type = blob.type || "";
+                    const ext = type.includes("pdf") ? "pdf" : type.includes("png") ? "png" : type.includes("jpeg") || type.includes("jpg") ? "jpg" : "bin";
+                    folder?.file(`${sanitizeFilename(`${o.orderNumber}_${o.supplierName ?? "supplier"}`)}.${ext}`, blob);
+                } catch { /* skip unreachable files */ }
+            }
+
+            // Sales invoice PDFs — rendered off-screen from the exact template clients receive,
+            // so the archived copies match the originals byte-for-byte in layout.
+            if (period.salesInvoices.length > 0) {
+                const salesFolder = zip.folder("sales-invoices");
+                const host = document.createElement("div");
+                host.style.cssText = "position:fixed;left:-10000px;top:0;width:1100px;background:#ffffff;z-index:-1;pointer-events:none;";
+                document.body.appendChild(host);
+                const root = createRoot(host);
+                try {
+                    for (const inv of period.salesInvoices) {
+                        let full: any;
+                        try {
+                            full = await convex.query(api.invoices.get, { id: inv._id as Id<"invoices"> });
+                        } catch { continue; }
+                        if (!full) continue;
+
+                        const source = inv.source ?? DEFAULT_SOURCE;
+                        // Render this invoice, then wait two frames for React to commit + lay out.
+                        await new Promise<void>((resolve) => {
+                            root.render(
+                                createElement(InvoiceDocument, {
+                                    invoice: full,
+                                    settings,
+                                    invoiceSource: source,
+                                    showSourceTag: source !== DEFAULT_SOURCE,
+                                })
+                            );
+                            requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+                        });
+
+                        const node = host.querySelector<HTMLElement>("#invoice-capture");
+                        if (!node) continue;
+                        await waitForImages(node);
+                        try { await (document as any).fonts?.ready; } catch { /* fonts API unavailable */ }
+
+                        const dataUrl = await captureInvoicePng(node, { quality: 0.85, pixelRatio: 1.5 });
+                        const pdf = await splitIntoPages(dataUrl, true);
+                        const blob = pdf.output("blob");
+                        salesFolder?.file(`${sanitizeFilename(full.invoiceNumber ?? inv.invoiceNumber)}.pdf`, blob);
+                    }
+                } finally {
+                    root.unmount();
+                    host.remove();
+                }
+            }
+
+            const out = await zip.generateAsync({ type: "blob" });
+            const url = URL.createObjectURL(out);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `tax-pack-${label}.zip`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error("Tax pack export failed:", err);
+            alert("Could not build the tax pack. Please try again.");
+        } finally {
+            setZipping(false);
+        }
+    };
+
+    const hasData = period.salesInvoices.length > 0 || period.purchaseOrders.length > 0;
+
+    return (
+        <Card className="p-6 space-y-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                    <SectionTitle>VAT Return · Quarter</SectionTitle>
+                    <p className="text-xs text-zinc-400 mt-1">Output VAT on sales minus input VAT on purchases — everything ready for your BTW filing.</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                    {/* Quarter */}
+                    <div className="flex gap-1 p-1 bg-zinc-100 rounded-xl">
+                        {[1, 2, 3, 4].map((q) => (
+                            <button
+                                key={q}
+                                onClick={() => setQuarter(q)}
+                                className={cn(
+                                    "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                                    quarter === q ? "bg-white text-black shadow-sm" : "text-zinc-400 hover:text-zinc-700"
+                                )}
+                            >
+                                Q{q}
+                            </button>
+                        ))}
+                    </div>
+                    {/* Year */}
+                    <select
+                        value={year}
+                        onChange={(e) => setYear(Number(e.target.value))}
+                        className="px-3 py-2 bg-zinc-100 border-none rounded-xl text-xs font-bold text-zinc-700 focus:ring-2 focus:ring-black/5 cursor-pointer"
+                    >
+                        {years.map((y) => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                </div>
+            </div>
+
+            {/* Basis toggle */}
+            <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Basis</span>
+                <div className="flex gap-1 p-1 bg-zinc-100 rounded-xl">
+                    <button
+                        onClick={() => setBasis("invoice")}
+                        className={cn("px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all", basis === "invoice" ? "bg-white text-black shadow-sm" : "text-zinc-400 hover:text-zinc-700")}
+                    >
+                        Invoice date · all
+                    </button>
+                    <button
+                        onClick={() => setBasis("payment")}
+                        className={cn("px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all", basis === "payment" ? "bg-white text-black shadow-sm" : "text-zinc-400 hover:text-zinc-700")}
+                    >
+                        Payment date · paid only
+                    </button>
+                </div>
+            </div>
+
+            {/* Figures */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="p-5 rounded-2xl bg-emerald-50/60 border border-emerald-100">
+                    <div className="flex items-center gap-2 text-emerald-700"><Receipt size={14} /><span className="text-[10px] font-black uppercase tracking-widest">Output VAT · Sales</span></div>
+                    <p className="text-2xl font-black text-emerald-700 mt-2">{fmt(period.salesVat)}</p>
+                    <p className="text-[11px] text-emerald-700/60 font-medium mt-1">Net {fmt(period.salesNet)} · {period.salesInvoices.length} invoice{period.salesInvoices.length !== 1 ? "s" : ""}</p>
+                </div>
+                <div className="p-5 rounded-2xl bg-amber-50/60 border border-amber-100">
+                    <div className="flex items-center gap-2 text-amber-700"><Package size={14} /><span className="text-[10px] font-black uppercase tracking-widest">Input VAT · Purchases</span></div>
+                    <p className="text-2xl font-black text-amber-700 mt-2">{fmt(period.purchaseVat)}</p>
+                    <p className="text-[11px] text-amber-700/60 font-medium mt-1">Net {fmt(period.purchaseNet)} · {period.purchaseOrders.length} order{period.purchaseOrders.length !== 1 ? "s" : ""}</p>
+                </div>
+                <div className="p-5 rounded-2xl bg-zinc-900 text-white">
+                    <div className="flex items-center gap-2 text-zinc-300"><FileText size={14} /><span className="text-[10px] font-black uppercase tracking-widest">{period.netVat >= 0 ? "Net VAT to remit" : "Net VAT to reclaim"}</span></div>
+                    <p className="text-2xl font-black mt-2">{fmt(Math.abs(period.netVat))}</p>
+                    <p className="text-[11px] text-zinc-400 font-medium mt-1">Sales VAT − purchase VAT</p>
+                </div>
+            </div>
+
+            {/* Warnings */}
+            {(period.salesMissingRate > 0 || period.purchaseNoFile > 0) && (
+                <div className="text-[11px] text-zinc-500 space-y-1">
+                    {period.salesMissingRate > 0 && <p>· {period.salesMissingRate} sales invoice{period.salesMissingRate !== 1 ? "s have" : " has"} no VAT rate set — counted as 0%. Set a rate on the invoice to include its VAT.</p>}
+                    {period.purchaseNoFile > 0 && <p>· {period.purchaseNoFile} purchase{period.purchaseNoFile !== 1 ? "s have" : " has"} no uploaded invoice file — won&apos;t appear in the ZIP.</p>}
+                </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex flex-wrap gap-3 pt-2 border-t border-zinc-100">
+                <button
+                    onClick={() => exportInvoices(period.salesInvoices as never, `sales-invoices-${label}`)}
+                    disabled={period.salesInvoices.length === 0}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-bold text-zinc-700 hover:border-zinc-300 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                    <Download size={14} /> Sales CSV
+                </button>
+                <button
+                    onClick={() => exportOrders(period.purchaseOrders as never, defaultRate, `purchases-${label}`)}
+                    disabled={period.purchaseOrders.length === 0}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-bold text-zinc-700 hover:border-zinc-300 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                    <Download size={14} /> Purchases CSV
+                </button>
+                <button
+                    onClick={handleDownloadZip}
+                    disabled={!hasData || zipping}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-black text-white rounded-xl text-xs font-bold hover:bg-zinc-800 transition-all active:scale-95 shadow-lg shadow-black/10 disabled:opacity-40 disabled:cursor-not-allowed ml-auto"
+                >
+                    {zipping ? <Loader2 size={14} className="animate-spin" /> : <FileArchive size={14} />}
+                    {zipping ? "Building…" : "Download Tax Pack (ZIP)"}
+                </button>
+            </div>
+            <p className="text-[11px] text-zinc-400">
+                The Tax Pack bundles your branded <strong className="font-bold text-zinc-500">sales invoice PDFs</strong>, your suppliers&apos; purchase invoice files, the BTW summary, and CSV exports — everything in one ZIP. Generating the sales PDFs can take a few seconds for large quarters.
+            </p>
+        </Card>
+    );
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export default function ReportsPage() {
@@ -119,6 +432,7 @@ export default function ReportsPage() {
     const settings = useQuery(api.settings.get);
     const allJobs = useQuery(api.jobs.list);
     const allInvoices = useQuery(api.invoices.list);
+    const allOrders = useQuery(api.orders.list);
     const allClients = useQuery(api.clients.list);
     const currency = settings?.currency;
 
@@ -213,6 +527,18 @@ export default function ReportsPage() {
                     sub="intake to completion"
                 />
             </div>
+
+            {/* ── VAT / Quarter ── */}
+            {allInvoices && allOrders && (
+                <VatQuarterPanel
+                    invoices={allInvoices as never}
+                    orders={allOrders as never}
+                    currency={currency}
+                    defaultRate={settings?.defaultTaxRate ?? DEFAULT_VAT_RATE}
+                    companyName={settings?.companyName ?? "Your workshop"}
+                    settings={settings}
+                />
+            )}
 
             {/* ── Revenue Chart ── */}
             <Card className="p-6 space-y-6">
@@ -453,6 +779,14 @@ export default function ReportsPage() {
                             count: allInvoices?.length ?? 0,
                             onClick: () => allInvoices && exportInvoices(allInvoices as any),
                             disabled: !allInvoices || allInvoices.length === 0,
+                        },
+                        {
+                            label: "Purchases",
+                            description: "Supplier orders with net, VAT & gross amounts",
+                            icon: <Package size={20} />,
+                            count: allOrders?.length ?? 0,
+                            onClick: () => allOrders && exportOrders(allOrders as any, settings?.defaultTaxRate ?? DEFAULT_VAT_RATE),
+                            disabled: !allOrders || allOrders.length === 0,
                         },
                         {
                             label: "Clients",

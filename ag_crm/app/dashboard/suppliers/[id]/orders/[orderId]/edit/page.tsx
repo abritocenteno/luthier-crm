@@ -48,6 +48,7 @@ function EditOrderForm() {
         date: new Date().getTime(),
         amount: 0,
         status: "pending",
+        taxRate: 21,
         items: [] as { name: string; description: string; remark: string; amount: number; unitPrice: number }[],
         invoiceStorageId: undefined as Id<"_storage"> | undefined,
     });
@@ -64,11 +65,12 @@ function EditOrderForm() {
                 date: order.date,
                 amount: order.amount,
                 status: order.status,
+                taxRate: order.taxRate ?? settings?.defaultTaxRate ?? 21,
                 items: order.items || [],
                 invoiceStorageId: order.invoiceStorageId as Id<"_storage"> | undefined,
             });
         }
-    }, [order, router]);
+    }, [order, router, settings]);
 
     const calculateTotal = (items: typeof formData.items) => {
         return items.reduce((acc, item) => acc + (item.amount * item.unitPrice), 0);
@@ -244,6 +246,30 @@ function EditOrderForm() {
                                         )}
                                     >
                                         {status}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="space-y-4 pt-4 border-t border-zinc-100">
+                            <div>
+                                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block">VAT Rate (BTW)</label>
+                                <p className="text-[10px] text-zinc-400 font-medium mt-1">The amount above is VAT-inclusive. Pick the rate on the supplier&apos;s invoice — used for your input-VAT reporting.</p>
+                            </div>
+                            <div className="flex gap-2">
+                                {[21, 9, 0].map((rate) => (
+                                    <button
+                                        key={rate}
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, taxRate: rate })}
+                                        className={cn(
+                                            "flex-1 py-3 px-2 rounded-xl text-[11px] font-bold transition-all border",
+                                            formData.taxRate === rate
+                                                ? "bg-black text-white border-black shadow-lg shadow-black/10 scale-[1.02]"
+                                                : "bg-white text-zinc-400 border-zinc-200 hover:border-zinc-300"
+                                        )}
+                                    >
+                                        {rate === 0 ? "0% / Reverse" : `${rate}%`}
                                     </button>
                                 ))}
                             </div>

@@ -1,3 +1,5 @@
+import { splitVat, DEFAULT_VAT_RATE } from "./vat";
+
 // ── Generic CSV helper ─────────────────────────────────────────────────────
 
 function escapeCsvCell(value: unknown): string {
@@ -18,6 +20,11 @@ function toCSV(rows: Record<string, unknown>[]): string {
         ...rows.map((row) => headers.map((h) => escapeCsvCell(row[h])).join(",")),
     ];
     return lines.join("\n");
+}
+
+/** Build a CSV string from rows (without triggering a download) — handy for bundling into a ZIP. */
+export function toCSVString(rows: Record<string, unknown>[]): string {
+    return toCSV(rows);
 }
 
 export function downloadCSV(rows: Record<string, unknown>[], filename: string) {
@@ -61,6 +68,17 @@ type Invoice = {
     paymentMethod?: string;
     paidAt?: number;
     clientName?: string;
+    taxRate?: number;
+};
+
+type Order = {
+    _id: string;
+    orderNumber: string;
+    date: number;
+    amount: number;
+    status: string;
+    taxRate?: number;
+    supplierName?: string;
 };
 
 type Client = {
@@ -104,17 +122,48 @@ export function exportJobs(jobs: Job[]) {
     downloadCSV(rows as Record<string, unknown>[], "jobs_export");
 }
 
-export function exportInvoices(invoices: Invoice[]) {
-    const rows = invoices.map((i) => ({
-        "Invoice #": i.invoiceNumber,
-        "Client": i.clientName ?? "",
-        "Date": fmt(i.date),
-        "Amount (€)": i.amount.toFixed(2),
-        "Status": i.status,
-        "Payment Method": i.paymentMethod ?? "",
-        "Paid On": fmt(i.paidAt),
-    }));
-    downloadCSV(rows as Record<string, unknown>[], "invoices_export");
+export function invoiceRows(invoices: Invoice[]): Record<string, unknown>[] {
+    return invoices.map((i) => {
+        const rate = i.taxRate ?? 0;
+        const { net, vat } = splitVat(i.amount, rate);
+        return {
+            "Invoice #": i.invoiceNumber,
+            "Client": i.clientName ?? "",
+            "Date": fmt(i.date),
+            "VAT Rate (%)": rate,
+            "Net (€)": net.toFixed(2),
+            "VAT (€)": vat.toFixed(2),
+            "Gross (€)": i.amount.toFixed(2),
+            "Status": i.status,
+            "Payment Method": i.paymentMethod ?? "",
+            "Paid On": fmt(i.paidAt),
+        };
+    });
+}
+
+export function orderRows(orders: Order[], defaultRate = DEFAULT_VAT_RATE): Record<string, unknown>[] {
+    return orders.map((o) => {
+        const rate = o.taxRate ?? defaultRate;
+        const { net, vat } = splitVat(o.amount, rate);
+        return {
+            "Order #": o.orderNumber,
+            "Supplier": o.supplierName ?? "",
+            "Date": fmt(o.date),
+            "VAT Rate (%)": rate,
+            "Net (€)": net.toFixed(2),
+            "VAT (€)": vat.toFixed(2),
+            "Gross (€)": o.amount.toFixed(2),
+            "Status": o.status,
+        };
+    });
+}
+
+export function exportInvoices(invoices: Invoice[], filename = "invoices_export") {
+    downloadCSV(invoiceRows(invoices), filename);
+}
+
+export function exportOrders(orders: Order[], defaultRate = DEFAULT_VAT_RATE, filename = "orders_export") {
+    downloadCSV(orderRows(orders, defaultRate), filename);
 }
 
 export function exportClients(clients: Client[]) {

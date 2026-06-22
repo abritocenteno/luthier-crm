@@ -114,6 +114,7 @@ export default defineSchema({
             amount: v.number(),
             unitPrice: v.number(),
         }))),
+        taxRate: v.optional(v.number()), // VAT % contained in `amount` (VAT-inclusive); used for input-VAT reporting
         invoiceStorageId: v.optional(v.id("_storage")),
         userId: v.string(),
     })

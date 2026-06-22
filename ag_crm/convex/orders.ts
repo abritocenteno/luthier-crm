@@ -29,6 +29,7 @@ export const add = mutation({
             amount: v.number(),
             unitPrice: v.number(),
         }))),
+        taxRate: v.optional(v.number()),
         invoiceStorageId: v.optional(v.id("_storage")),
     },
     handler: async (ctx, args) => {
@@ -86,6 +87,7 @@ export const update = mutation({
             amount: v.number(),
             unitPrice: v.number(),
         }))),
+        taxRate: v.optional(v.number()),
         invoiceStorageId: v.optional(v.id("_storage")),
     },
     handler: async (ctx, args) => {
