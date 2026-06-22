@@ -235,13 +235,14 @@ export const generateInvoice = mutation({
         if (!job || job.userId !== identity.tokenIdentifier) throw new Error("Job not found");
         if (job.invoiceId) throw new Error("Invoice already generated for this job");
 
-        // Map work items → invoice line items
+        // Map work items → invoice line items (tagged so a later re-sync can rebuild them)
         const items = (job.workItems ?? []).map((wi) => ({
             name: wi.name,
             description: wi.description ?? "",
             remark: wi.type === "hourly" ? `${wi.hours ?? 0}h × ${wi.unitPrice}/h` : "",
             amount: wi.type === "hourly" ? (wi.hours ?? 1) : 1,
-            unitPrice: wi.type === "hourly" ? wi.unitPrice : wi.unitPrice,
+            unitPrice: wi.unitPrice,
+            fromJob: true,
         }));
 
         // Sum work items
@@ -271,6 +272,73 @@ export const generateInvoice = mutation({
         await ctx.db.patch(id, { invoiceId });
 
         return invoiceId;
+    },
+});
+
+// Re-sync an already-generated invoice with the job's current work items + linked
+// orders. The job-derived line items are rebuilt to match the job, while any line
+// items added manually on the invoice itself — plus credits and tax rate — are kept.
+export const syncInvoice = mutation({
+    args: { id: v.id("jobs") },
+    handler: async (ctx, { id }) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) throw new Error("Unauthorized");
+
+        const job = await ctx.db.get(id);
+        if (!job || job.userId !== identity.tokenIdentifier) throw new Error("Job not found");
+        if (!job.invoiceId) throw new Error("No invoice has been generated for this job yet");
+
+        const invoice = await ctx.db.get(job.invoiceId);
+        if (!invoice) throw new Error("Linked invoice not found");
+        if (invoice.status === "paid") {
+            throw new Error("This invoice is already paid and can't be changed. Create a new invoice instead.");
+        }
+
+        // Keep everything that wasn't derived from the job's work items:
+        //  - items explicitly marked manual (fromJob === false)
+        //  - order line items (they carry fromOrderId)
+        // Legacy job items (no fromJob, no fromOrderId) are treated as job-derived and rebuilt.
+        const existing = invoice.items ?? [];
+        const manualItems = existing.filter((it) => it.fromJob === false || !!it.fromOrderId);
+
+        // Rebuild the job-derived line items from the job's current work items.
+        const jobItems = (job.workItems ?? []).map((wi) => ({
+            name: wi.name,
+            description: wi.description ?? "",
+            remark: wi.type === "hourly" ? `${wi.hours ?? 0}h × ${wi.unitPrice}/h` : "",
+            amount: wi.type === "hourly" ? (wi.hours ?? 1) : 1,
+            unitPrice: wi.unitPrice,
+            fromJob: true,
+        }));
+
+        const mergedItems = [...jobItems, ...manualItems];
+        const itemsSubtotal = mergedItems.reduce((acc, i) => acc + i.amount * i.unitPrice, 0);
+
+        // Add linked-order totals, skipping any order already present as a manual line item
+        // (so it isn't counted twice).
+        const billedOrderIds = new Set(
+            manualItems.map((it) => it.fromOrderId).filter(Boolean) as string[]
+        );
+        let orderTotal = 0;
+        if (job.orderIds && job.orderIds.length > 0) {
+            const orders = await Promise.all(job.orderIds.map((oid) => ctx.db.get(oid)));
+            orderTotal = orders.reduce(
+                (acc, o) => acc + (o && !billedOrderIds.has(o._id) ? o.amount : 0),
+                0
+            );
+        }
+
+        // Preserve any manual credits already applied to the invoice.
+        const credits = (invoice as { credits?: { description: string; amount: number }[] }).credits;
+        const creditsTotal = credits?.reduce((acc, c) => acc + c.amount, 0) ?? 0;
+
+        await ctx.db.patch(job.invoiceId, {
+            items: mergedItems,
+            orderIds: job.orderIds ?? [],
+            amount: itemsSubtotal + orderTotal - creditsTotal,
+        });
+
+        return job.invoiceId;
     },
 });
 

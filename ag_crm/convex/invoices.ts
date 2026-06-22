@@ -30,6 +30,7 @@ export const add = mutation({
             amount: v.number(),
             unitPrice: v.number(),
             fromOrderId: v.optional(v.id("orders")),
+            fromJob: v.optional(v.boolean()),
         }))),
         credits: v.optional(v.array(v.object({
             description: v.string(),
@@ -103,6 +104,7 @@ export const update = mutation({
             amount: v.number(),
             unitPrice: v.number(),
             fromOrderId: v.optional(v.id("orders")),
+            fromJob: v.optional(v.boolean()),
         }))),
         credits: v.optional(v.array(v.object({
             description: v.string(),

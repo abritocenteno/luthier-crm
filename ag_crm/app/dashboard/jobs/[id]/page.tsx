@@ -9,7 +9,7 @@ import { Id } from "../../../../convex/_generated/dataModel";
 import {
     ArrowLeft, Wrench, Edit2, FileText, Guitar, Calendar, Clock,
     CheckCircle2, AlertCircle, Loader2, ExternalLink, StickyNote,
-    ChevronRight, Package, User, Inbox, Bell, Send, ImagePlus, X, Trash2, Printer, ClipboardList, Timer, Plus, Pencil,
+    ChevronRight, Package, User, Inbox, Bell, Send, ImagePlus, X, Trash2, Printer, ClipboardList, Timer, Plus, Pencil, RefreshCw,
 } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { SetupSheetCard } from "@/components/SetupSheetCard";
@@ -47,6 +47,7 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
     const settings = useQuery(api.settings.get);
     const updateStatus = useMutation(api.jobs.updateStatus);
     const generateInvoice = useMutation(api.jobs.generateInvoice);
+    const syncInvoice = useMutation(api.jobs.syncInvoice);
     const notifyClient = useAction(api.resend.sendJobReadyEmail);
     const sendQuote = useAction(api.resend.sendQuoteEmail);
     const markQuoteSent = useMutation(api.jobs.markQuoteSent);
@@ -61,6 +62,7 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
 
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isSyncing, setIsSyncing] = useState(false);
     const [isNotifying, setIsNotifying] = useState(false);
     const [notified, setNotified] = useState(false);
     const [isSendingQuote, setIsSendingQuote] = useState(false);
@@ -178,6 +180,23 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
             alert(err.message ?? "Failed to generate invoice.");
         } finally {
             setIsGenerating(false);
+        }
+    };
+
+    const handleSyncInvoice = async () => {
+        if (!confirm(
+            "Re-sync this invoice with the job's current work items and linked orders?\n\n" +
+            "The job's line items will be refreshed to match the job. Anything you added manually on the " +
+            "invoice itself — plus credits and tax rate — is kept."
+        )) return;
+        setIsSyncing(true);
+        try {
+            const invoiceId = await syncInvoice({ id });
+            router.push(`/dashboard/invoices/${invoiceId}`);
+        } catch (err: any) {
+            alert(err.message ?? "Failed to update invoice.");
+        } finally {
+            setIsSyncing(false);
         }
     };
 
@@ -366,13 +385,26 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
                             Generate Invoice
                         </button>
                     ) : job.invoiceId ? (
-                        <Link
-                            href={`/dashboard/invoices/${job.invoiceId}`}
-                            className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 transition-all active:scale-95 shadow-lg shadow-emerald-600/20"
-                        >
-                            <FileText size={16} />
-                            View Invoice
-                        </Link>
+                        <>
+                            {job.status !== "closed" && job.invoice?.status !== "paid" && (
+                                <button
+                                    onClick={handleSyncInvoice}
+                                    disabled={isSyncing}
+                                    className="flex items-center gap-2 px-5 py-2.5 bg-white border border-zinc-200 text-zinc-700 rounded-xl text-sm font-bold hover:border-black hover:text-black transition-all active:scale-95 shadow-sm disabled:opacity-50"
+                                    title="Rebuild this invoice from the job's current work items"
+                                >
+                                    {isSyncing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                                    Update Invoice
+                                </button>
+                            )}
+                            <Link
+                                href={`/dashboard/invoices/${job.invoiceId}`}
+                                className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 transition-all active:scale-95 shadow-lg shadow-emerald-600/20"
+                            >
+                                <FileText size={16} />
+                                View Invoice
+                            </Link>
+                        </>
                     ) : null}
                 </div>
             </header>

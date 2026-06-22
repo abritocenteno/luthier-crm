@@ -36,6 +36,7 @@ export default defineSchema({
             amount: v.number(),
             unitPrice: v.number(),
             fromOrderId: v.optional(v.id("orders")),
+            fromJob: v.optional(v.boolean()), // true = derived from the job's work items (replaced on re-sync)
         }))),
         credits: v.optional(v.array(v.object({
             description: v.string(),

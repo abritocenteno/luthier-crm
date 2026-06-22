@@ -58,7 +58,7 @@ function EditInvoiceForm({ id }: { id: Id<"invoices"> }) {
         amount: 0,
         status: "pending",
         paymentMethod: "",
-        items: [] as { name: string; description: string; remark: string; amount: number; unitPrice: number; fromOrderId?: Id<"orders"> }[],
+        items: [] as { name: string; description: string; remark: string; amount: number; unitPrice: number; fromOrderId?: Id<"orders">; fromJob?: boolean }[],
         credits: [] as { description: string; amount: number }[],
         orderIds: [] as Id<"orders">[],
         taxRate: 21,
@@ -105,7 +105,7 @@ function EditInvoiceForm({ id }: { id: Id<"invoices"> }) {
     const handleAddItem = () => {
         setFormData(prev => ({
             ...prev,
-            items: [...prev.items, { name: "", description: "", remark: "", amount: 1, unitPrice: 0 }]
+            items: [...prev.items, { name: "", description: "", remark: "", amount: 1, unitPrice: 0, fromJob: false }]
         }));
     };
 
