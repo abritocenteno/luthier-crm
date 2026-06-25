@@ -109,6 +109,7 @@ export const TUNINGS: Tuning[] = [
     { name: "7-string Standard (B)", category: "guitar", notes: ["B1", "E2", "A2", "D3", "G3", "B3", "E4"], gaugeLabel: ".010–.059" },
     // Bass
     { name: "Bass — E Standard (4)", category: "bass", notes: ["E1", "A1", "D2", "G2"], gaugeLabel: ".045–.105" },
+    { name: "Bass — Eb / Half-step down (4)", category: "bass", notes: ["D#1", "G#1", "C#2", "F#2"], gaugeLabel: ".045–.105" },
     { name: "Bass — Drop D (4)", category: "bass", notes: ["D1", "A1", "D2", "G2"], gaugeLabel: ".045–.105" },
     { name: "Bass — B Standard (5)", category: "bass", notes: ["B0", "E1", "A1", "D2", "G2"], gaugeLabel: ".045–.130" },
     // Ukulele
