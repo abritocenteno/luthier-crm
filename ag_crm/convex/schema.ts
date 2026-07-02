@@ -61,6 +61,9 @@ export default defineSchema({
         street: v.optional(v.string()),
         postcode: v.optional(v.string()),
         city: v.optional(v.string()),
+        // Whether Dutch BTW on this supplier's purchases is reclaimable as voorbelasting.
+        // Foreign suppliers (non-NL) charge no reclaimable Dutch VAT. Undefined = reclaimable (NL).
+        vatReclaimable: v.optional(v.boolean()),
         userId: v.string(), // tokenIdentifier of the owner
     }).index("by_user", ["userId"]),
     settings: defineTable({

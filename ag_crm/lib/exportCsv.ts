@@ -79,6 +79,7 @@ type Order = {
     status: string;
     taxRate?: number;
     supplierName?: string;
+    supplierVatReclaimable?: boolean;
 };
 
 type Client = {
@@ -153,6 +154,7 @@ export function orderRows(orders: Order[], defaultRate = DEFAULT_VAT_RATE): Reco
             "Net (€)": net.toFixed(2),
             "VAT (€)": vat.toFixed(2),
             "Gross (€)": o.amount.toFixed(2),
+            "NL VAT Reclaimable": o.supplierVatReclaimable === false ? "No" : "Yes",
             "Status": o.status,
         };
     });

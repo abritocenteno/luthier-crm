@@ -60,6 +60,8 @@ export const list = query({
                 return {
                     ...order,
                     supplierName: supplier?.name || "Unknown Supplier",
+                    // Undefined = reclaimable (NL). Only an explicit false marks a foreign supplier.
+                    supplierVatReclaimable: supplier?.vatReclaimable !== false,
                     supplierImageUrl: supplier?.imageStorageId
                         ? await ctx.storage.getUrl(supplier.imageStorageId)
                         : supplier?.imageUrl,

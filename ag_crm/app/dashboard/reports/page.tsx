@@ -128,6 +128,7 @@ type AnyInvoice = {
 type AnyOrder = {
     _id: string; orderNumber: string; date: number; amount: number; status: string;
     taxRate?: number; supplierName?: string; invoiceUrl?: string | null;
+    supplierVatReclaimable?: boolean;
 };
 
 function sanitizeFilename(s: string) {
@@ -184,10 +185,17 @@ function VatQuarterPanel({
             salesGross += b.gross; salesVat += b.vat;
             if (inv.taxRate == null) salesMissingRate++;
         }
+        // Reclaimable = domestic (NL) purchases; foreign-supplier VAT is not voorbelasting
+        // and must be excluded from the reclaim, though the gross remains a business cost.
         let purchaseGross = 0, purchaseVat = 0, purchaseNoFile = 0;
+        let foreignGross = 0, foreignVat = 0, foreignCount = 0;
         for (const o of purchaseOrders) {
             const b = splitVat(o.amount, o.taxRate ?? defaultRate);
-            purchaseGross += b.gross; purchaseVat += b.vat;
+            if (o.supplierVatReclaimable === false) {
+                foreignGross += b.gross; foreignVat += b.vat; foreignCount++;
+            } else {
+                purchaseGross += b.gross; purchaseVat += b.vat;
+            }
             if (!o.invoiceUrl) purchaseNoFile++;
         }
 
@@ -195,6 +203,8 @@ function VatQuarterPanel({
             start, end, salesInvoices, purchaseOrders,
             salesGross, salesNet: salesGross - salesVat, salesVat, salesMissingRate,
             purchaseGross, purchaseNet: purchaseGross - purchaseVat, purchaseVat, purchaseNoFile,
+            purchaseReclaimCount: purchaseOrders.length - foreignCount,
+            foreignGross, foreignNet: foreignGross - foreignVat, foreignVat, foreignCount,
             netVat: salesVat - purchaseVat,
         };
     }, [invoices, orders, year, quarter, basis, defaultRate]);
@@ -220,16 +230,25 @@ function VatQuarterPanel({
                 `  VAT collected:   ${period.salesVat.toFixed(2)}`,
                 `  Gross:           ${period.salesGross.toFixed(2)}`,
                 ``,
-                `PURCHASES (input VAT)`,
-                `  Orders:          ${period.purchaseOrders.length}`,
+                `PURCHASES (input VAT — reclaimable, NL only)`,
+                `  Orders:          ${period.purchaseReclaimCount}`,
                 `  Net:             ${period.purchaseNet.toFixed(2)}`,
-                `  VAT paid:        ${period.purchaseVat.toFixed(2)}`,
+                `  VAT reclaimable: ${period.purchaseVat.toFixed(2)}`,
                 `  Gross:           ${period.purchaseGross.toFixed(2)}`,
+                ...(period.foreignCount > 0 ? [
+                    ``,
+                    `FOREIGN PURCHASES (excluded — non-NL, VAT not reclaimable)`,
+                    `  Orders:          ${period.foreignCount}`,
+                    `  Net:             ${period.foreignNet.toFixed(2)}`,
+                    `  VAT (excluded):  ${period.foreignVat.toFixed(2)}`,
+                    `  Gross:           ${period.foreignGross.toFixed(2)}`,
+                ] : []),
                 ``,
                 `NET VAT (${period.netVat >= 0 ? "to remit" : "to reclaim"}): ${Math.abs(period.netVat).toFixed(2)}`,
                 ``,
                 `Included: /sales-invoices (your invoice PDFs) · /purchase-invoices (supplier files) · CSV exports`,
                 period.salesMissingRate > 0 ? `Note: ${period.salesMissingRate} sales invoice(s) have no VAT rate set and were treated as 0%.` : ``,
+                period.foreignCount > 0 ? `Note: ${period.foreignCount} foreign purchase(s) excluded from the reclaim (non-NL suppliers charge no reclaimable Dutch BTW).` : ``,
                 period.purchaseNoFile > 0 ? `Note: ${period.purchaseNoFile} purchase(s) have no uploaded invoice file.` : ``,
                 `Generated ${new Date().toLocaleString("en-GB")}`,
             ].filter(Boolean).join("\n");
@@ -376,7 +395,7 @@ function VatQuarterPanel({
                 <div className="p-5 rounded-2xl bg-amber-50/60 border border-amber-100">
                     <div className="flex items-center gap-2 text-amber-700"><Package size={14} /><span className="text-[10px] font-black uppercase tracking-widest">Input VAT · Purchases</span></div>
                     <p className="text-2xl font-black text-amber-700 mt-2">{fmt(period.purchaseVat)}</p>
-                    <p className="text-[11px] text-amber-700/60 font-medium mt-1">Net {fmt(period.purchaseNet)} · {period.purchaseOrders.length} order{period.purchaseOrders.length !== 1 ? "s" : ""}</p>
+                    <p className="text-[11px] text-amber-700/60 font-medium mt-1">Net {fmt(period.purchaseNet)} · {period.purchaseReclaimCount} reclaimable order{period.purchaseReclaimCount !== 1 ? "s" : ""}</p>
                 </div>
                 <div className="p-5 rounded-2xl bg-zinc-900 text-white">
                     <div className="flex items-center gap-2 text-zinc-300"><FileText size={14} /><span className="text-[10px] font-black uppercase tracking-widest">{period.netVat >= 0 ? "Net VAT to remit" : "Net VAT to reclaim"}</span></div>
@@ -386,9 +405,10 @@ function VatQuarterPanel({
             </div>
 
             {/* Warnings */}
-            {(period.salesMissingRate > 0 || period.purchaseNoFile > 0) && (
+            {(period.salesMissingRate > 0 || period.purchaseNoFile > 0 || period.foreignCount > 0) && (
                 <div className="text-[11px] text-zinc-500 space-y-1">
                     {period.salesMissingRate > 0 && <p>· {period.salesMissingRate} sales invoice{period.salesMissingRate !== 1 ? "s have" : " has"} no VAT rate set — counted as 0%. Set a rate on the invoice to include its VAT.</p>}
+                    {period.foreignCount > 0 && <p>· {period.foreignCount} foreign purchase{period.foreignCount !== 1 ? "s" : ""} ({fmt(period.foreignVat)} VAT) excluded from the reclaim — non-NL suppliers charge no reclaimable Dutch BTW.</p>}
                     {period.purchaseNoFile > 0 && <p>· {period.purchaseNoFile} purchase{period.purchaseNoFile !== 1 ? "s have" : " has"} no uploaded invoice file — won&apos;t appear in the ZIP.</p>}
                 </div>
             )}
