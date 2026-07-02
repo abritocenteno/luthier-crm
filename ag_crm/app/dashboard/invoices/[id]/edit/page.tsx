@@ -592,26 +592,33 @@ function EditInvoiceForm({ id }: { id: Id<"invoices"> }) {
                                         </td>
                                         <td />
                                     </tr>
-                                    {/* VAT row (informational — included in prices) */}
-                                    {formData.taxRate > 0 && (
-                                        <tr>
-                                            <td colSpan={4} className="px-6 py-1 text-right">
-                                                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
-                                                    Incl. VAT ({formData.taxRate}%)
-                                                </span>
-                                            </td>
-                                            <td colSpan={2} className="px-6 py-1 text-right text-sm font-bold text-zinc-700">
-                                                {formatCurrency(
-                                                    includedVat(
-                                                        formData.items.reduce((acc, item) => acc + item.amount * item.unitPrice, 0),
-                                                        formData.taxRate
-                                                    ),
-                                                    settings?.currency
-                                                )}
-                                            </td>
-                                            <td />
-                                        </tr>
-                                    )}
+                                    {/* VAT row — rate is editable; prices are VAT-inclusive, so this only re-splits the total */}
+                                    <tr>
+                                        <td colSpan={4} className="px-6 py-1 text-right">
+                                            <label className="inline-flex items-center gap-2 justify-end">
+                                                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Incl. VAT</span>
+                                                <select
+                                                    value={formData.taxRate}
+                                                    onChange={e => setFormData({ ...formData, taxRate: parseInt(e.target.value) })}
+                                                    className="px-2 py-1 bg-white border border-zinc-200 rounded-lg text-xs font-bold text-zinc-700 focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
+                                                >
+                                                    <option value={21}>21%</option>
+                                                    <option value={9}>9%</option>
+                                                    <option value={0}>0%</option>
+                                                </select>
+                                            </label>
+                                        </td>
+                                        <td colSpan={2} className="px-6 py-1 text-right text-sm font-bold text-zinc-700">
+                                            {formatCurrency(
+                                                includedVat(
+                                                    formData.items.reduce((acc, item) => acc + item.amount * item.unitPrice, 0),
+                                                    formData.taxRate
+                                                ),
+                                                settings?.currency
+                                            )}
+                                        </td>
+                                        <td />
+                                    </tr>
                                     {/* Grand total row */}
                                     <tr className="bg-zinc-50/80 border-t border-zinc-100">
                                         <td colSpan={4} className="px-6 py-4 text-right">
