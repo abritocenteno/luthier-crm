@@ -124,7 +124,14 @@ export const update = mutation({
         }
 
         if (existing.status === "paid") {
-            throw new Error("Paid invoices cannot be edited");
+            // A settled invoice's amount and line items stay locked, but its VAT rate
+            // may still be corrected for BTW reporting — that only changes how the
+            // (unchanged) gross is split into net + VAT, not what the client paid.
+            if (data.amount !== existing.amount) {
+                throw new Error("Paid invoices are locked — only the VAT rate can be corrected, not the amount.");
+            }
+            await ctx.db.patch(id, { taxRate: data.taxRate });
+            return;
         }
 
         await ctx.db.patch(id, data);

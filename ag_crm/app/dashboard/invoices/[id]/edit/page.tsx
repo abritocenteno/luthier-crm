@@ -224,7 +224,10 @@ function EditInvoiceForm({ id }: { id: Id<"invoices"> }) {
             router.push("/dashboard/invoices");
         } catch (error) {
             console.error("Failed to update invoice:", error);
-            alert("Failed to update invoice. Please try again.");
+            // Surface the server's own message (e.g. the paid-invoice lock) instead of a generic one.
+            const raw = error instanceof Error ? error.message : "";
+            const m = raw.match(/Uncaught Error:\s*([^\n]+)/);
+            alert(m ? m[1].trim() : "Failed to update invoice. Please try again.");
         } finally {
             setIsSubmitting(false);
         }
