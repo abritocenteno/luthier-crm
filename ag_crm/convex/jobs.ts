@@ -257,6 +257,14 @@ export const generateInvoice = mutation({
 
         const invoiceNumber = `INV-${Math.floor(1000 + Math.random() * 9000)}`;
 
+        // Default the VAT rate to the user's configured default (falling back to 21%),
+        // so job-generated invoices show BTW just like manually created ones.
+        const settings = await ctx.db
+            .query("settings")
+            .withIndex("by_user", (q) => q.eq("userId", identity.tokenIdentifier))
+            .first();
+        const taxRate = settings?.defaultTaxRate ?? 21;
+
         const invoiceId = await ctx.db.insert("invoices", {
             clientId: job.clientId,
             invoiceNumber,
@@ -265,6 +273,7 @@ export const generateInvoice = mutation({
             status: "pending",
             items,
             orderIds: job.orderIds ?? [],
+            taxRate,
             userId: identity.tokenIdentifier,
         });
 
