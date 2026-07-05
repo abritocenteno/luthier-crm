@@ -55,6 +55,7 @@ type Job = {
     estimatedCompletionDate?: number;
     completionDate?: number;
     internalNotes?: string;
+    source?: string; // 'direct' | 'gitaarafstellen' — acquisition channel
     workItems?: Array<{ name: string; type: string; unitPrice: number; hours?: number }>;
     client?: { name?: string; email?: string };
 };
@@ -106,6 +107,7 @@ export function exportJobs(jobs: Job[]) {
         return {
             "Job Title": j.title,
             "Client": (j as any).client?.name ?? "",
+            "Channel": j.source === "gitaarafstellen" ? "Gitaarafstellen" : "Direct",
             "Status": j.status,
             "Instrument Type": j.instrumentType,
             "Brand": j.instrumentBrand ?? "",
