@@ -375,7 +375,7 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
                             {notified ? "Client Notified" : "Notify Client"}
                         </button>
                     )}
-                    {!job.invoiceId && job.status !== "closed" ? (
+                    {!job.invoiceId ? (
                         <button
                             onClick={handleGenerateInvoice}
                             disabled={isGenerating}
