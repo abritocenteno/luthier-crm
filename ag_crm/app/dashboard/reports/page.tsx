@@ -7,11 +7,12 @@ import { createRoot } from "react-dom/client";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import Link from "next/link";
-import { TrendingUp, TrendingDown, Minus, ArrowRight, Download, Users, Wrench, FileText, Receipt, Package, FileArchive, Loader2 } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, ArrowRight, Download, Users, Wrench, FileText, Receipt, Package, FileArchive, Loader2, Landmark, PiggyBank } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { exportJobs, exportInvoices, exportClients, exportOrders, invoiceRows, orderRows, toCSVString } from "@/lib/exportCsv";
 import { LEAD_SOURCES, DEFAULT_SOURCE } from "@/lib/sources";
 import { splitVat, quarterRange, QUARTER_LABELS, currentFilingPeriod, DEFAULT_VAT_RATE } from "@/lib/vat";
+import { computeJaaroverzicht, MARGINAL_RATE_OPTIONS } from "@/lib/incomeTax";
 import InvoiceDocument from "@/components/InvoiceDocument";
 import { splitIntoPages, captureInvoicePng, waitForImages } from "@/lib/invoicePdf";
 
@@ -445,6 +446,133 @@ function VatQuarterPanel({
     );
 }
 
+// ── Income tax / Jaaroverzicht panel ─────────────────────────────────────────
+
+function JaaroverzichtPanel({
+    invoices,
+    orders,
+    currency,
+    defaultRate,
+}: {
+    invoices: AnyInvoice[];
+    orders: AnyOrder[];
+    currency?: string;
+    defaultRate: number;
+}) {
+    const fmt = (n: number) => formatCurrency(n, currency);
+    const filing = currentFilingPeriod();
+    const [year, setYear] = useState(filing.year);
+    const [marginalRate, setMarginalRate] = useState(MARGINAL_RATE_OPTIONS[0].rate);
+
+    const years = useMemo(() => {
+        const ys = new Set<number>([filing.year, new Date().getFullYear()]);
+        [...invoices.map((i) => i.date), ...orders.map((o) => o.date)].forEach((ts) => ys.add(new Date(ts).getFullYear()));
+        return Array.from(ys).sort((a, b) => b - a);
+    }, [invoices, orders, filing.year]);
+
+    const r = useMemo(
+        () => computeJaaroverzicht({ invoices, orders, year, defaultRate }),
+        [invoices, orders, year, defaultRate]
+    );
+
+    const estimatedTax = r.belastbareWinst > 0 ? r.belastbareWinst * marginalRate : 0;
+    const mkbPct = (r.mkbRate * 100).toLocaleString("nl-NL", { maximumFractionDigits: 2 });
+
+    return (
+        <Card className="p-6 space-y-6">
+            {/* Header */}
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                    <SectionTitle>Income Tax · Jaaroverzicht</SectionTitle>
+                    <p className="text-xs text-zinc-400 mt-1">Your yearly profit &amp; loss for the aangifte inkomstenbelasting — turnover minus costs, after the MKB-winstvrijstelling.</p>
+                </div>
+                <select
+                    value={year}
+                    onChange={(e) => setYear(Number(e.target.value))}
+                    className="px-3 py-2 bg-zinc-100 border-none rounded-xl text-xs font-bold text-zinc-700 focus:ring-2 focus:ring-black/5 cursor-pointer"
+                >
+                    {years.map((y) => <option key={y} value={y}>{y}</option>)}
+                </select>
+            </div>
+
+            {/* Profit ladder */}
+            <div className="rounded-2xl border border-zinc-200 divide-y divide-zinc-100 overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-3.5">
+                    <div>
+                        <p className="text-sm font-bold text-zinc-800">Net turnover</p>
+                        <p className="text-[11px] text-zinc-400">Omzet excl. BTW · {r.invoiceCount} invoice{r.invoiceCount !== 1 ? "s" : ""}</p>
+                    </div>
+                    <p className="text-sm font-black text-zinc-900 tabular-nums">{fmt(r.revenueNet)}</p>
+                </div>
+                <div className="flex items-center justify-between px-5 py-3.5">
+                    <div>
+                        <p className="text-sm font-bold text-zinc-800">− Business costs</p>
+                        <p className="text-[11px] text-zinc-400">
+                            Inkoop &amp; kosten · {r.nlCount} NL{r.foreignCount > 0 ? ` + ${r.foreignCount} foreign (gross)` : ""}
+                        </p>
+                    </div>
+                    <p className="text-sm font-black text-zinc-900 tabular-nums">−{fmt(r.deductibleCosts)}</p>
+                </div>
+                <div className="flex items-center justify-between px-5 py-3.5 bg-zinc-50">
+                    <div>
+                        <p className="text-sm font-black text-zinc-900">= Winst uit onderneming</p>
+                        <p className="text-[11px] text-zinc-400">Profit before exemptions</p>
+                    </div>
+                    <p className={cn("text-sm font-black tabular-nums", r.netProfit >= 0 ? "text-zinc-900" : "text-red-600")}>{fmt(r.netProfit)}</p>
+                </div>
+                <div className="flex items-center justify-between px-5 py-3.5">
+                    <div>
+                        <p className="text-sm font-bold text-zinc-800">− MKB-winstvrijstelling</p>
+                        <p className="text-[11px] text-zinc-400">{mkbPct}% of profit · no urencriterium needed</p>
+                    </div>
+                    <p className="text-sm font-black text-zinc-900 tabular-nums">−{fmt(r.mkbVrijstelling)}</p>
+                </div>
+            </div>
+
+            {/* Taxable profit + set-aside estimate */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="p-5 rounded-2xl bg-zinc-900 text-white">
+                    <div className="flex items-center gap-2 text-zinc-300"><Landmark size={14} /><span className="text-[10px] font-black uppercase tracking-widest">Belastbare winst · Box 1</span></div>
+                    <p className="text-2xl font-black mt-2">{fmt(r.belastbareWinst)}</p>
+                    <p className="text-[11px] text-zinc-400 font-medium mt-1">Stacks on top of your salary in Box 1</p>
+                </div>
+                <div className="p-5 rounded-2xl bg-indigo-50/60 border border-indigo-100">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-indigo-700"><PiggyBank size={14} /><span className="text-[10px] font-black uppercase tracking-widest">Set aside · est.</span></div>
+                        <div className="flex gap-1 p-1 bg-white/70 rounded-lg">
+                            {MARGINAL_RATE_OPTIONS.map((opt) => (
+                                <button
+                                    key={opt.rate}
+                                    onClick={() => setMarginalRate(opt.rate)}
+                                    className={cn("px-2 py-1 rounded-md text-[10px] font-bold transition-all", marginalRate === opt.rate ? "bg-indigo-600 text-white shadow-sm" : "text-indigo-500 hover:text-indigo-700")}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <p className="text-2xl font-black text-indigo-700 mt-2">{fmt(estimatedTax)}</p>
+                    <p className="text-[11px] text-indigo-700/60 font-medium mt-1">Rough reserve at {Math.round(marginalRate * 100)}% marginal — not the final assessment</p>
+                </div>
+            </div>
+
+            {/* Warnings */}
+            {r.missingRate > 0 && (
+                <div className="text-[11px] text-zinc-500">
+                    <p>· {r.missingRate} invoice{r.missingRate !== 1 ? "s have" : " has"} no VAT rate set — counted at face value as net, which may overstate turnover and profit.</p>
+                </div>
+            )}
+
+            {/* Caveats */}
+            <div className="text-[11px] text-zinc-400 space-y-1 pt-2 border-t border-zinc-100">
+                <p><strong className="font-bold text-zinc-500">How this is built:</strong> factuurstelsel — every invoice issued in {year} net of BTW, minus business costs (NL purchases at net, foreign at gross), one calendar year at a time.</p>
+                <p><strong className="font-bold text-zinc-500">No zelfstandigenaftrek</strong> — this assumes you don&apos;t meet the 1.225-hour urencriterium, so only the MKB-winstvrijstelling is applied.</p>
+                <p>Indicative only — confirm the {mkbPct}% MKB rate and your Box 1 bracket for the tax year with the Belastingdienst. Not formal tax advice.</p>
+            </div>
+        </Card>
+    );
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export default function ReportsPage() {
@@ -557,6 +685,16 @@ export default function ReportsPage() {
                     defaultRate={settings?.defaultTaxRate ?? DEFAULT_VAT_RATE}
                     companyName={settings?.companyName ?? "Your workshop"}
                     settings={settings}
+                />
+            )}
+
+            {/* ── Income Tax / Jaaroverzicht ── */}
+            {allInvoices && allOrders && (
+                <JaaroverzichtPanel
+                    invoices={allInvoices as never}
+                    orders={allOrders as never}
+                    currency={currency}
+                    defaultRate={settings?.defaultTaxRate ?? DEFAULT_VAT_RATE}
                 />
             )}
 
