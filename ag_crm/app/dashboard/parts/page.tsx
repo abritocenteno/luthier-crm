@@ -60,7 +60,9 @@ export default function PartsPage() {
 
     const lowStock = (parts ?? []).filter((p) => p.reorderThreshold != null && p.quantity <= (p.reorderThreshold ?? 0));
 
-    const pager = usePagination(filtered, 15, `${search}|${filterCategory}`);
+    const sorted = [...filtered].sort((a, b) => b._creationTime - a._creationTime);
+
+    const pager = usePagination(sorted, 15, `${search}|${filterCategory}`);
     const pageItems = pager.pageItems;
 
     const openNew = () => { setDraft(emptyDraft()); setEditingId(null); setShowForm(true); };
@@ -212,6 +214,7 @@ export default function PartsPage() {
                                     <th className="px-6 py-4">SKU</th>
                                     <th className="px-6 py-4 text-center">Qty</th>
                                     <th className="px-6 py-4 text-right">Unit Cost</th>
+                                    <th className="px-6 py-4">Date Added</th>
                                     <th className="px-6 py-4 text-right">Actions</th>
                                 </tr>
                             </thead>
@@ -258,6 +261,9 @@ export default function PartsPage() {
                                             </td>
                                             <td className="px-6 py-4 text-right text-sm font-bold text-zinc-900">
                                                 {part.unitCost != null ? formatCurrency(part.unitCost, settings?.currency) : "—"}
+                                            </td>
+                                            <td className="px-6 py-4 text-sm text-zinc-500 font-medium whitespace-nowrap tabular-nums">
+                                                {new Date(part._creationTime).toLocaleDateString()}
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

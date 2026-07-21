@@ -88,7 +88,11 @@ export default function SuppliersPage() {
         s.email.toLowerCase().includes(search.toLowerCase())
     );
 
-    const pager = usePagination(filteredSuppliers ?? [], 15, search);
+    const sortedSuppliers = filteredSuppliers
+        ? [...filteredSuppliers].sort((a, b) => b._creationTime - a._creationTime)
+        : undefined;
+
+    const pager = usePagination(sortedSuppliers ?? [], 15, search);
     const pageItems = pager.pageItems;
 
     const handleOpenDrawer = (supplier?: any) => {
@@ -243,6 +247,7 @@ export default function SuppliersPage() {
                                     <th className="px-6 py-4">Supplier Information</th>
                                     <th className="px-6 py-4">Type</th>
                                     <th className="px-6 py-4">Contact</th>
+                                    <th className="px-6 py-4">Date Added</th>
                                     <th className="px-6 py-4 text-right">Actions</th>
                                 </tr>
                             </thead>
@@ -284,6 +289,9 @@ export default function SuppliersPage() {
                                                     )}
                                                 </div>
                                             </td>
+                                            <td className="px-6 py-4 text-sm text-zinc-500 font-medium whitespace-nowrap tabular-nums">
+                                                {new Date(supplier._creationTime).toLocaleDateString()}
+                                            </td>
                                             <td className="px-6 py-4 text-right">
                                                 <div className="flex items-center justify-end gap-2">
                                                     <button
@@ -313,7 +321,7 @@ export default function SuppliersPage() {
                                 ) : (
                                     [1, 2, 3].map(i => (
                                         <tr key={i} className="animate-pulse">
-                                            <td colSpan={4} className="px-6 py-6 border-b border-zinc-50">
+                                            <td colSpan={5} className="px-6 py-6 border-b border-zinc-50">
                                                 <div className="h-10 bg-zinc-100 rounded-xl w-full" />
                                             </td>
                                         </tr>
@@ -321,7 +329,7 @@ export default function SuppliersPage() {
                                 )}
                                 {filteredSuppliers?.length === 0 && (
                                     <tr>
-                                        <td colSpan={4} className="px-6 py-12 text-center">
+                                        <td colSpan={5} className="px-6 py-12 text-center">
                                             <div className="flex flex-col items-center justify-center space-y-3">
                                                 <div className="w-12 h-12 bg-zinc-50 rounded-full flex items-center justify-center text-zinc-300">
                                                     <Truck size={24} />
