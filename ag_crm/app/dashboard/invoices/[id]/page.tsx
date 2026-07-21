@@ -402,8 +402,8 @@ function InvoiceDetail({ id }: { id: Id<"invoices"> }) {
                                                 disabled={isMarkingPaid}
                                                 className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
                                             >
-                                                {isMarkingPaid ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-                                                Confirm Payment — {selectedPayMethod}
+                                                {isMarkingPaid ? <Loader2 size={16} className="animate-spin shrink-0" /> : <CheckCircle2 size={16} className="shrink-0" />}
+                                                <span className="truncate">Confirm Payment — {selectedPayMethod}</span>
                                             </button>
                                         </div>
                                     </div>

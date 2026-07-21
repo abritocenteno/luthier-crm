@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
+import { usePagination, Pagination } from "@/components/Pagination";
 import { Id } from "../../../convex/_generated/dataModel";
 
 // --- Components ---
@@ -86,6 +87,9 @@ export default function SuppliersPage() {
         s.name.toLowerCase().includes(search.toLowerCase()) ||
         s.email.toLowerCase().includes(search.toLowerCase())
     );
+
+    const pager = usePagination(filteredSuppliers ?? [], 15, search);
+    const pageItems = pager.pageItems;
 
     const handleOpenDrawer = (supplier?: any) => {
         if (supplier) {
@@ -244,7 +248,7 @@ export default function SuppliersPage() {
                             </thead>
                             <tbody className="divide-y divide-zinc-100">
                                 {filteredSuppliers ? (
-                                    filteredSuppliers.map((supplier) => (
+                                    pageItems.map((supplier) => (
                                         <tr key={supplier._id} className="group hover:bg-zinc-50/50 transition-colors">
                                             <td className="px-6 py-4">
                                                 <Link href={`/dashboard/suppliers/${supplier._id}`} className="flex items-center gap-3 group/link">
@@ -333,6 +337,8 @@ export default function SuppliersPage() {
                             </tbody>
                         </table>
                     </div>
+
+                    <Pagination pager={pager} unit="suppliers" />
                 </Card>
             </div>
 

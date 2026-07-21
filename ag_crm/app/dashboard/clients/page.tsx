@@ -23,6 +23,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 import { exportClients } from "@/lib/exportCsv";
+import { usePagination, Pagination } from "@/components/Pagination";
 import { LEAD_SOURCES, DEFAULT_SOURCE, sourceMeta } from "@/lib/sources";
 import { Id } from "../../../convex/_generated/dataModel";
 import { useSortableData } from "@/lib/hooks/useSortableData";
@@ -89,6 +90,9 @@ export default function ClientsPage() {
     ) : null;
 
     const { items: sortedClients, requestSort, sortConfig } = useSortableData(filteredClients || []);
+
+    const pager = usePagination(sortedClients, 15, `${search}|${sourceFilter}|${String(sortConfig.key)}|${sortConfig.direction}`);
+    const pageItems = pager.pageItems;
 
     const handleOpenDrawer = (client?: any) => {
         if (client) {
@@ -245,7 +249,7 @@ export default function ClientsPage() {
                                     <div className="h-12 bg-zinc-100 rounded-xl w-full" />
                                 </div>
                             ))
-                        ) : sortedClients.map((client) => (
+                        ) : pageItems.map((client) => (
                             <div key={client._id} className="flex items-center gap-3 px-4 py-3">
                                 <Link href={`/dashboard/clients/${client._id}`} className="flex items-center gap-3 flex-1 min-w-0">
                                     <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-400 border border-zinc-200 overflow-hidden shrink-0">
@@ -329,7 +333,7 @@ export default function ClientsPage() {
                                             </td>
                                         </tr>
                                     ))
-                                ) : sortedClients.map((client) => (
+                                ) : pageItems.map((client) => (
                                         <tr key={client._id} className="group hover:bg-zinc-50/50 transition-colors">
                                             <td className="px-6 py-4">
                                                 <Link href={`/dashboard/clients/${client._id}`} className="flex items-center gap-3 group/link">
@@ -415,6 +419,8 @@ export default function ClientsPage() {
                             </tbody>
                         </table>
                     </div>
+
+                    <Pagination pager={pager} unit="clients" />
                 </Card>
             </div>
 

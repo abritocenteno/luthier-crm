@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { exportInvoices } from "@/lib/exportCsv";
 import { cn, formatCurrency } from "@/lib/utils";
+import { usePagination, Pagination } from "@/components/Pagination";
 import { LEAD_SOURCES, DEFAULT_SOURCE, sourceMeta } from "@/lib/sources";
 import { Id } from "../../../convex/_generated/dataModel";
 
@@ -83,6 +84,9 @@ export default function InvoicesPage() {
             else if (sortField === "status")         cmp = a.status.localeCompare(b.status);
             return sortDir === "asc" ? cmp : -cmp;
         });
+
+    const pager = usePagination(filtered ?? [], 15, `${search}|${dateFilter}|${sourceFilter}|${sortField}|${sortDir}`);
+    const pageItems = pager.pageItems;
 
     const SortIcon = ({ field }: { field: SortField }) => {
         if (sortField !== field) return <ChevronsUpDown size={12} className="opacity-25 shrink-0" />;
@@ -199,7 +203,7 @@ export default function InvoicesPage() {
                                 </Link>
                             </div>
                         </div>
-                    ) : filtered.map(invoice => (
+                    ) : pageItems.map(invoice => (
                         <div key={invoice._id} className="flex items-center gap-3 px-4 py-3">
                             <Link href={`/dashboard/invoices/${invoice._id}`} className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between gap-2 mb-0.5">
@@ -255,7 +259,7 @@ export default function InvoicesPage() {
                                             </div>
                                         </td>
                                     </tr>
-                                ) : filtered.map(invoice => (
+                                ) : pageItems.map(invoice => (
                                     <tr key={invoice._id} className="group hover:bg-zinc-50/50 transition-colors">
                                         <td className="px-6 py-4">
                                             <Link href={`/dashboard/invoices/${invoice._id}`} className="flex items-center gap-3 group/link">
@@ -327,6 +331,8 @@ export default function InvoicesPage() {
                         </tbody>
                     </table>
                 </div>
+
+                <Pagination pager={pager} unit="invoices" />
             </Card>
         </div>
     );

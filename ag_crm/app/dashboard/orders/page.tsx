@@ -9,6 +9,7 @@ import {
     Calendar, Building2, ChevronUp, ChevronDown, ChevronsUpDown, Download,
 } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
+import { usePagination, Pagination } from "@/components/Pagination";
 import { Id } from "../../../convex/_generated/dataModel";
 
 const Card = ({ children, className }: { children: React.ReactNode; className?: string }) => (
@@ -110,6 +111,9 @@ export default function OrdersPage() {
             return sortDir === "asc" ? cmp : -cmp;
         });
 
+    const pager = usePagination(filtered ?? [], 15, `${search}|${dateFilter}|${sortField}|${sortDir}`);
+    const pageItems = pager.pageItems;
+
     const SortIcon = ({ field }: { field: SortField }) => {
         if (sortField !== field) return <ChevronsUpDown size={12} className="opacity-25 shrink-0" />;
         return sortDir === "asc"
@@ -201,7 +205,7 @@ export default function OrdersPage() {
                                             </div>
                                         </td>
                                     </tr>
-                                ) : filtered.map(order => (
+                                ) : pageItems.map(order => (
                                     <tr key={order._id} className="group hover:bg-zinc-50/50 transition-colors">
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
@@ -278,6 +282,8 @@ export default function OrdersPage() {
                         </tbody>
                     </table>
                 </div>
+
+                <Pagination pager={pager} unit="orders" />
             </Card>
         </div>
     );

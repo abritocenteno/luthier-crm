@@ -283,7 +283,7 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
                         Back to Jobs
                     </button>
                     <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-black flex items-center justify-center text-white shadow-lg">
+                        <div className="w-12 h-12 shrink-0 rounded-2xl bg-black flex items-center justify-center text-white shadow-lg">
                             <Wrench size={24} />
                         </div>
                         <div>

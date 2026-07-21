@@ -9,6 +9,7 @@ import {
     ChevronDown, Minus, Search,
 } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
+import { usePagination, Pagination } from "@/components/Pagination";
 
 const CATEGORIES = ["Strings", "Tuners", "Nuts & Saddles", "Pickups", "Electronics", "Hardware", "Frets", "Finishing", "Other"];
 
@@ -58,6 +59,9 @@ export default function PartsPage() {
     });
 
     const lowStock = (parts ?? []).filter((p) => p.reorderThreshold != null && p.quantity <= (p.reorderThreshold ?? 0));
+
+    const pager = usePagination(filtered, 15, `${search}|${filterCategory}`);
+    const pageItems = pager.pageItems;
 
     const openNew = () => { setDraft(emptyDraft()); setEditingId(null); setShowForm(true); };
 
@@ -212,7 +216,7 @@ export default function PartsPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-zinc-100">
-                                {filtered.map((part) => {
+                                {pageItems.map((part) => {
                                     const isLow = part.reorderThreshold != null && part.quantity <= (part.reorderThreshold ?? 0);
                                     return (
                                         <tr key={part._id} className="group hover:bg-zinc-50/50 transition-colors">
@@ -280,6 +284,8 @@ export default function PartsPage() {
                         </table>
                     </div>
                 )}
+
+                <Pagination pager={pager} unit="parts" />
             </Card>
 
             {/* Add / Edit Drawer */}

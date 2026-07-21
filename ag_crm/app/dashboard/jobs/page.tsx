@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { exportJobs } from "@/lib/exportCsv";
+import { usePagination, Pagination } from "@/components/Pagination";
 import { LEAD_SOURCES, DEFAULT_SOURCE, sourceMeta } from "@/lib/sources";
 
 const STATUS_CONFIG = {
@@ -62,6 +63,9 @@ export default function JobsPage() {
         (activeTab === "all" || j.status === activeTab) &&
         (sourceFilter === "all" || ((j as any).source || DEFAULT_SOURCE) === sourceFilter)
     ) ?? [];
+
+    const pager = usePagination(filtered, 12, `${activeTab}|${sourceFilter}`);
+    const pageItems = pager.pageItems;
 
     // Counts per status for badges
     const counts = jobs?.reduce<Record<string, number>>((acc, j) => {
@@ -168,7 +172,7 @@ export default function JobsPage() {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    {filtered.map((job) => (
+                    {pageItems.map((job) => (
                         <Link
                             key={job._id}
                             href={`/dashboard/jobs/${job._id}`}
@@ -214,6 +218,8 @@ export default function JobsPage() {
                     ))}
                 </div>
             )}
+
+            {pager.total > 0 && <Pagination pager={pager} unit="jobs" variant="plain" className="mt-2 px-0" />}
         </div>
     );
 }
