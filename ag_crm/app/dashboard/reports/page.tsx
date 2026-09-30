@@ -11,8 +11,9 @@ import { TrendingUp, TrendingDown, Minus, ArrowRight, Download, Users, Wrench, F
 import { cn, formatCurrency } from "@/lib/utils";
 import { exportJobs, exportInvoices, exportClients, exportOrders, invoiceRows, orderRows, toCSVString } from "@/lib/exportCsv";
 import { LEAD_SOURCES, DEFAULT_SOURCE } from "@/lib/sources";
-import { splitVat, quarterRange, QUARTER_LABELS, currentFilingPeriod, DEFAULT_VAT_RATE } from "@/lib/vat";
+import { splitVat, type SupplierVatTreatment, quarterRange, QUARTER_LABELS, currentFilingPeriod, DEFAULT_VAT_RATE } from "@/lib/vat";
 import { computeJaaroverzicht, MARGINAL_RATE_OPTIONS } from "@/lib/incomeTax";
+import { computeAangifte } from "@/lib/btwAangifte";
 import InvoiceDocument from "@/components/InvoiceDocument";
 import { splitIntoPages, captureInvoicePng, waitForImages } from "@/lib/invoicePdf";
 
@@ -129,7 +130,7 @@ type AnyInvoice = {
 type AnyOrder = {
     _id: string; orderNumber: string; date: number; amount: number; status: string;
     taxRate?: number; supplierName?: string; invoiceUrl?: string | null;
-    supplierVatReclaimable?: boolean;
+    supplierVatTreatment?: SupplierVatTreatment;
 };
 
 function sanitizeFilename(s: string) {
@@ -188,23 +189,28 @@ function VatQuarterPanel({
         }
         // Reclaimable = domestic (NL) purchases; foreign-supplier VAT is not voorbelasting
         // and must be excluded from the reclaim, though the gross remains a business cost.
+        // EU reverse-charge purchases (0%) go to 4b and net to zero, so they're kept apart.
         let purchaseGross = 0, purchaseVat = 0, purchaseNoFile = 0;
         let foreignGross = 0, foreignVat = 0, foreignCount = 0;
         for (const o of purchaseOrders) {
-            const b = splitVat(o.amount, o.taxRate ?? defaultRate);
-            if (o.supplierVatReclaimable === false) {
+            const treatment = o.supplierVatTreatment ?? "nl";
+            if (treatment === "foreign") {
+                const b = splitVat(o.amount, o.taxRate ?? defaultRate);
                 foreignGross += b.gross; foreignVat += b.vat; foreignCount++;
-            } else {
+            } else if (treatment === "nl") {
+                const b = splitVat(o.amount, o.taxRate ?? defaultRate);
                 purchaseGross += b.gross; purchaseVat += b.vat;
             }
             if (!o.invoiceUrl) purchaseNoFile++;
         }
+        const aangifte = computeAangifte(salesInvoices, purchaseOrders, defaultRate);
 
         return {
             start, end, salesInvoices, purchaseOrders,
             salesGross, salesNet: salesGross - salesVat, salesVat, salesMissingRate,
             purchaseGross, purchaseNet: purchaseGross - purchaseVat, purchaseVat, purchaseNoFile,
-            purchaseReclaimCount: purchaseOrders.length - foreignCount,
+            purchaseReclaimCount: purchaseOrders.length - foreignCount - aangifte.reverseCount,
+            aangifte,
             foreignGross, foreignNet: foreignGross - foreignVat, foreignVat, foreignCount,
             netVat: salesVat - purchaseVat,
         };
@@ -245,7 +251,20 @@ function VatQuarterPanel({
                     `  Gross:           ${period.foreignGross.toFixed(2)}`,
                 ] : []),
                 ``,
+                ...(period.aangifte.reverseCount > 0 ? [
+                    ``,
+                    `EU REVERSE-CHARGE PURCHASES (0%, verlegd — rubriek 4b, reclaimed in 5b)`,
+                    `  Orders:          ${period.aangifte.reverseCount}`,
+                    `  Net:             ${period.aangifte.r4bOmzet.toFixed(2)}`,
+                    `  VAT (21%):       ${period.aangifte.r4bBtw.toFixed(2)}`,
+                ] : []),
+                ``,
                 `NET VAT (${period.netVat >= 0 ? "to remit" : "to reclaim"}): ${Math.abs(period.netVat).toFixed(2)}`,
+                ``,
+                `BTW AANGIFTE (whole euros, rounded in your favour)`,
+                ...period.aangifte.rubrieken.map((r) =>
+                    `  ${r.code.padEnd(4)}${r.label.padEnd(56)}${r.omzet != null ? `omzet ${String(r.omzet).padStart(7)}` : " ".repeat(13)}${r.btw != null ? `   btw ${String(r.btw).padStart(6)}` : ""}`
+                ),
                 ``,
                 `Included: /sales-invoices (your invoice PDFs) · /purchase-invoices (supplier files) · CSV exports`,
                 period.salesMissingRate > 0 ? `Note: ${period.salesMissingRate} sales invoice(s) have no VAT rate set and were treated as 0%.` : ``,
@@ -406,10 +425,46 @@ function VatQuarterPanel({
             </div>
 
             {/* Warnings */}
-            {(period.salesMissingRate > 0 || period.purchaseNoFile > 0 || period.foreignCount > 0) && (
+            {/* Aangifte rubrieken */}
+            <div className="rounded-2xl border border-zinc-100 overflow-hidden">
+                <div className="flex items-baseline justify-between gap-4 px-5 py-3 bg-zinc-50 border-b border-zinc-100">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">BTW aangifte · rubrieken</span>
+                    <span className="text-[10px] font-medium text-zinc-400">Whole euros, rounded in your favour</span>
+                </div>
+                <table className="w-full text-sm">
+                    <thead>
+                        <tr className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+                            <th className="text-left font-bold px-5 py-2 w-12">#</th>
+                            <th className="text-left font-bold py-2">Rubriek</th>
+                            <th className="text-right font-bold py-2 px-3">Omzet</th>
+                            <th className="text-right font-bold py-2 px-5">BTW</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {period.aangifte.rubrieken.map((r) => (
+                            <tr
+                                key={r.code}
+                                className={cn(
+                                    "border-t border-zinc-100",
+                                    r.code === "5g" && "bg-zinc-900 text-white",
+                                    r.code !== "5g" && !r.omzet && !r.btw && "text-zinc-300"
+                                )}
+                            >
+                                <td className="px-5 py-2.5 font-black tabular-nums">{r.code}</td>
+                                <td className="py-2.5 pr-3 text-[12px] font-medium">{r.label}</td>
+                                <td className="py-2.5 px-3 text-right font-bold tabular-nums">{r.omzet != null ? `€ ${r.omzet}` : ""}</td>
+                                <td className="py-2.5 px-5 text-right font-black tabular-nums">{r.btw != null ? `€ ${r.btw}` : ""}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            {(period.salesMissingRate > 0 || period.purchaseNoFile > 0 || period.foreignCount > 0 || period.aangifte.reverseCount > 0) && (
                 <div className="text-[11px] text-zinc-500 space-y-1">
                     {period.salesMissingRate > 0 && <p>· {period.salesMissingRate} sales invoice{period.salesMissingRate !== 1 ? "s have" : " has"} no VAT rate set — counted as 0%. Set a rate on the invoice to include its VAT.</p>}
                     {period.foreignCount > 0 && <p>· {period.foreignCount} foreign purchase{period.foreignCount !== 1 ? "s" : ""} ({fmt(period.foreignVat)} VAT) excluded from the reclaim — non-NL suppliers charge no reclaimable Dutch BTW.</p>}
+                    {period.aangifte.reverseCount > 0 && <p>· {period.aangifte.reverseCount} EU reverse-charge purchase{period.aangifte.reverseCount !== 1 ? "s" : ""} ({fmt(period.aangifte.r4bOmzet)} at 0%) declared in 4b with {fmt(period.aangifte.r4bBtw)} BTW, reclaimed again in 5b — nets to zero.</p>}
                     {period.purchaseNoFile > 0 && <p>· {period.purchaseNoFile} purchase{period.purchaseNoFile !== 1 ? "s have" : " has"} no uploaded invoice file — won&apos;t appear in the ZIP.</p>}
                 </div>
             )}
@@ -508,7 +563,7 @@ function JaaroverzichtPanel({
                     <div>
                         <p className="text-sm font-bold text-zinc-800">− Business costs</p>
                         <p className="text-[11px] text-zinc-400">
-                            Inkoop &amp; kosten · {r.nlCount} NL{r.foreignCount > 0 ? ` + ${r.foreignCount} foreign (gross)` : ""}
+                            Inkoop &amp; kosten · {r.nlCount} NL{r.reverseCount > 0 ? ` + ${r.reverseCount} EU reverse-charge` : ""}{r.foreignCount > 0 ? ` + ${r.foreignCount} foreign (gross)` : ""}
                         </p>
                     </div>
                     <p className="text-sm font-black text-zinc-900 tabular-nums">−{fmt(r.deductibleCosts)}</p>

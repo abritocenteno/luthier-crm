@@ -45,6 +45,7 @@ export const add = mutation({
         postcode: v.optional(v.string()),
         city: v.optional(v.string()),
         vatReclaimable: v.optional(v.boolean()),
+        vatTreatment: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
         const identity = await ctx.auth.getUserIdentity();
@@ -71,6 +72,7 @@ export const update = mutation({
         postcode: v.optional(v.string()),
         city: v.optional(v.string()),
         vatReclaimable: v.optional(v.boolean()),
+        vatTreatment: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
         const { id, ...data } = args;

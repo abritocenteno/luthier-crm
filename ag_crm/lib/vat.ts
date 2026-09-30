@@ -41,3 +41,23 @@ export function currentFilingPeriod(now = new Date()): { year: number; quarter: 
     if (q === 1) return { year: now.getFullYear() - 1, quarter: 4 };
     return { year: now.getFullYear(), quarter: q - 1 };
 }
+
+// ── Supplier VAT treatment ──────────────────────────────────────────────────
+// 'nl'         — Dutch supplier charging Dutch BTW → reclaimable voorbelasting (5b).
+// 'eu_reverse' — EU supplier invoicing 0% under reverse charge (verlegd). The paid
+//                amount is net; you self-assess Dutch BTW in 4b and reclaim it in 5b.
+// 'foreign'    — foreign supplier charging its own VAT → not reclaimable, a plain cost.
+
+export type SupplierVatTreatment = "nl" | "eu_reverse" | "foreign";
+
+export const VAT_TREATMENT_LABELS: Record<SupplierVatTreatment, string> = {
+    nl: "NL · BTW reclaimable",
+    eu_reverse: "EU · 0% reverse charge",
+    foreign: "Foreign VAT · not reclaimable",
+};
+
+/** Resolve a supplier's treatment, falling back to the legacy `vatReclaimable` flag. */
+export function resolveVatTreatment(s?: { vatTreatment?: string; vatReclaimable?: boolean } | null): SupplierVatTreatment {
+    if (s?.vatTreatment === "nl" || s?.vatTreatment === "eu_reverse" || s?.vatTreatment === "foreign") return s.vatTreatment;
+    return s?.vatReclaimable === false ? "foreign" : "nl";
+}

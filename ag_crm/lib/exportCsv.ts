@@ -1,4 +1,5 @@
-import { splitVat, DEFAULT_VAT_RATE } from "./vat";
+import { splitVat, DEFAULT_VAT_RATE, VAT_TREATMENT_LABELS, type SupplierVatTreatment } from "./vat";
+import { orderVat } from "./btwAangifte";
 
 // ── Generic CSV helper ─────────────────────────────────────────────────────
 
@@ -80,7 +81,7 @@ type Order = {
     status: string;
     taxRate?: number;
     supplierName?: string;
-    supplierVatReclaimable?: boolean;
+    supplierVatTreatment?: SupplierVatTreatment;
 };
 
 type Client = {
@@ -146,7 +147,8 @@ export function invoiceRows(invoices: Invoice[]): Record<string, unknown>[] {
 
 export function orderRows(orders: Order[], defaultRate = DEFAULT_VAT_RATE): Record<string, unknown>[] {
     return orders.map((o) => {
-        const rate = o.taxRate ?? defaultRate;
+        const treatment = o.supplierVatTreatment ?? "nl";
+        const rate = treatment === "eu_reverse" ? 0 : o.taxRate ?? defaultRate;
         const { net, vat } = splitVat(o.amount, rate);
         return {
             "Order #": o.orderNumber,
@@ -156,7 +158,8 @@ export function orderRows(orders: Order[], defaultRate = DEFAULT_VAT_RATE): Reco
             "Net (€)": net.toFixed(2),
             "VAT (€)": vat.toFixed(2),
             "Gross (€)": o.amount.toFixed(2),
-            "NL VAT Reclaimable": o.supplierVatReclaimable === false ? "No" : "Yes",
+            "VAT Treatment": VAT_TREATMENT_LABELS[treatment],
+            "Reverse-charge VAT 4b (€)": treatment === "eu_reverse" ? orderVat(o, defaultRate).reverseVat.toFixed(2) : "",
             "Status": o.status,
         };
     });

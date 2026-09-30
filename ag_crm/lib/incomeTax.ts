@@ -1,4 +1,5 @@
-import { splitVat } from "./vat";
+import { splitVat, type SupplierVatTreatment } from "./vat";
+import { orderVat } from "./btwAangifte";
 
 // ── Income-tax (inkomstenbelasting) constants ────────────────────────────────
 //
@@ -37,7 +38,7 @@ type JOrder = {
     amount: number;
     taxRate?: number;
     status?: string;
-    supplierVatReclaimable?: boolean;
+    supplierVatTreatment?: SupplierVatTreatment;
 };
 
 export type JaaroverzichtInput = {
@@ -71,21 +72,27 @@ export function computeJaaroverzicht({ invoices, orders, year, defaultRate }: Ja
 
     let nlCostNet = 0;
     let foreignCostGross = 0;
+    let reverseCostNet = 0;
     let nlCount = 0;
     let foreignCount = 0;
+    let reverseCount = 0;
     for (const o of orders) {
         if (o.status === "cancelled") continue;
         if (!inYear(o.date)) continue;
-        const b = splitVat(o.amount, o.taxRate ?? defaultRate);
-        if (o.supplierVatReclaimable === false) {
-            foreignCostGross += b.gross;
+        // EU reverse-charge purchases cost what was paid: the 4b VAT is reclaimed in 5b.
+        const c = orderVat(o, defaultRate);
+        if (c.treatment === "foreign") {
+            foreignCostGross += c.net;
             foreignCount++;
+        } else if (c.treatment === "eu_reverse") {
+            reverseCostNet += c.net;
+            reverseCount++;
         } else {
-            nlCostNet += b.net;
+            nlCostNet += c.net;
             nlCount++;
         }
     }
-    const deductibleCosts = nlCostNet + foreignCostGross;
+    const deductibleCosts = nlCostNet + foreignCostGross + reverseCostNet;
 
     // Winst uit onderneming — the figure that feeds the IB return.
     const netProfit = revenueNet - deductibleCosts;
@@ -105,6 +112,8 @@ export function computeJaaroverzicht({ invoices, orders, year, defaultRate }: Ja
         nlCount,
         foreignCostGross,
         foreignCount,
+        reverseCostNet,
+        reverseCount,
         deductibleCosts,
         netProfit,
         mkbRate,

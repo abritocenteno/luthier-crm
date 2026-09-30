@@ -26,6 +26,13 @@ import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 import { usePagination, Pagination } from "@/components/Pagination";
 import { Id } from "../../../convex/_generated/dataModel";
+import { resolveVatTreatment, VAT_TREATMENT_LABELS, type SupplierVatTreatment } from "@/lib/vat";
+
+const VAT_TREATMENT_OPTIONS: { value: SupplierVatTreatment; hint: string }[] = [
+    { value: "nl", hint: "Dutch supplier — input VAT counts toward your BTW reclaim (5b)." },
+    { value: "eu_reverse", hint: "EU supplier invoicing 0% (e.g. Thomann, StickerApp) — declared in 4b, reclaimed in 5b." },
+    { value: "foreign", hint: "Foreign supplier charging its own VAT — excluded from your BTW reclaim." },
+];
 
 // --- Components ---
 
@@ -78,7 +85,7 @@ export default function SuppliersPage() {
         street: "",
         postcode: "",
         city: "",
-        vatReclaimable: true,
+        vatTreatment: "nl" as SupplierVatTreatment,
         imageUrl: "",
         imageStorageId: undefined as Id<"_storage"> | undefined,
     });
@@ -107,7 +114,7 @@ export default function SuppliersPage() {
                 street: supplier.street || "",
                 postcode: supplier.postcode || "",
                 city: supplier.city || "",
-                vatReclaimable: supplier.vatReclaimable !== false,
+                vatTreatment: resolveVatTreatment(supplier),
                 imageUrl: supplier.imageUrl || "",
                 imageStorageId: supplier.imageStorageId,
             });
@@ -122,7 +129,7 @@ export default function SuppliersPage() {
                 street: "",
                 postcode: "",
                 city: "",
-                vatReclaimable: true,
+                vatTreatment: "nl" as SupplierVatTreatment,
                 imageUrl: "",
                 imageStorageId: undefined,
             });
@@ -565,23 +572,19 @@ export default function SuppliersPage() {
                                 {/* Tax treatment */}
                                 <div className="space-y-4 pt-4 border-t border-zinc-100">
                                     <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block">Tax Treatment</label>
-                                    <button
-                                        type="button"
-                                        onClick={() => setFormData({ ...formData, vatReclaimable: !formData.vatReclaimable })}
-                                        className="w-full flex items-center justify-between gap-4 p-4 bg-zinc-50 border border-zinc-200 rounded-xl text-left hover:border-zinc-300 transition-all"
-                                    >
-                                        <div className="space-y-0.5">
-                                            <p className="text-sm font-bold text-zinc-800">Dutch BTW reclaimable</p>
-                                            <p className="text-[11px] text-zinc-400 font-medium">
-                                                {formData.vatReclaimable
-                                                    ? "NL supplier — input VAT counts toward your BTW reclaim."
-                                                    : "Foreign supplier — VAT excluded from your BTW reclaim."}
-                                            </p>
-                                        </div>
-                                        <div className={`relative shrink-0 w-11 h-6 rounded-full transition-colors ${formData.vatReclaimable ? "bg-emerald-500" : "bg-zinc-300"}`}>
-                                            <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${formData.vatReclaimable ? "translate-x-5" : ""}`} />
-                                        </div>
-                                    </button>
+                                    <div className="grid grid-cols-1 gap-2">
+                                        {VAT_TREATMENT_OPTIONS.map((opt) => (
+                                            <button
+                                                key={opt.value}
+                                                type="button"
+                                                onClick={() => setFormData({ ...formData, vatTreatment: opt.value })}
+                                                className={`w-full p-4 border rounded-xl text-left transition-all ${formData.vatTreatment === opt.value ? "bg-white border-black ring-2 ring-black/5" : "bg-zinc-50 border-zinc-200 hover:border-zinc-300"}`}
+                                            >
+                                                <p className="text-sm font-bold text-zinc-800">{VAT_TREATMENT_LABELS[opt.value]}</p>
+                                                <p className="text-[11px] text-zinc-400 font-medium">{opt.hint}</p>
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             </form>
 

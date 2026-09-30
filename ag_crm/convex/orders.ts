@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { resolveVatTreatment } from "../lib/vat";
 
 export const listBySupplier = query({
     args: { supplierId: v.id("suppliers") },
@@ -60,8 +61,7 @@ export const list = query({
                 return {
                     ...order,
                     supplierName: supplier?.name || "Unknown Supplier",
-                    // Undefined = reclaimable (NL). Only an explicit false marks a foreign supplier.
-                    supplierVatReclaimable: supplier?.vatReclaimable !== false,
+                    supplierVatTreatment: resolveVatTreatment(supplier),
                     supplierImageUrl: supplier?.imageStorageId
                         ? await ctx.storage.getUrl(supplier.imageStorageId)
                         : supplier?.imageUrl,
