@@ -96,15 +96,13 @@ function OrderDetail({ orderId }: { orderId: Id<"orders"> }) {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    {order.status !== 'paid' && (
-                        <Link
-                            href={`/dashboard/suppliers/${order.supplierId}/orders/${order._id}/edit`}
-                            className="flex items-center gap-2 px-5 py-2.5 bg-white border border-zinc-200 text-zinc-900 rounded-xl text-sm font-bold hover:bg-zinc-50 transition-all active:scale-95 shadow-sm"
-                        >
-                            <Edit2 size={18} />
-                            Edit Order
-                        </Link>
-                    )}
+                    <Link
+                        href={`/dashboard/suppliers/${order.supplierId}/orders/${order._id}/edit`}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-white border border-zinc-200 text-zinc-900 rounded-xl text-sm font-bold hover:bg-zinc-50 transition-all active:scale-95 shadow-sm"
+                    >
+                        <Edit2 size={18} />
+                        {order.status === 'paid' ? 'Correct VAT' : 'Edit Order'}
+                    </Link>
                     {order.invoiceUrl && (
                         <a
                             href={order.invoiceUrl}

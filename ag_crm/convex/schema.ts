@@ -120,6 +120,8 @@ export default defineSchema({
             unitPrice: v.number(),
         }))),
         taxRate: v.optional(v.number()), // VAT % contained in `amount` (VAT-inclusive); used for input-VAT reporting
+        // Per-order override of the supplier's VAT treatment ('nl' | 'eu_reverse' | 'foreign'); empty = supplier default.
+        vatTreatment: v.optional(v.string()),
         invoiceStorageId: v.optional(v.id("_storage")),
         userId: v.string(),
     })

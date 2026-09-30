@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { resolveVatTreatment } from "../lib/vat";
+import { resolveOrderVatTreatment } from "../lib/vat";
 
 export const listBySupplier = query({
     args: { supplierId: v.id("suppliers") },
@@ -31,6 +31,7 @@ export const add = mutation({
             unitPrice: v.number(),
         }))),
         taxRate: v.optional(v.number()),
+        vatTreatment: v.optional(v.string()),
         invoiceStorageId: v.optional(v.id("_storage")),
     },
     handler: async (ctx, args) => {
@@ -61,7 +62,7 @@ export const list = query({
                 return {
                     ...order,
                     supplierName: supplier?.name || "Unknown Supplier",
-                    supplierVatTreatment: resolveVatTreatment(supplier),
+                    supplierVatTreatment: resolveOrderVatTreatment(order, supplier),
                     supplierImageUrl: supplier?.imageStorageId
                         ? await ctx.storage.getUrl(supplier.imageStorageId)
                         : supplier?.imageUrl,
@@ -90,6 +91,7 @@ export const update = mutation({
             unitPrice: v.number(),
         }))),
         taxRate: v.optional(v.number()),
+        vatTreatment: v.optional(v.string()),
         invoiceStorageId: v.optional(v.id("_storage")),
     },
     handler: async (ctx, args) => {
@@ -103,7 +105,14 @@ export const update = mutation({
         }
 
         if (existing.status === "paid") {
-            throw new Error("Paid orders cannot be edited");
+            // A settled order's amount and line items stay locked, but its VAT rate and
+            // treatment may still be corrected for BTW reporting — that only changes how
+            // the (unchanged) amount is reported, not what was paid.
+            if (data.amount !== existing.amount) {
+                throw new Error("Paid orders are locked — only the VAT rate and treatment can be corrected, not the amount.");
+            }
+            await ctx.db.patch(id, { taxRate: data.taxRate, vatTreatment: data.vatTreatment });
+            return;
         }
 
         await ctx.db.patch(id, data);

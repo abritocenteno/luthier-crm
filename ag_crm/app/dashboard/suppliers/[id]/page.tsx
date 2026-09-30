@@ -455,15 +455,13 @@ export default function SupplierDetailPage() {
                                                 </td>
                                                  <td className="px-6 py-4 text-right">
                                                      <div className="flex items-center justify-end gap-2 text-zinc-400">
-                                                         {order.status !== 'paid' && (
-                                                             <Link
-                                                                 href={`/dashboard/suppliers/${supplierId}/orders/${order._id}/edit`}
-                                                                 className="p-2 hover:text-black hover:bg-zinc-100 rounded-lg transition-all"
-                                                                 title="Edit Order"
-                                                             >
-                                                                 <Edit2 size={16} />
-                                                             </Link>
-                                                         )}
+                                                         <Link
+                                                             href={`/dashboard/suppliers/${supplierId}/orders/${order._id}/edit`}
+                                                             className="p-2 hover:text-black hover:bg-zinc-100 rounded-lg transition-all"
+                                                             title={order.status === 'paid' ? 'Correct VAT' : 'Edit Order'}
+                                                         >
+                                                             <Edit2 size={16} />
+                                                         </Link>
                                                          <Link href={`/dashboard/suppliers/${supplierId}/orders/${order._id}`}>
                                                              <ChevronRight size={16} className="text-zinc-300 group-hover:text-black transition-colors" />
                                                          </Link>

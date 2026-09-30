@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import { cn, formatCurrency, getCurrencySymbol } from "@/lib/utils";
 import { Id } from "../../../../../../convex/_generated/dataModel";
+import { resolveVatTreatment } from "@/lib/vat";
+import { OrderVatTreatmentPicker } from "@/components/OrderVatTreatmentPicker";
 
 const Card = ({ children, className }: { children: React.ReactNode, className?: string }) => (
     <div className={cn("bg-white border border-zinc-200 rounded-2xl shadow-sm overflow-hidden", className)}>
@@ -52,6 +54,7 @@ function CreateOrderForm() {
         amount: 0,
         status: "pending",
         taxRate: 21,
+        vatTreatment: "",
         items: [] as { name: string; description: string; remark: string; amount: number; unitPrice: number }[],
         invoiceStorageId: undefined as Id<"_storage"> | undefined,
     });
@@ -265,6 +268,12 @@ function CreateOrderForm() {
                                 ))}
                             </div>
                         </div>
+
+                        <OrderVatTreatmentPicker
+                            value={formData.vatTreatment}
+                            supplierDefault={resolveVatTreatment(supplier)}
+                            onChange={(vatTreatment) => setFormData({ ...formData, vatTreatment })}
+                        />
                     </Card>
 
                     {/* File Upload / AI Extraction Section */}

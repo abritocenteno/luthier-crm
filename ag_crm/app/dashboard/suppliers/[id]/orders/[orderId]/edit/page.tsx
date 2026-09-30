@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { cn, formatCurrency, getCurrencySymbol } from "@/lib/utils";
 import { Id } from "@/convex/_generated/dataModel";
+import { resolveVatTreatment } from "@/lib/vat";
+import { OrderVatTreatmentPicker } from "@/components/OrderVatTreatmentPicker";
 
 const Card = ({ children, className }: { children: React.ReactNode, className?: string }) => (
     <div className={cn("bg-white border border-zinc-200 rounded-2xl shadow-sm overflow-hidden", className)}>
@@ -49,28 +51,25 @@ function EditOrderForm() {
         amount: 0,
         status: "pending",
         taxRate: 21,
+        vatTreatment: "",
         items: [] as { name: string; description: string; remark: string; amount: number; unitPrice: number }[],
         invoiceStorageId: undefined as Id<"_storage"> | undefined,
     });
 
     useEffect(() => {
         if (order) {
-            if (order.status === "paid") {
-                alert("Paid orders cannot be edited.");
-                router.back();
-                return;
-            }
             setFormData({
                 orderNumber: order.orderNumber,
                 date: order.date,
                 amount: order.amount,
                 status: order.status,
                 taxRate: order.taxRate ?? settings?.defaultTaxRate ?? 21,
+                vatTreatment: order.vatTreatment ?? "",
                 items: order.items || [],
                 invoiceStorageId: order.invoiceStorageId as Id<"_storage"> | undefined,
             });
         }
-    }, [order, router, settings]);
+    }, [order, settings]);
 
     const calculateTotal = (items: typeof formData.items) => {
         return items.reduce((acc, item) => acc + (item.amount * item.unitPrice), 0);
@@ -197,6 +196,11 @@ function EditOrderForm() {
             </header>
 
             <form onSubmit={handleSubmit} className="space-y-12">
+                {order?.status === "paid" && (
+                    <div className="px-5 py-4 rounded-2xl bg-amber-50 border border-amber-100 text-sm text-amber-800 font-medium">
+                        This order is paid — only the <strong className="font-bold">VAT rate</strong> and <strong className="font-bold">VAT treatment</strong> can be corrected. Other changes won&apos;t be saved.
+                    </div>
+                )}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
                     {/* Header Information */}
                     <Card className="p-8 space-y-8">
@@ -274,6 +278,12 @@ function EditOrderForm() {
                                 ))}
                             </div>
                         </div>
+
+                        <OrderVatTreatmentPicker
+                            value={formData.vatTreatment}
+                            supplierDefault={resolveVatTreatment(supplier)}
+                            onChange={(vatTreatment) => setFormData({ ...formData, vatTreatment })}
+                        />
                     </Card>
 
                     {/* File Upload / AI Extraction Section */}

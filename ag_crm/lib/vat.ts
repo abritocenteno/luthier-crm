@@ -56,8 +56,20 @@ export const VAT_TREATMENT_LABELS: Record<SupplierVatTreatment, string> = {
     foreign: "Foreign VAT · not reclaimable",
 };
 
+export function isVatTreatment(v: unknown): v is SupplierVatTreatment {
+    return v === "nl" || v === "eu_reverse" || v === "foreign";
+}
+
 /** Resolve a supplier's treatment, falling back to the legacy `vatReclaimable` flag. */
 export function resolveVatTreatment(s?: { vatTreatment?: string; vatReclaimable?: boolean } | null): SupplierVatTreatment {
-    if (s?.vatTreatment === "nl" || s?.vatTreatment === "eu_reverse" || s?.vatTreatment === "foreign") return s.vatTreatment;
+    if (isVatTreatment(s?.vatTreatment)) return s.vatTreatment;
     return s?.vatReclaimable === false ? "foreign" : "nl";
+}
+
+/** An order's own override (e.g. one invoice a reverse-charge supplier billed with VAT) wins over its supplier's. */
+export function resolveOrderVatTreatment(
+    order: { vatTreatment?: string },
+    supplier?: { vatTreatment?: string; vatReclaimable?: boolean } | null,
+): SupplierVatTreatment {
+    return isVatTreatment(order.vatTreatment) ? order.vatTreatment : resolveVatTreatment(supplier);
 }
