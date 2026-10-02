@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { Id } from "../../../../../../convex/_generated/dataModel";
+import { useBackNav } from "@/lib/navHistory";
 
 const Card = ({ children, className }: { children: React.ReactNode, className?: string }) => (
     <div className={cn("bg-white border border-zinc-200 rounded-2xl shadow-sm overflow-hidden", className)}>
@@ -46,6 +47,8 @@ const Badge = ({ children, variant = "neutral" }: { children: React.ReactNode, v
 
 function OrderDetail({ orderId }: { orderId: Id<"orders"> }) {
     const router = useRouter();
+    const { id: supplierId } = useParams<{ id: string }>();
+    const back = useBackNav(`/dashboard/suppliers/${supplierId}`, "Supplier");
     const order = useQuery(api.orders.get, { id: orderId });
     const settings = useQuery(api.settings.get);
 
@@ -62,7 +65,7 @@ function OrderDetail({ orderId }: { orderId: Id<"orders"> }) {
             <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
                 <AlertCircle className="text-red-500" size={48} />
                 <h2 className="text-xl font-bold">Order Not Found</h2>
-                <button onClick={() => router.back()} className="text-sm font-bold text-black underline">Go Back</button>
+                <button onClick={() => router.push("/dashboard/orders")} className="text-sm font-bold text-black underline">Back to Orders</button>
             </div>
         );
     }
@@ -73,11 +76,11 @@ function OrderDetail({ orderId }: { orderId: Id<"orders"> }) {
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div className="space-y-4">
                     <button
-                        onClick={() => router.back()}
+                        onClick={() => back.goBack()}
                         className="flex items-center gap-2 text-sm font-bold text-zinc-400 hover:text-black transition-colors group"
                     >
                         <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-                        Back to Supplier
+                        Back to {back.label}
                     </button>
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-2xl bg-zinc-900 flex items-center justify-center text-white shadow-lg">
@@ -125,6 +128,7 @@ function OrderDetail({ orderId }: { orderId: Id<"orders"> }) {
                         <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-8">Line Items</h3>
                         <div className="space-y-6">
                             {order.items && order.items.length > 0 ? (
+                                <div className="overflow-x-auto">
                                 <table className="w-full text-left">
                                     <thead>
                                         <tr className="border-b border-zinc-100">
@@ -173,6 +177,7 @@ function OrderDetail({ orderId }: { orderId: Id<"orders"> }) {
                                         </tr>
                                     </tfoot>
                                 </table>
+                                </div>
                             ) : (
                                 <div className="py-12 text-center">
                                     <p className="text-zinc-400 font-medium">No items recorded for this order.</p>

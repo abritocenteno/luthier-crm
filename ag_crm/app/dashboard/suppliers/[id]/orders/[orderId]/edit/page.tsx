@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense, useRef } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
-import { useRouter, useParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { api } from "@/convex/_generated/api";
 import {
     ArrowLeft,
@@ -20,6 +20,7 @@ import { cn, formatCurrency, getCurrencySymbol } from "@/lib/utils";
 import { Id } from "@/convex/_generated/dataModel";
 import { resolveVatTreatment } from "@/lib/vat";
 import { OrderVatTreatmentPicker } from "@/components/OrderVatTreatmentPicker";
+import { useBackNav } from "@/lib/navHistory";
 
 const Card = ({ children, className }: { children: React.ReactNode, className?: string }) => (
     <div className={cn("bg-white border border-zinc-200 rounded-2xl shadow-sm overflow-hidden", className)}>
@@ -28,10 +29,10 @@ const Card = ({ children, className }: { children: React.ReactNode, className?: 
 );
 
 function EditOrderForm() {
-    const router = useRouter();
     const params = useParams();
     const supplierId = params.id as Id<"suppliers">;
     const orderId = params.orderId as Id<"orders">;
+    const back = useBackNav(`/dashboard/suppliers/${supplierId}/orders/${orderId}`, "Order");
 
     const supplier = useQuery(api.suppliers.get, { id: supplierId });
     const order = useQuery(api.orders.get, { id: orderId });
@@ -163,7 +164,7 @@ function EditOrderForm() {
                 supplierId: supplierId,
                 ...formData
             });
-            router.push(`/dashboard/suppliers/${supplierId}/orders/${orderId}`);
+            back.leaveTo(`/dashboard/suppliers/${supplierId}/orders/${orderId}`);
         } catch (error: any) {
             console.error("Failed to update order:", error);
             alert(`Failed to update order: ${error.message || "Unknown error"}`);
@@ -178,11 +179,11 @@ function EditOrderForm() {
         <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
             <header className="space-y-4">
                 <button
-                    onClick={() => router.back()}
+                    onClick={() => back.goBack()}
                     className="flex items-center gap-2 text-sm font-bold text-zinc-400 hover:text-black transition-colors group"
                 >
                     <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-                    Back to Order
+                    Back to {back.label}
                 </button>
                 <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-black flex items-center justify-center text-white shadow-lg shadow-black/10">
@@ -502,7 +503,7 @@ function EditOrderForm() {
                     <div className="flex items-center justify-center gap-4">
                         <button
                             type="button"
-                            onClick={() => router.back()}
+                            onClick={() => back.goBack()}
                             className="px-8 py-3 bg-white border border-zinc-200 rounded-xl text-sm font-bold text-zinc-600 hover:bg-zinc-100 transition-all active:scale-95 min-w-[140px]"
                         >
                             Cancel

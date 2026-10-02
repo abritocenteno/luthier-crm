@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import {
@@ -12,6 +12,7 @@ import {
 import { cn, formatCurrency, getCurrencySymbol } from "@/lib/utils";
 import { LEAD_SOURCES, DEFAULT_SOURCE } from "@/lib/sources";
 import { Suspense } from "react";
+import { useBackNav } from "@/lib/navHistory";
 
 const Card = ({ children, className }: { children: React.ReactNode; className?: string }) => (
     <div className={cn("bg-white border border-zinc-200 rounded-2xl shadow-sm overflow-hidden", className)}>
@@ -42,7 +43,7 @@ type WorkItem = {
 };
 
 function CreateJobForm() {
-    const router = useRouter();
+    const back = useBackNav("/dashboard/jobs", "Jobs");
     const searchParams = useSearchParams();
     const initialClientId = searchParams.get("clientId") as Id<"clients"> | null;
 
@@ -179,7 +180,7 @@ function CreateJobForm() {
                     : undefined,
                 internalNotes: internalNotes || undefined,
             });
-            router.push(`/dashboard/jobs/${id}`);
+            back.leaveTo(`/dashboard/jobs/${id}`);
         } catch (err) {
             console.error(err);
             alert("Failed to create job. Please try again.");
@@ -192,11 +193,11 @@ function CreateJobForm() {
         <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
             <header className="space-y-4">
                 <button
-                    onClick={() => router.back()}
+                    onClick={() => back.goBack()}
                     className="flex items-center gap-2 text-sm font-bold text-zinc-400 hover:text-black transition-colors group"
                 >
                     <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-                    Back to Jobs
+                    Back to {back.label}
                 </button>
                 <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-black flex items-center justify-center text-white shadow-lg shadow-black/10">
@@ -724,7 +725,7 @@ function CreateJobForm() {
                     <div className="flex items-center gap-4">
                         <button
                             type="button"
-                            onClick={() => router.back()}
+                            onClick={() => back.goBack()}
                             className="px-8 py-3 bg-white border border-zinc-200 rounded-xl text-sm font-bold text-zinc-600 hover:bg-zinc-100 transition-all active:scale-95 min-w-[140px]"
                         >
                             Cancel

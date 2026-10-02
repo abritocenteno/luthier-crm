@@ -15,6 +15,13 @@ type Result = {
     type: "client" | "job" | "invoice";
 };
 
+const OPEN_EVENT = "global-search:open";
+
+/** Opens the search palette from anywhere, e.g. the header's Search button. */
+export function openGlobalSearch() {
+    window.dispatchEvent(new Event(OPEN_EVENT));
+}
+
 export function GlobalSearch() {
     const router = useRouter();
     const [open, setOpen] = useState(false);
@@ -34,8 +41,13 @@ export function GlobalSearch() {
             }
             if (e.key === "Escape") setOpen(false);
         };
+        const openHandler = () => setOpen(true);
         window.addEventListener("keydown", handler);
-        return () => window.removeEventListener("keydown", handler);
+        window.addEventListener(OPEN_EVENT, openHandler);
+        return () => {
+            window.removeEventListener("keydown", handler);
+            window.removeEventListener(OPEN_EVENT, openHandler);
+        };
     }, []);
 
     // Reset on open

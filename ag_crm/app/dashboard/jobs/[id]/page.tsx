@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { SetupSheetCard } from "@/components/SetupSheetCard";
+import { useBackNav } from "@/lib/navHistory";
 
 const STATUS_STEPS = [
     { key: "quoted",        label: "Quote",             desc: "Awaiting approval" },
@@ -43,6 +44,7 @@ const Card = ({ children, className }: { children: React.ReactNode; className?: 
 
 function JobDetail({ id }: { id: Id<"jobs"> }) {
     const router = useRouter();
+    const back = useBackNav("/dashboard/jobs", "Jobs");
     const job = useQuery(api.jobs.get, { id });
     const settings = useQuery(api.settings.get);
     const updateStatus = useMutation(api.jobs.updateStatus);
@@ -147,7 +149,7 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
             <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
                 <AlertCircle className="text-red-500" size={48} />
                 <h2 className="text-xl font-bold">Job Not Found</h2>
-                <button onClick={() => router.back()} className="text-sm font-bold text-black underline">Go Back</button>
+                <button onClick={() => router.push("/dashboard/jobs")} className="text-sm font-bold text-black underline">Back to Jobs</button>
             </div>
         );
     }
@@ -262,7 +264,7 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
         setIsDeleting(true);
         try {
             await deleteJob({ id });
-            router.push("/dashboard/jobs");
+            back.goBack();
         } catch (err: any) {
             alert(err.message ?? "Failed to delete job.");
             setIsDeleting(false);
@@ -276,11 +278,11 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
             <header className="flex flex-col md:flex-row md:items-start justify-between gap-6">
                 <div className="space-y-4">
                     <button
-                        onClick={() => router.push("/dashboard/jobs")}
+                        onClick={() => back.goBack()}
                         className="flex items-center gap-2 text-sm font-bold text-zinc-400 hover:text-black transition-colors group"
                     >
                         <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-                        Back to Jobs
+                        Back to {back.label}
                     </button>
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 shrink-0 rounded-2xl bg-black flex items-center justify-center text-white shadow-lg">
@@ -561,6 +563,7 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
                             </div>
                         ) : (
                             <>
+                                <div className="overflow-x-auto">
                                 <table className="w-full text-left">
                                     <thead>
                                         <tr className="border-b border-zinc-100 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
@@ -603,6 +606,7 @@ function JobDetail({ id }: { id: Id<"jobs"> }) {
                                         </tr>
                                     </tfoot>
                                 </table>
+                                </div>
                             </>
                         )}
                     </Card>

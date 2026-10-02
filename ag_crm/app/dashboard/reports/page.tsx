@@ -432,6 +432,7 @@ function VatQuarterPanel({
                     <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">BTW aangifte · rubrieken</span>
                     <span className="text-[10px] font-medium text-zinc-400">Whole euros, rounded in your favour</span>
                 </div>
+                <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                     <thead>
                         <tr className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
@@ -459,6 +460,7 @@ function VatQuarterPanel({
                         ))}
                     </tbody>
                 </table>
+                </div>
             </div>
 
             {(period.salesMissingRate > 0 || period.purchaseNoFile > 0 || period.foreignCount > 0 || period.aangifte.reverseCount > 0) && (

@@ -186,6 +186,7 @@ export default function TimesheetPage() {
                     <div className="px-6 pt-5 pb-3">
                         <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">All entries this week</p>
                     </div>
+                    <div className="overflow-x-auto">
                     <table className="w-full text-left">
                         <thead>
                             <tr className="border-b border-zinc-100 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
@@ -239,6 +240,7 @@ export default function TimesheetPage() {
                             </tr>
                         </tfoot>
                     </table>
+                    </div>
                 </div>
             )}
 

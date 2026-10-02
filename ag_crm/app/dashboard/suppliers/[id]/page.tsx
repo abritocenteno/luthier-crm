@@ -32,6 +32,7 @@ import { useState, useRef } from "react";
 import { motion } from "motion/react";
 import { cn, formatCurrency } from "@/lib/utils";
 import Link from "next/link";
+import { useBackNav } from "@/lib/navHistory";
 
 const Card = ({ children, className }: { children: React.ReactNode, className?: string }) => (
     <div className={cn("bg-white border border-zinc-200 rounded-2xl shadow-sm overflow-hidden", className)}>
@@ -58,6 +59,7 @@ const Badge = ({ children, variant = 'neutral' }: { children: React.ReactNode, v
 export default function SupplierDetailPage() {
     const params = useParams();
     const router = useRouter();
+    const back = useBackNav("/dashboard/suppliers", "Suppliers");
     const supplierId = params.id as Id<"suppliers">;
 
     const supplier = useQuery(api.suppliers.get, { id: supplierId });
@@ -199,11 +201,11 @@ export default function SupplierDetailPage() {
             {/* Header */}
             <header className="space-y-6">
                 <button
-                    onClick={() => router.back()}
+                    onClick={() => back.goBack()}
                     className="flex items-center gap-2 text-sm font-bold text-zinc-400 hover:text-black transition-colors group"
                 >
                     <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-                    Back to Suppliers
+                    Back to {back.label}
                 </button>
 
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">

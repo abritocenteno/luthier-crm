@@ -43,6 +43,7 @@ import { motion } from "motion/react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { LEAD_SOURCES, DEFAULT_SOURCE, sourceMeta } from "@/lib/sources";
 import Link from "next/link";
+import { useBackNav } from "@/lib/navHistory";
 
 const Card = ({ children, className }: { children: React.ReactNode, className?: string }) => (
     <div className={cn("bg-white border border-zinc-200 rounded-2xl shadow-sm overflow-hidden", className)}>
@@ -69,6 +70,7 @@ const Badge = ({ children, variant = 'neutral' }: { children: React.ReactNode, v
 export default function ClientDetailPage() {
     const params = useParams();
     const router = useRouter();
+    const back = useBackNav("/dashboard/clients", "Clients");
     const clientId = params.id as Id<"clients">;
 
     const client = useQuery(api.clients.get, { id: clientId });
@@ -268,11 +270,11 @@ export default function ClientDetailPage() {
             {/* Header */}
             <header className="space-y-6">
                 <button
-                    onClick={() => router.back()}
+                    onClick={() => back.goBack()}
                     className="flex items-center gap-2 text-sm font-bold text-zinc-400 hover:text-black transition-colors group"
                 >
                     <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-                    Back to Clients
+                    Back to {back.label}
                 </button>
 
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">

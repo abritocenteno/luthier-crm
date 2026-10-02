@@ -21,13 +21,14 @@ import {
     Clock,
     Library,
 } from "lucide-react";
-import { GlobalSearch } from "@/components/GlobalSearch";
+import { GlobalSearch, openGlobalSearch } from "@/components/GlobalSearch";
 import { NotificationBell } from "@/components/NotificationBell";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useSyncExternalStore } from "react";
 import { cn } from "@/lib/utils";
+import { recordPath } from "@/lib/navHistory";
 import { Authenticated, Unauthenticated, AuthLoading, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 
@@ -95,6 +96,32 @@ function OnboardingGate({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
 }
 
+const LogoMark = ({ className }: { className?: string }) => (
+    <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", className)} style={{ background: "#402A1B" }}>
+        <span className="font-bold text-lg" style={{ color: "#C9914C", fontFamily: "var(--font-domine)" }}>F</span>
+    </div>
+);
+
+const Logo = () => (
+    <div className="flex items-center gap-2">
+        <LogoMark />
+        <span className="font-bold text-xl tracking-tight" style={{ fontFamily: "var(--font-domine)" }}>Fret<span style={{ color: "#C9914C" }}>Ops</span></span>
+    </div>
+);
+
+/** A section stays highlighted on its detail, create and edit pages; "/dashboard" itself only on an exact match. */
+const isActive = (pathname: string, href: string) =>
+    href === "/dashboard" ? pathname === href : pathname === href || pathname.startsWith(href + "/");
+
+// Mac shows ⌘K, everything else Ctrl K. The server snapshot avoids a hydration mismatch.
+const subscribeNoop = () => () => {};
+const useSearchShortcutLabel = () =>
+    useSyncExternalStore(
+        subscribeNoop,
+        () => (/Mac|iPhone|iPad/.test(navigator.platform) ? "⌘K" : "Ctrl K"),
+        () => "Ctrl K",
+    );
+
 const SidebarItem = ({
     icon: Icon,
     label,
@@ -110,6 +137,8 @@ const SidebarItem = ({
 }) => (
     <Link
         href={href}
+        title={collapsed ? label : undefined}
+        aria-current={active ? "page" : undefined}
         className={cn(
             "flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-all rounded-xl group relative",
             active
@@ -133,6 +162,11 @@ export default function DashboardLayout({
     const pathname = usePathname();
     const [collapsed, setCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
+    const shortcutLabel = useSearchShortcutLabel();
+
+    useEffect(() => {
+        recordPath(pathname);
+    }, [pathname]);
 
     const navigation = [
         { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
@@ -160,19 +194,7 @@ export default function DashboardLayout({
                 )}
             >
                 <div className="h-16 flex items-center justify-between px-6 border-b border-zinc-100">
-                    {!collapsed && (
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#402A1B" }}>
-                                <span className="font-bold text-lg" style={{ color: "#C9914C", fontFamily: "var(--font-domine)" }}>F</span>
-                            </div>
-                            <span className="font-bold text-xl tracking-tight" style={{ fontFamily: "var(--font-domine)" }}>Fret<span style={{ color: "#C9914C" }}>Ops</span></span>
-                        </div>
-                    )}
-                    {collapsed && (
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto" style={{ background: "#402A1B" }}>
-                            <span className="font-bold text-lg" style={{ color: "#C9914C", fontFamily: "var(--font-domine)" }}>F</span>
-                        </div>
-                    )}
+                    {collapsed ? <LogoMark className="mx-auto" /> : <Logo />}
                 </div>
 
                 <nav className="flex-1 overflow-y-auto p-4 space-y-2">
@@ -180,7 +202,7 @@ export default function DashboardLayout({
                         <SidebarItem
                             key={item.href}
                             {...item}
-                            active={pathname === item.href}
+                            active={isActive(pathname, item.href)}
                             collapsed={collapsed}
                         />
                     ))}
@@ -189,6 +211,7 @@ export default function DashboardLayout({
                 <div className="p-4 border-t border-zinc-100">
                     <button
                         onClick={() => setCollapsed(!collapsed)}
+                        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
                         className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-zinc-500 hover:text-black hover:bg-zinc-100 rounded-xl transition-all"
                     >
                         {collapsed ? <ChevronRight size={20} className="mx-auto" /> : (
@@ -217,13 +240,8 @@ export default function DashboardLayout({
                 )}
             >
                 <div className="h-16 flex items-center justify-between px-6 border-b border-zinc-100">
-                    <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#402A1B" }}>
-                            <span className="font-bold text-lg" style={{ color: "#C9914C", fontFamily: "var(--font-domine)" }}>F</span>
-                        </div>
-                        <span className="font-bold text-xl tracking-tight" style={{ fontFamily: "var(--font-domine)" }}>Fret<span style={{ color: "#C9914C" }}>Ops</span></span>
-                    </div>
-                    <button onClick={() => setMobileOpen(false)} className="p-1 hover:bg-zinc-100 rounded-lg">
+                    <Logo />
+                    <button onClick={() => setMobileOpen(false)} aria-label="Close menu" className="p-1 hover:bg-zinc-100 rounded-lg">
                         <X size={20} />
                     </button>
                 </div>
@@ -232,7 +250,7 @@ export default function DashboardLayout({
                         <SidebarItem
                             key={item.href}
                             {...item}
-                            active={pathname === item.href}
+                            active={isActive(pathname, item.href)}
                             collapsed={false}
                         />
                     ))}
@@ -252,6 +270,7 @@ export default function DashboardLayout({
                 <header className="h-16 sticky top-0 z-30 bg-white/80 dark:bg-zinc-950/85 backdrop-blur-md border-b border-zinc-200 px-6 flex items-center justify-between">
                     <button
                         onClick={() => setMobileOpen(true)}
+                        aria-label="Open menu"
                         className="p-2 hover:bg-zinc-100 rounded-lg lg:hidden"
                     >
                         <Menu size={20} />
@@ -260,15 +279,12 @@ export default function DashboardLayout({
                     <div className="ml-auto flex items-center gap-3">
                         {/* Search trigger */}
                         <button
-                            onClick={() => {
-                                const e = new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true });
-                                window.dispatchEvent(e);
-                            }}
+                            onClick={openGlobalSearch}
                             className="hidden sm:flex items-center gap-2 px-3 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-500 hover:text-zinc-700 rounded-xl text-xs font-medium transition-all"
                         >
                             <Search size={14} />
                             <span>Search</span>
-                            <kbd className="ml-1 px-1.5 py-0.5 bg-white border border-zinc-200 rounded text-[10px] font-bold shadow-sm text-zinc-400">⌘K</kbd>
+                            <kbd className="ml-1 px-1.5 py-0.5 bg-white border border-zinc-200 rounded text-[10px] font-bold shadow-sm text-zinc-400">{shortcutLabel}</kbd>
                         </button>
                         <ThemeToggle />
                         <Authenticated>

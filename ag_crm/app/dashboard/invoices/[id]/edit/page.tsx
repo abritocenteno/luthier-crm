@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { cn, formatCurrency, getCurrencySymbol } from "@/lib/utils";
 import { Id } from "../../../../../convex/_generated/dataModel";
+import { useBackNav } from "@/lib/navHistory";
 
 const Card = ({ children, className }: { children: React.ReactNode, className?: string }) => (
     <div className={cn("bg-white border border-zinc-200 rounded-2xl shadow-sm overflow-hidden", className)}>
@@ -30,6 +31,7 @@ const Card = ({ children, className }: { children: React.ReactNode, className?: 
 
 function EditInvoiceForm({ id }: { id: Id<"invoices"> }) {
     const router = useRouter();
+    const back = useBackNav(`/dashboard/invoices/${id}`, "Invoice");
 
     const clients = useQuery(api.clients.list);
     const invoice = useQuery(api.invoices.get, { id });
@@ -221,7 +223,7 @@ function EditInvoiceForm({ id }: { id: Id<"invoices"> }) {
                 credits: formData.credits,
                 orderIds: formData.orderIds,
             });
-            router.push("/dashboard/invoices");
+            back.leaveTo(`/dashboard/invoices/${id}`);
         } catch (error) {
             console.error("Failed to update invoice:", error);
             // Surface the server's own message (e.g. the paid-invoice lock) instead of a generic one.
@@ -246,7 +248,7 @@ function EditInvoiceForm({ id }: { id: Id<"invoices"> }) {
             <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
                 <AlertCircle className="text-red-500" size={48} />
                 <h2 className="text-xl font-bold">Invoice Not Found</h2>
-                <button onClick={() => router.back()} className="text-sm font-bold text-black underline">Go Back</button>
+                <button onClick={() => router.push("/dashboard/invoices")} className="text-sm font-bold text-black underline">Back to Invoices</button>
             </div>
         );
     }
@@ -255,11 +257,11 @@ function EditInvoiceForm({ id }: { id: Id<"invoices"> }) {
         <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
             <header className="space-y-4">
                 <button
-                    onClick={() => router.push("/dashboard/invoices")}
+                    onClick={() => back.goBack()}
                     className="flex items-center gap-2 text-sm font-bold text-zinc-400 hover:text-black transition-colors group"
                 >
                     <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-                    Back to Invoices
+                    Back to {back.label}
                 </button>
                 <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-black flex items-center justify-center text-white shadow-lg shadow-black/10">
@@ -753,7 +755,7 @@ function EditInvoiceForm({ id }: { id: Id<"invoices"> }) {
                     <div className="flex items-center justify-center gap-4">
                         <button
                             type="button"
-                            onClick={() => router.push("/dashboard/invoices")}
+                            onClick={() => back.goBack()}
                             className="px-8 py-3 bg-white border border-zinc-200 rounded-xl text-sm font-bold text-zinc-600 hover:bg-zinc-100 transition-all active:scale-95 min-w-[140px]"
                         >
                             Cancel

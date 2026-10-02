@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { cn, formatCurrency, getCurrencySymbol } from "@/lib/utils";
 import { LEAD_SOURCES, DEFAULT_SOURCE } from "@/lib/sources";
+import { useBackNav } from "@/lib/navHistory";
 
 const Card = ({ children, className }: { children: React.ReactNode; className?: string }) => (
     <div className={cn("bg-white border border-zinc-200 rounded-2xl shadow-sm overflow-hidden", className)}>
@@ -35,6 +36,7 @@ type WorkItem = { name: string; description: string; type: "fixed" | "hourly"; u
 
 function EditJobForm({ id }: { id: Id<"jobs"> }) {
     const router = useRouter();
+    const back = useBackNav(`/dashboard/jobs/${id}`, "Job");
     const job = useQuery(api.jobs.get, { id });
     const clients = useQuery(api.clients.list);
     const settings = useQuery(api.settings.get);
@@ -107,7 +109,7 @@ function EditJobForm({ id }: { id: Id<"jobs"> }) {
             <CheckCircle2 className="text-zinc-400" size={48} />
             <h2 className="text-xl font-bold">Job is Closed</h2>
             <p className="text-zinc-500 text-sm">Closed jobs cannot be edited.</p>
-            <button onClick={() => router.back()} className="text-sm font-bold text-black underline">Go Back</button>
+            <button onClick={() => router.push("/dashboard/jobs")} className="text-sm font-bold text-black underline">Back to Jobs</button>
         </div>
     );
 
@@ -154,7 +156,7 @@ function EditJobForm({ id }: { id: Id<"jobs"> }) {
                 estimatedCompletionDate: estimatedCompletionDate ? new Date(estimatedCompletionDate).getTime() : undefined,
                 internalNotes: internalNotes || undefined,
             });
-            router.push(`/dashboard/jobs/${id}`);
+            back.leaveTo(`/dashboard/jobs/${id}`);
         } catch (err) {
             console.error(err);
             alert("Failed to update job.");
@@ -166,9 +168,9 @@ function EditJobForm({ id }: { id: Id<"jobs"> }) {
     return (
         <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
             <header className="space-y-4">
-                <button onClick={() => router.back()} className="flex items-center gap-2 text-sm font-bold text-zinc-400 hover:text-black transition-colors group">
+                <button onClick={() => back.goBack()} className="flex items-center gap-2 text-sm font-bold text-zinc-400 hover:text-black transition-colors group">
                     <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-                    Back to Job
+                    Back to {back.label}
                 </button>
                 <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-black flex items-center justify-center text-white shadow-lg shadow-black/10">
@@ -471,7 +473,7 @@ function EditJobForm({ id }: { id: Id<"jobs"> }) {
                 {/* Submit */}
                 <div className="flex flex-col items-center gap-6 pt-12 border-t border-zinc-100">
                     <div className="flex items-center gap-4">
-                        <button type="button" onClick={() => router.back()}
+                        <button type="button" onClick={() => back.goBack()}
                             className="px-8 py-3 bg-white border border-zinc-200 rounded-xl text-sm font-bold text-zinc-600 hover:bg-zinc-100 transition-all active:scale-95 min-w-[140px]">
                             Cancel
                         </button>

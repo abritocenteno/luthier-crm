@@ -3,7 +3,7 @@
 // Triggering re-compilation
 import { useState, useEffect, Suspense, useRef } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { api } from "../../../../convex/_generated/api";
 import {
     ArrowLeft,
@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { cn, formatCurrency, getCurrencySymbol } from "@/lib/utils";
 import { Id } from "../../../../convex/_generated/dataModel";
+import { useBackNav } from "@/lib/navHistory";
 
 const Card = ({ children, className }: { children: React.ReactNode, className?: string }) => (
     <div className={cn("bg-white border border-zinc-200 rounded-2xl shadow-sm overflow-hidden", className)}>
@@ -32,7 +33,7 @@ const Card = ({ children, className }: { children: React.ReactNode, className?: 
 );
 
 function CreateInvoiceForm() {
-    const router = useRouter();
+    const back = useBackNav("/dashboard/invoices", "Invoices");
     const searchParams = useSearchParams();
     const initialClientId = searchParams.get("clientId") as Id<"clients"> | null;
 
@@ -305,7 +306,7 @@ function CreateInvoiceForm() {
                 clientId: formData.clientId as Id<"clients">,
                 orderIds: formData.orderIds,
             });
-            router.push("/dashboard/invoices");
+            back.leaveTo("/dashboard/invoices");
         } catch (error) {
             console.error("Failed to create invoice:", error);
             alert("Failed to create invoice. Please try again.");
@@ -318,11 +319,11 @@ function CreateInvoiceForm() {
         <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
             <header className="space-y-4">
                 <button
-                    onClick={() => router.back()}
+                    onClick={() => back.goBack()}
                     className="flex items-center gap-2 text-sm font-bold text-zinc-400 hover:text-black transition-colors group"
                 >
                     <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-                    Back to Invoices
+                    Back to {back.label}
                 </button>
                 <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-black flex items-center justify-center text-white shadow-lg shadow-black/10">
@@ -913,7 +914,7 @@ function CreateInvoiceForm() {
                     <div className="flex items-center justify-center gap-4">
                         <button
                             type="button"
-                            onClick={() => router.back()}
+                            onClick={() => back.goBack()}
                             className="px-8 py-3 bg-white border border-zinc-200 rounded-xl text-sm font-bold text-zinc-600 hover:bg-zinc-100 transition-all active:scale-95 min-w-[140px]"
                         >
                             Cancel
