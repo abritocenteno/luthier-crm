@@ -73,3 +73,23 @@ export const upsert = mutation({
         }
     },
 });
+
+// Save the day-job salary used by the "One day less" tracker on Reports
+export const setSalary = mutation({
+    args: {
+        salaryNetPer4Weeks: v.number(),
+        salaryWorkDays: v.number(),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) throw new Error("Unauthorized");
+
+        const existingSettings = await ctx.db
+            .query("settings")
+            .withIndex("by_user", (q) => q.eq("userId", identity.tokenIdentifier))
+            .first();
+        if (!existingSettings) throw new Error("Save your company settings first.");
+
+        await ctx.db.patch(existingSettings._id, args);
+    },
+});

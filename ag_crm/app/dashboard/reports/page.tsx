@@ -1,19 +1,20 @@
 "use client";
 
-import { useQuery, useConvex } from "convex/react";
+import { useQuery, useConvex, useMutation } from "convex/react";
 import { useMemo, useState } from "react";
 import { createElement } from "react";
 import { createRoot } from "react-dom/client";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import Link from "next/link";
-import { TrendingUp, TrendingDown, Minus, ArrowRight, Download, Users, Wrench, FileText, Receipt, Package, FileArchive, Loader2, Landmark, PiggyBank } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, ArrowRight, Download, Users, Wrench, FileText, Receipt, Package, FileArchive, Loader2, Landmark, PiggyBank, CalendarMinus } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { exportJobs, exportInvoices, exportClients, exportOrders, invoiceRows, orderRows, toCSVString } from "@/lib/exportCsv";
 import { LEAD_SOURCES, DEFAULT_SOURCE } from "@/lib/sources";
 import { splitVat, type SupplierVatTreatment, quarterRange, QUARTER_LABELS, currentFilingPeriod, DEFAULT_VAT_RATE } from "@/lib/vat";
 import { computeJaaroverzicht, MARGINAL_RATE_OPTIONS } from "@/lib/incomeTax";
 import { computeAangifte } from "@/lib/btwAangifte";
+import { computeDayOff, DAY_OFF_TAX_RESERVE, ROLLING_WEEKS } from "@/lib/dayOff";
 import InvoiceDocument from "@/components/InvoiceDocument";
 import { splitIntoPages, captureInvoicePng, waitForImages } from "@/lib/invoicePdf";
 
@@ -628,6 +629,209 @@ function JaaroverzichtPanel({
     );
 }
 
+// ── One day less panel ───────────────────────────────────────────────────────
+
+const WORK_DAY_OPTIONS = [3, 4, 5];
+
+function DayOffPanel({
+    invoices,
+    orders,
+    currency,
+    defaultRate,
+    salaryPer4Weeks,
+    workDays,
+}: {
+    invoices: AnyInvoice[];
+    orders: AnyOrder[];
+    currency?: string;
+    defaultRate: number;
+    salaryPer4Weeks?: number;
+    workDays?: number;
+}) {
+    const fmt = (n: number) => formatCurrency(n, currency);
+    const fmt0 = (n: number) => formatCurrency(Math.round(n), currency).replace(/\.00$/, "");
+    const setSalary = useMutation(api.settings.setSalary);
+
+    const [salaryInput, setSalaryInput] = useState(salaryPer4Weeks != null ? String(salaryPer4Weeks) : "");
+    const [days, setDays] = useState(workDays ?? 5);
+    const [saveError, setSaveError] = useState<string | null>(null);
+
+    const salary = Number(salaryInput.replace(",", "."));
+    const hasSalary = salaryInput.trim() !== "" && Number.isFinite(salary) && salary > 0;
+
+    const save = async (nextSalary: number, nextDays: number) => {
+        if (!(nextSalary > 0)) return;
+        if (nextSalary === salaryPer4Weeks && nextDays === workDays) return;
+        try {
+            setSaveError(null);
+            await setSalary({ salaryNetPer4Weeks: nextSalary, salaryWorkDays: nextDays });
+        } catch (e) {
+            setSaveError(e instanceof Error ? e.message : "Could not save");
+        }
+    };
+
+    // Pinned at mount so the weekly buckets don't shift between renders.
+    const [now] = useState(() => Date.now());
+
+    const r = useMemo(
+        () => computeDayOff({
+            invoices, orders, defaultRate,
+            salaryPer4Weeks: hasSalary ? salary : 0,
+            workDaysPerWeek: days,
+            now,
+        }),
+        [invoices, orders, defaultRate, hasSalary, salary, days, now]
+    );
+
+    const reached = r.afterTaxPerWeek >= r.dayValue && r.dayValue > 0;
+    const chartMax = Math.max(r.dayValue * 1.25, ...r.weeks.map((w) => w.rollingAfterTax), 1);
+    const targetPct = (r.dayValue / chartMax) * 100;
+    const taxPct = Math.round(DAY_OFF_TAX_RESERVE * 100);
+    const weekLabel = (ts: number) => new Date(ts).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+
+    return (
+        <Card className="p-6 space-y-6">
+            {/* Header */}
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                    <SectionTitle>One day less</SectionTitle>
+                    <p className="text-xs text-zinc-400 mt-1">Can the shop replace one day of your day job? Shop profit per week, averaged over the last {ROLLING_WEEKS} weeks, after tax.</p>
+                </div>
+                <div className="flex items-end gap-2">
+                    <label className="space-y-1">
+                        <span className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest">Net salary / 4 weeks</span>
+                        <input
+                            type="text"
+                            inputMode="decimal"
+                            value={salaryInput}
+                            placeholder="e.g. 2775.96"
+                            onChange={(e) => setSalaryInput(e.target.value)}
+                            onBlur={() => save(salary, days)}
+                            onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                            className="w-32 px-3 py-2 bg-zinc-100 border-none rounded-xl text-xs font-bold text-zinc-700 tabular-nums focus:ring-2 focus:ring-black/5"
+                        />
+                    </label>
+                    <label className="space-y-1">
+                        <span className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest">Days / week</span>
+                        <select
+                            value={days}
+                            onChange={(e) => { const d = Number(e.target.value); setDays(d); save(salary, d); }}
+                            className="px-3 py-2 bg-zinc-100 border-none rounded-xl text-xs font-bold text-zinc-700 focus:ring-2 focus:ring-black/5 cursor-pointer"
+                        >
+                            {WORK_DAY_OPTIONS.map((d) => <option key={d} value={d}>{d}</option>)}
+                        </select>
+                    </label>
+                </div>
+            </div>
+            {saveError && <p className="text-[11px] text-red-600">{saveError}</p>}
+
+            {!hasSalary ? (
+                <div className="rounded-2xl border border-dashed border-zinc-200 px-5 py-8 text-center text-xs text-zinc-400">
+                    Enter your net salary per 4 weeks to see how close the shop is to covering a day.
+                </div>
+            ) : (
+                <>
+                    {/* Headline tiles */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="p-5 rounded-2xl border border-zinc-200">
+                            <div className="flex items-center gap-2 text-zinc-400"><CalendarMinus size={14} /><span className="text-[10px] font-black uppercase tracking-widest">A day off costs</span></div>
+                            <p className="text-2xl font-black text-zinc-900 mt-2 tabular-nums">{fmt(r.dayValue)}<span className="text-sm font-bold text-zinc-400"> / week</span></p>
+                            <p className="text-[11px] text-zinc-400 font-medium mt-1">Net · needs {fmt0(r.profitNeeded)} shop profit before ~{taxPct}% tax</p>
+                        </div>
+                        <div className={cn("p-5 rounded-2xl", reached ? "bg-emerald-600 text-white" : "bg-zinc-900 text-white")}>
+                            <div className="flex items-center gap-2 text-zinc-300"><PiggyBank size={14} /><span className="text-[10px] font-black uppercase tracking-widest">Shop earns · after tax</span></div>
+                            <p className="text-2xl font-black mt-2 tabular-nums">{fmt(r.afterTaxPerWeek)}<span className="text-sm font-bold text-zinc-400"> / week</span></p>
+                            <p className="text-[11px] text-zinc-400 font-medium mt-1">{fmt0(r.profitPerWeek)} profit/week · last {r.span} week{r.span !== 1 ? "s" : ""}</p>
+                        </div>
+                        <div className="p-5 rounded-2xl bg-indigo-50/60 border border-indigo-100">
+                            <div className="flex items-center gap-2 text-indigo-700"><TrendingUp size={14} /><span className="text-[10px] font-black uppercase tracking-widest">{reached ? "Covered" : "Still to go"}</span></div>
+                            {reached ? (
+                                <>
+                                    <p className="text-2xl font-black text-indigo-700 mt-2">✓ Day covered</p>
+                                    <p className="text-[11px] text-indigo-700/60 font-medium mt-1">{fmt0(r.afterTaxPerWeek - r.dayValue)}/week to spare after tax</p>
+                                </>
+                            ) : (
+                                <>
+                                    <p className="text-2xl font-black text-indigo-700 mt-2 tabular-nums">{fmt0(r.profitGap)}<span className="text-sm font-bold text-indigo-400"> profit / week</span></p>
+                                    <p className="text-[11px] text-indigo-700/60 font-medium mt-1">
+                                        {r.avgInvoiceNet > 0
+                                            ? `≈ ${r.extraJobsPerWeek.toLocaleString("en-GB", { maximumFractionDigits: 1 })} extra jobs/week at your average ${fmt0(r.avgInvoiceNet)} (excl. BTW, before materials)`
+                                            : "No invoices in this period yet"}
+                                    </p>
+                                </>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Coverage bar */}
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between text-[11px] font-bold">
+                            <span className="text-zinc-500">Covers {Math.round(r.coverage * 100)}% of a day</span>
+                            <span className="text-zinc-400 tabular-nums">{fmt0(Math.max(0, r.afterTaxPerWeek))} of {fmt0(r.dayValue)}</span>
+                        </div>
+                        <div className="h-2.5 rounded-full bg-zinc-100 overflow-hidden">
+                            <div
+                                className={cn("h-full rounded-full transition-all", reached ? "bg-emerald-500" : "bg-zinc-900")}
+                                style={{ width: `${Math.min(100, r.coverage * 100)}%` }}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Rolling average per week vs. target */}
+                    <div className="space-y-2">
+                        <p className="text-[11px] font-bold text-zinc-500">After-tax profit per week · {ROLLING_WEEKS}-week rolling average</p>
+                        <div className="relative h-40">
+                            <div className="absolute inset-x-0 border-t-2 border-dashed border-zinc-400 z-10 pointer-events-none" style={{ bottom: `${targetPct}%` }}>
+                                <span className="absolute right-0 -top-5 text-[10px] font-bold text-zinc-500 bg-white px-1">Day off · {fmt0(r.dayValue)}</span>
+                            </div>
+                            <div className="absolute inset-0 flex items-end gap-0.5">
+                                {r.weeks.map((w, i) => {
+                                    const isLatest = i === r.weeks.length - 1;
+                                    const pct = Math.max(0, w.rollingAfterTax) / chartMax * 100;
+                                    const hit = w.rollingAfterTax >= r.dayValue;
+                                    return (
+                                        <div key={w.end} className="flex-1 h-full flex flex-col justify-end group relative">
+                                            <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-zinc-900 text-white text-[9px] font-bold px-2 py-1 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
+                                                Week to {weekLabel(w.end)} · {fmt(w.rollingAfterTax)}/wk avg
+                                            </div>
+                                            <div
+                                                className={cn(
+                                                    "w-full rounded-t-[4px]",
+                                                    w.rollingAfterTax < 0 ? "bg-red-300" : hit ? "bg-emerald-500" : isLatest ? "bg-black" : "bg-zinc-300",
+                                                )}
+                                                style={{ height: `${Math.max(pct, 1)}%` }}
+                                            />
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                        <div className="flex justify-between text-[9px] font-bold uppercase tracking-wide text-zinc-300">
+                            <span>{weekLabel(r.weeks[0].end)}</span>
+                            <span>{weekLabel(r.weeks[Math.floor(r.weeks.length / 2)].end)}</span>
+                            <span className="text-black">This week</span>
+                        </div>
+                    </div>
+
+                    {/* Breakdown */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+                        <div><p className="text-zinc-400">Sales / week</p><p className="font-black text-zinc-900 tabular-nums">{fmt(r.revenuePerWeek)}</p></div>
+                        <div><p className="text-zinc-400">Costs / week</p><p className="font-black text-zinc-900 tabular-nums">−{fmt(r.costsPerWeek)}</p></div>
+                        <div><p className="text-zinc-400">Jobs / week</p><p className="font-black text-zinc-900 tabular-nums">{r.invoicesPerWeek.toLocaleString("en-GB", { maximumFractionDigits: 1 })}</p></div>
+                        <div><p className="text-zinc-400">Average invoice</p><p className="font-black text-zinc-900 tabular-nums">{fmt(r.avgInvoiceNet)}</p></div>
+                    </div>
+
+                    {/* Caveats */}
+                    <div className="text-[11px] text-zinc-400 space-y-1 pt-2 border-t border-zinc-100">
+                        <p><strong className="font-bold text-zinc-500">How this is built:</strong> invoices excl. BTW minus supplier orders, same as the Jaaroverzicht. One-off tool and gear purchases count in full in the week you bought them, so the average dips for a quarter afterwards.</p>
+                        <p><strong className="font-bold text-zinc-500">Tax:</strong> ~{taxPct}% on profit — your Box 1 marginal rate, less the MKB-winstvrijstelling, plus the Zvw-bijdrage. The day value ignores holiday pay and pension, so treat it as a minimum. Indicative only.</p>
+                    </div>
+                </>
+            )}
+        </Card>
+    );
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export default function ReportsPage() {
@@ -750,6 +954,18 @@ export default function ReportsPage() {
                     orders={allOrders as never}
                     currency={currency}
                     defaultRate={settings?.defaultTaxRate ?? DEFAULT_VAT_RATE}
+                />
+            )}
+
+            {/* ── One day less ── */}
+            {allInvoices && allOrders && settings !== undefined && (
+                <DayOffPanel
+                    invoices={allInvoices as never}
+                    orders={allOrders as never}
+                    currency={currency}
+                    defaultRate={settings?.defaultTaxRate ?? DEFAULT_VAT_RATE}
+                    salaryPer4Weeks={settings?.salaryNetPer4Weeks}
+                    workDays={settings?.salaryWorkDays}
                 />
             )}
 

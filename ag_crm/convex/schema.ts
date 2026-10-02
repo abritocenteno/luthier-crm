@@ -92,6 +92,9 @@ export default defineSchema({
         jobReadyEmailIntro: v.optional(v.string()),
         overdueEmailSubject: v.optional(v.string()),
         overdueEmailIntro: v.optional(v.string()),
+        // "One day less" tracker on Reports: net salary of the day job and its days per week.
+        salaryNetPer4Weeks: v.optional(v.number()),
+        salaryWorkDays: v.optional(v.number()),
     }).index("by_user", ["userId"]),
     events: defineTable({
         title: v.string(),
